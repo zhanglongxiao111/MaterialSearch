@@ -44,6 +44,7 @@ from search import (
     search_video_by_image,
     search_video_by_text_path_time,
     search_pexels_video_by_text,
+    clean_cache,
 )
 from utils import crop_video, get_hash, resize_image_with_aspect_ratio
 from project_manager import get_project_manager
@@ -170,6 +171,18 @@ def login_required(view_func):
 @login_required
 def index_page():
     return app.send_static_file("index.html")
+
+
+@app.route("/workspace", methods=["GET"])
+@login_required
+def workspace_page():
+    return app.send_static_file("index_workspace.html")
+
+
+@app.route("/classic", methods=["GET"])
+@login_required
+def classic_page():
+    return app.send_static_file("index_classic.html")
 
 
 @app.route("/login", methods=["GET", "POST"])
@@ -536,6 +549,39 @@ def api_unarchive_images(project_id):
     except Exception as e:
         logger.error(f"取消归档失败: {e}")
         return jsonify({"success": False, "error": str(e)}), 500
+
+
+@app.route("/api/projects/<project_id>/images/delete", methods=["POST"])
+@login_required
+def api_delete_project_images(project_id):
+    """删除项目库中的图片记录（仅删除数据库记录，不删除源文件）"""
+    pm = get_project_manager()
+    data = request.get_json() or {}
+    image_ids = data.get("image_ids", [])
+
+    if not isinstance(image_ids, list) or not image_ids:
+        return jsonify({"success": False, "error": "未指定要删除的图片"}), 400
+
+    try:
+        normalized_ids = []
+        for img_id in image_ids:
+            try:
+                normalized_ids.append(int(img_id))
+            except (TypeError, ValueError):
+                continue
+
+        if not normalized_ids:
+            return jsonify({"success": False, "error": "图片 ID 不合法"}), 400
+
+        result = pm.delete_project_images(project_id, normalized_ids)
+        pm.update_project_stats(project_id)
+        clean_cache()
+        return jsonify({"success": True, "data": result})
+    except ValueError as e:
+        return jsonify({"success": False, "error": str(e)}), 400
+    except Exception as e:
+        logger.error(f"删除项目图片失败: {e}")
+        return jsonify({"success": False, "error": "删除失败，请稍后重试"}), 500
 
 
 # ========== 库类型选择功能集成（必须在加密路由之前定义）==========

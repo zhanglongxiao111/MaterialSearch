@@ -3,12 +3,15 @@ import logging
 import os
 from typing import Optional, Dict
 
-from sqlalchemy import asc, create_engine, text
+from sqlalchemy import asc, create_engine, text, or_
 from sqlalchemy.orm import Session, sessionmaker
 
 from models import Image, Video, PexelsVideo, Project, ProjectImage, ProjectVideo, BaseModel, BaseModelProject
 
 logger = logging.getLogger(__name__)
+
+# 通用过滤条件：仅返回未被软删除的记录（兼容旧数据 is_deleted 为空的情况）
+NOT_DELETED_IMAGE = or_(Image.is_deleted.is_(False), Image.is_deleted.is_(None))
 
 
 class ProjectDatabaseManager:
@@ -205,11 +208,39 @@ def get_db_manager() -> ProjectDatabaseManager:
     return db_manager
 
 
+def get_session_by_target(target: str) -> Session:
+    """
+    根据目标获取数据库 session
+
+    Args:
+        target: 'permanent' 或 'proj_xxx'
+
+    Returns:
+        Session 对象
+
+    Raises:
+        ValueError: 目标库格式无效
+    """
+    manager = get_db_manager()
+
+    if target == 'permanent':
+        return manager.get_permanent_session()
+    elif target.startswith('proj_'):
+        return manager.get_project_session(target)
+    else:
+        raise ValueError(f"无效的目标库格式: {target}")
+
+
 def get_image_features_by_id(session: Session, image_id: int):
     """
     返回id对应的图片feature
     """
-    features = session.query(Image.features).filter_by(id=image_id).first()
+    features = (
+        session.query(Image.features)
+        .filter(Image.id == image_id)
+        .filter(NOT_DELETED_IMAGE)
+        .first()
+    )
     if not features:
         logger.warning("用数据库的图来进行搜索，但id在数据库中不存在")
         return None
@@ -220,7 +251,12 @@ def get_image_path_by_id(session: Session, id: int):
     """
     返回id对应的图片路径
     """
-    path = session.query(Image.path).filter_by(id=id).first()
+    path = (
+        session.query(Image.path)
+        .filter(Image.id == id)
+        .filter(NOT_DELETED_IMAGE)
+        .first()
+    )
     if not path:
         return None
     return path[0]
@@ -228,7 +264,7 @@ def get_image_path_by_id(session: Session, id: int):
 
 def get_image_count(session: Session):
     """获取图片总数"""
-    return session.query(Image).count()
+    return session.query(Image).filter(NOT_DELETED_IMAGE).count()
 
 
 def delete_image_if_outdated(session: Session, path: str, modify_time: datetime.datetime, checksum: str = None) -> bool:
@@ -442,7 +478,7 @@ def get_image_id_path_features(session: Session) -> tuple[list[int], list[str], 
     """
     session.query(Image).filter(Image.features.is_(None)).delete()
     session.commit()
-    query = session.query(Image.id, Image.path, Image.features)
+    query = session.query(Image.id, Image.path, Image.features).filter(NOT_DELETED_IMAGE)
     try:
         id_list, path_list, features_list = zip(*query)
         return id_list, path_list, features_list
@@ -457,7 +493,7 @@ def get_image_id_path_features_filter_by_path_time(session: Session, path: str, 
     """
     session.query(Image).filter(Image.features.is_(None)).delete()
     session.commit()
-    query = session.query(Image.id, Image.path, Image.features, Image.modify_time)
+    query = session.query(Image.id, Image.path, Image.features, Image.modify_time).filter(NOT_DELETED_IMAGE)
     if start_time:
         query = query.filter(Image.modify_time >= datetime.datetime.fromtimestamp(start_time))
     if end_time:
@@ -479,6 +515,7 @@ def search_image_by_path(session: Session, path: str):
     return (
         session.query(Image.id, Image.path)
         .filter(Image.path.like("%" + path + "%"))
+        .filter(NOT_DELETED_IMAGE)
         .order_by(asc(Image.path))
         .all()
     )
