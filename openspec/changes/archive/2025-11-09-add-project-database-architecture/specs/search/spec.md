@@ -1,6 +1,6 @@
 # Spec Delta: Search（搜索功能）
 
-## MODIFIED Requirements
+## ADDED Requirements
 
 ### Requirement: 图片搜索
 系统 SHALL 支持在指定库（永久库、项目库、全局）中进行图片搜索。

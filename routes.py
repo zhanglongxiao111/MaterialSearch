@@ -16,6 +16,7 @@
 import base64
 import datetime
 import hashlib
+import json
 import logging
 import os
 import tempfile
@@ -33,7 +34,7 @@ from PIL import Image as PILImage
 
 from config import *
 from database import get_image_path_by_id, is_video_exist, get_db_manager, add_image, add_video
-from models import DatabaseSession, Image
+from models import DatabaseSession, Image, DedupJob
 from process_assets import match_text_and_image, process_image, process_text, process_images, process_video
 from scan import scanner  # noqa
 from utils import get_file_hash
@@ -48,6 +49,7 @@ from search import (
 )
 from utils import crop_video, get_hash, resize_image_with_aspect_ratio
 from project_manager import get_project_manager
+from dedup_service import get_dedup_service
 from archive import get_archive_manager
 
 logger = logging.getLogger(__name__)
@@ -85,6 +87,14 @@ def cleanup_indexing_tasks():
         indexing_task_events.pop(task_id, None)
         indexing_task_decisions.pop(task_id, None)
 
+
+
+def parse_bool(value):
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, str):
+        return value.strip().lower() in {"1", "true", "yes", "on"}
+    return bool(value)
 
 def apply_path_mappings(path: str) -> str:
     """根据 PATH_MAPPINGS 将盘符映射到真实 UNC 路径。"""
@@ -270,6 +280,10 @@ def api_match():
         if not project:
             return jsonify({"error": f"项目不存在: {project_id}"}), 404
 
+    include_duplicates = parse_bool(data.get("include_duplicates", False))
+    if library_type != "permanent":
+        include_duplicates = True
+
     upload_file_path = session.get('upload_file_path', '')
     session['upload_file_path'] = ""
     if search_type in (1, 3, 4):
@@ -278,9 +292,9 @@ def api_match():
     logger.debug(data)
     if search_type == 0:
         results = search_image_by_text_path_time(data["positive"], data["negative"], positive_threshold, negative_threshold,
-                                                 path, start_time, end_time, library_type, project_id)
+                                                 path, start_time, end_time, library_type, project_id, include_duplicates=include_duplicates)
     elif search_type == 1:
-        results = search_image_by_image(upload_file_path, image_threshold, path, start_time, end_time, library_type, project_id)
+        results = search_image_by_image(upload_file_path, image_threshold, path, start_time, end_time, library_type, project_id, include_duplicates=include_duplicates)
     elif search_type == 2:
         results = search_video_by_text_path_time(data["positive"], data["negative"], positive_threshold, negative_threshold,
                                                  path, start_time, end_time, library_type, project_id)
@@ -290,7 +304,7 @@ def api_match():
         score = match_text_and_image(process_text(data["positive"]), process_image(upload_file_path)) * 100
         return jsonify({"score": "%.2f" % score})
     elif search_type == 5:
-        results = search_image_by_image(img_id, image_threshold, path, start_time, end_time, library_type, project_id)
+        results = search_image_by_image(img_id, image_threshold, path, start_time, end_time, library_type, project_id, include_duplicates=include_duplicates)
     elif search_type == 6:
         results = search_video_by_image(img_id, image_threshold, path, start_time, end_time, library_type, project_id)
     elif search_type == 9:
@@ -798,6 +812,7 @@ def api_preview_files():
                         'is_indexed': existing is not None,
                         'phash': existing.phash if existing else None
                     }
+
                 except Exception as err:
                     logger.warning(f"获取文件元信息失败 {filepath}: {err}")
                     return None
@@ -943,7 +958,10 @@ def api_batch_index():
 
         files = data.get('files')
         target = data.get('target')
-        duplicate_strategy = str(data.get('duplicate_strategy', 'ask')).lower()
+        raw_strategy = data.get('duplicate_strategy')
+        duplicate_strategy = str(raw_strategy if raw_strategy is not None else 'ask').lower()
+        if target == 'permanent' and raw_strategy is None:
+            duplicate_strategy = 'skip'
 
         if not isinstance(files, list) or len(files) == 0:
             return jsonify({"error": "files 必须是非空数组"}), 400
@@ -1024,6 +1042,16 @@ def process_batch_index(task_id, files, target, duplicate_strategy):
     if not task:
         return
 
+    db_session = None
+
+    def update_project_stats_safe():
+        if target.startswith('proj_'):
+            try:
+                pm = get_project_manager()
+                pm.update_project_stats(target)
+            except Exception as stats_error:
+                logger.error(f"更新项目统计失败: {stats_error}")
+
     try:
         if target == 'permanent':
             db_session = get_db_manager().get_permanent_session()
@@ -1040,6 +1068,7 @@ def process_batch_index(task_id, files, target, duplicate_strategy):
                 task['status'] = 'cancelled'
                 task['updated_at'] = time.time()
                 logger.info(f"任务 {task_id} 被取消 ({task['processed']}/{task['total']})")
+                update_project_stats_safe()
                 return
 
             file_path = file_info.get('path')
@@ -1059,84 +1088,128 @@ def process_batch_index(task_id, files, target, duplicate_strategy):
                 if ext in IMAGE_EXTENSIONS:
                     props = calculate_image_properties(file_path)
                     if not props:
-                        task['failed'].append({'path': file_path, 'error': '无法读取图片属性'})
+                        task['failed'].append({'path': file_path, 'error': '无法读取图片信息'})
                         continue
 
+                    file_size = props.get('file_size') or os.path.getsize(file_path)
+                    props['file_size'] = file_size
+                    resolution_new = (props.get('width') or 0) * (props.get('height') or 0)
+
                     existing = None
-                    strategy_for_this = task.get('duplicate_strategy', duplicate_strategy)
-                    if props.get('phash'):
-                        with db_session:
-                            existing = db_session.query(Image).filter(Image.phash == props['phash']).first()
+                    duplicate_reason = None
+                    if target == 'permanent' and checksum:
+                        existing = db_session.query(Image).filter(Image.checksum == checksum).first()
+                        if existing:
+                            duplicate_reason = 'checksum'
+                    if not existing and props.get('phash'):
+                        existing = db_session.query(Image).filter(Image.phash == props['phash']).first()
+                        if existing and duplicate_reason is None:
+                            duplicate_reason = 'phash'
 
                     if existing:
-                        action = strategy_for_this
-                        if action == 'ask':
-                            duplicate_payload = {
-                                'new_file': {
-                                    'path': file_path,
-                                    'filename': os.path.basename(file_path),
-                                    'size': props.get('file_size') or os.path.getsize(file_path),
-                                    'mtime': int(os.path.getmtime(file_path)),
-                                    'thumbnail': f"/api/thumbnail?path={quote(file_path, safe='')}&size=96"
-                                },
-                                'existing_file': {
-                                    'path': existing.path,
-                                    'filename': os.path.basename(existing.path),
-                                    'size': getattr(existing, 'file_size', None),
-                                    'mtime': int(existing.modify_time.timestamp()) if getattr(existing, 'modify_time', None) else None,
-                                    'thumbnail': f"/api/thumbnail?path={quote(existing.path, safe='')}&size=96"
-                                }
-                            }
-                            action = wait_for_duplicate_decision(task_id, duplicate_payload)
+                        if target != 'permanent':
+                            task['duplicates'].append({
+                                'path': file_path,
+                                'existing_path': existing.path,
+                                'action': '项目库允许重复，已继续'
+                            })
+                        else:
+                            resolution_existing = (getattr(existing, 'width', 0) or 0) * (getattr(existing, 'height', 0) or 0)
+                            size_existing = getattr(existing, 'file_size', 0) or 0
+                            auto_overwrite = duplicate_reason == 'phash' and (
+                                resolution_new > resolution_existing or
+                                (resolution_new == resolution_existing and file_size > size_existing)
+                            )
+                            action = task.get('duplicate_strategy', duplicate_strategy)
+                            if duplicate_reason == 'checksum':
+                                action_to_take = 'skip'
+                            else:
+                                if action == 'ask' and not auto_overwrite:
+                                    duplicate_payload = {
+                                        'new_file': {
+                                            'path': file_path,
+                                            'filename': os.path.basename(file_path),
+                                            'size': file_size,
+                                            'mtime': int(os.path.getmtime(file_path)),
+                                            'thumbnail': f"/api/thumbnail?path={quote(file_path, safe='')}&size=96"
+                                        },
+                                        'existing_file': {
+                                            'path': existing.path,
+                                            'filename': os.path.basename(existing.path),
+                                            'size': getattr(existing, 'file_size', None),
+                                            'mtime': int(existing.modify_time.timestamp()) if getattr(existing, 'modify_time', None) else None,
+                                            'thumbnail': f"/api/thumbnail?path={quote(existing.path, safe='')}&size=96"
+                                        }
+                                    }
+                                    action = wait_for_duplicate_decision(task_id, duplicate_payload)
+                                if auto_overwrite:
+                                    action = 'overwrite'
+                                action_to_take = action
 
-                        if action == 'skip':
-                            task['duplicates'].append({
-                                'path': file_path,
-                                'existing_path': existing.path,
-                                'action': '用户跳过' if strategy_for_this == 'ask' else '已跳过'
-                            })
-                            continue
-                        if action == 'overwrite':
-                            task['duplicates'].append({
-                                'path': file_path,
-                                'existing_path': existing.path,
-                                'action': '用户覆盖' if strategy_for_this == 'ask' else '已覆盖'
-                            })
-                            with db_session:
-                                db_session.delete(existing)
+                            if action_to_take == 'skip':
+                                skip_reason = '自动跳过（完全相同）' if duplicate_reason == 'checksum' else '保留已存在的高分辨率版本'
+                                task['duplicates'].append({
+                                    'path': file_path,
+                                    'existing_path': existing.path,
+                                    'action': skip_reason
+                                })
+                                continue
+
+                            if action_to_take == 'overwrite':
+                                feature = process_image(file_path)
+                                if feature is None:
+                                    task['failed'].append({'path': file_path, 'error': '特征提取失败'})
+                                    continue
+                                existing.path = file_path
+                                existing.modify_time = mtime
+                                existing.checksum = checksum
+                                existing.width = props.get('width')
+                                existing.height = props.get('height')
+                                existing.aspect_ratio = props.get('aspect_ratio')
+                                existing.aspect_ratio_standard = props.get('aspect_ratio_standard')
+                                existing.file_size = file_size
+                                existing.file_format = props.get('file_format')
+                                existing.phash = props.get('phash')
+                                existing.features = feature.tobytes()
+                                existing.upload_time = datetime.datetime.now()
                                 db_session.commit()
+
+                                task['duplicates'].append({
+                                    'path': file_path,
+                                    'existing_path': existing.path,
+                                    'action': '已替换为更高分辨率'
+                                })
+                                task['success'] += 1
+                                continue
 
                     feature = process_image(file_path)
                     if feature is None:
                         task['failed'].append({'path': file_path, 'error': '特征提取失败'})
                         continue
 
-                    with db_session:
-                        add_image(
-                            db_session,
-                            path=file_path,
-                            modify_time=mtime,
-                            checksum=checksum,
-                            features=feature.tobytes(),
-                            **props
-                        )
+                    add_image(
+                        db_session,
+                        path=file_path,
+                        modify_time=mtime,
+                        checksum=checksum,
+                        features=feature.tobytes(),
+                        **props
+                    )
 
                     task['success'] += 1
-
                 elif ext in VIDEO_EXTENSIONS:
                     frame_time_features_generator = process_video(file_path)
                     if frame_time_features_generator is None:
                         task['failed'].append({'path': file_path, 'error': '视频特征提取失败'})
                         continue
 
-                    with db_session:
-                        add_video(
-                            db_session,
-                            path=file_path,
-                            modify_time=mtime,
-                            checksum=checksum,
-                            frame_time_features_generator=frame_time_features_generator
-                        )
+                    add_video(
+                        db_session,
+                        path=file_path,
+                        modify_time=mtime,
+                        checksum=checksum,
+                        frame_time_features_generator=frame_time_features_generator
+                    )
 
                     task['success'] += 1
 
@@ -1145,6 +1218,8 @@ def process_batch_index(task_id, files, target, duplicate_strategy):
 
             except Exception as file_error:
                 logger.error(f"索引文件失败 {file_path}: {file_error}", exc_info=True)
+                if db_session:
+                    db_session.rollback()
                 task['failed'].append({'path': file_path, 'error': str(file_error)})
 
         task['status'] = 'completed'
@@ -1152,12 +1227,7 @@ def process_batch_index(task_id, files, target, duplicate_strategy):
         task['duration'] = task['end_time'] - task['start_time']
         task['updated_at'] = time.time()
 
-        if target.startswith('proj_'):
-            try:
-                pm = get_project_manager()
-                pm.update_project_stats(target)
-            except Exception as stats_error:
-                logger.error(f"更新项目统计失败: {stats_error}")
+        update_project_stats_safe()
 
     except Exception as e:
         logger.error(f"批量索引任务失败: {e}", exc_info=True)
@@ -1165,9 +1235,102 @@ def process_batch_index(task_id, files, target, duplicate_strategy):
             task['status'] = 'failed'
             task['error'] = str(e)
             task['updated_at'] = time.time()
+        update_project_stats_safe()
     finally:
+        if db_session:
+            db_session.close()
         indexing_task_events.pop(task_id, None)
         indexing_task_decisions.pop(task_id, None)
+
+
+def _serialize_dedup_job(job: DedupJob):
+    report_data = None
+    if job.report:
+        try:
+            report_data = json.loads(job.report)
+        except json.JSONDecodeError:
+            report_data = None
+    return {
+        "id": job.id,
+        "library_type": job.library_type,
+        "status": job.status,
+        "phase": job.phase,
+        "progress": job.progress,
+        "created_at": job.created_at.isoformat() if job.created_at else None,
+        "completed_at": job.completed_at.isoformat() if job.completed_at else None,
+        "duplicate_groups": job.duplicate_groups,
+        "duplicates_marked": job.duplicates_marked,
+        "space_saving_bytes": job.space_saving or 0,
+        "space_saving_mb": round((job.space_saving or 0) / 1024 / 1024, 2) if job.space_saving else 0,
+        "total_scanned": job.total_scanned,
+        "report": report_data,
+        "error": job.error,
+        "notes": job.notes,
+    }
+
+
+@app.route("/api/dedup/jobs", methods=["POST"])
+@login_required
+def api_create_dedup_job():
+    data = request.get_json() or {}
+    library_type = data.get("library_type", "permanent")
+    include_phash = parse_bool(data.get("include_phash", True))
+    include_clip = parse_bool(data.get("include_clip", True))
+    created_by = session.get("username") or session.get("user") or "system"
+
+    service = get_dedup_service()
+    try:
+        job_info = service.start_job(
+            library_type=library_type,
+            created_by=created_by,
+            include_phash=include_phash,
+            include_clip=include_clip,
+        )
+        return jsonify({"success": True, **job_info})
+    except ValueError as exc:
+        return jsonify({"success": False, "error": str(exc)}), 400
+    except RuntimeError as exc:
+        return jsonify({"success": False, "error": str(exc)}), 409
+    except Exception as exc:
+        logger.error(f"启动去重任务失败: {exc}", exc_info=True)
+        return jsonify({"success": False, "error": str(exc)}), 500
+
+
+@app.route("/api/dedup/jobs/<job_id>", methods=["GET"])
+@login_required
+def api_get_dedup_job(job_id):
+    session_db = get_db_manager().get_permanent_session()
+    try:
+        job = session_db.query(DedupJob).filter_by(id=job_id).first()
+        if not job:
+            return jsonify({"success": False, "error": "任务不存在"}), 404
+        return jsonify({"success": True, "data": _serialize_dedup_job(job)})
+    except Exception as exc:
+        logger.error(f"查询去重任务失败: {exc}", exc_info=True)
+        return jsonify({"success": False, "error": str(exc)}), 500
+    finally:
+        session_db.close()
+
+
+@app.route("/api/dedup/jobs/latest", methods=["GET"])
+@login_required
+def api_get_latest_dedup_job():
+    session_db = get_db_manager().get_permanent_session()
+    try:
+        job = (
+            session_db.query(DedupJob)
+            .filter(DedupJob.status == "completed")
+            .order_by(DedupJob.completed_at.desc())
+            .first()
+        )
+        if not job:
+            return jsonify({"success": True, "data": None})
+        return jsonify({"success": True, "data": _serialize_dedup_job(job)})
+    except Exception as exc:
+        logger.error(f"获取最新去重报告失败: {exc}", exc_info=True)
+        return jsonify({"success": False, "error": str(exc)}), 500
+    finally:
+        session_db.close()
 
 
 @app.route("/api/batch_index/<task_id>/decision", methods=["POST"])

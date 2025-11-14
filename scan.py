@@ -14,6 +14,8 @@ from database import (
     delete_video_if_outdated,
     add_video,
     add_image,
+    get_session_by_target,
+    get_db_manager,
 )
 from models import create_tables, DatabaseSession
 from process_assets import process_images, process_video
@@ -104,10 +106,11 @@ class Scanner:
         self.logger.debug(f"{path} 不匹配后缀：{wrong_ext} 跳过：{skip} 忽略：{ignore}")
         return not any((wrong_ext, skip, ignore))
 
-    def generate_or_load_assets(self):
+    def generate_or_load_assets(self, scan_paths=None):
         """
         若无缓存文件，扫描目录到self.assets, 并生成新的缓存文件；
         否则加载缓存文件到self.assets
+        :param scan_paths: 自定义扫描路径列表，如果为None则使用环境变量 ASSETS_PATH
         :return: None
         """
         if os.path.isfile(self.temp_file):
@@ -117,7 +120,7 @@ class Scanner:
                 self.assets = pickle.load(f)
         else:
             self.is_continue_scan = False
-            self.scan_dir()
+            self.scan_dir(scan_paths)
             self.save_assets()
 
     def is_current_auto_scan_time(self) -> bool:
@@ -147,14 +150,29 @@ class Scanner:
                 self.scanned = True  # 表示本目标时间段内已进行扫描，防止同个时间段内扫描多次
                 self.scan(True)
 
-    def scan_dir(self):
+    def scan_dir(self, scan_paths=None):
         """
         遍历文件并将符合条件的文件加入 assets 集合
+        :param scan_paths: 自定义扫描路径列表，如果为None则使用环境变量 ASSETS_PATH
+        """
+        self.generate_assets_from_paths(scan_paths)
+
+    def generate_assets_from_paths(self, paths=None):
+        """
+        从指定路径生成assets字典，把所有符合要求的素材文件路径存入assets字典
+        :param paths: 路径列表，如果为None则使用环境变量 ASSETS_PATH
         """
         self.assets = dict()
-        paths = [Path(i) for i in ASSETS_PATH if i]
+        if paths is None:
+            paths = [Path(i) for i in ASSETS_PATH if i]
+        else:
+            # 确保路径是 Path 对象，并过滤掉空字符串
+            paths = [Path(p) for p in paths if p and p.strip()]
         # 遍历根目录及其子目录下的所有文件
         for path in paths:
+            if not path.exists():
+                self.logger.warning(f"路径不存在，跳过: {path}")
+                continue
             for file in filter(self.filter_path, path.rglob("*")):
                 modify_time = os.path.getmtime(str(file))
                 try:  # 尝试把modify_time转换成datetime用来写入数据库
@@ -191,85 +209,115 @@ class Scanner:
             del self.assets[path]
         self.total_images = get_image_count(session)
 
-    def scan(self, auto=False):
+    def scan(self, auto=False, target='permanent', scan_paths=None):
         """
         扫描资源。如果存在assets.pickle，则直接读取并开始扫描。如果不存在，则先读取所有文件路径，并写入assets.pickle，然后开始扫描。
         每100个文件重新保存一次assets.pickle，如果程序被中断，下次可以从断点处继续扫描。扫描完成后删除assets.pickle并清缓存。
         :param auto: 是否由AUTO_SCAN触发的
+        :param target: 扫描目标库，'permanent' 或 'proj_xxx'
+        :param scan_paths: 自定义扫描路径列表，如果为None则使用环境变量 ASSETS_PATH
         """
-        self.logger.info("开始扫描")
+        self.logger.info(f"开始扫描 (目标库: {target})")
         self.is_scanning = True
         self.scan_start_time = time.time()
-        self.generate_or_load_assets()
-        with DatabaseSession() as session:
-            # 删除不存在的文件记录
-            if not self.is_continue_scan:  # 非断点恢复的情况下才删除
-                delete_record_if_not_exist(session, set(self.assets.keys()))
-            # 将没有变化的文件从assets中移除(不启用checksum的时候直接检查，如果启用，这个会很慢，留到正式扫描再检查)
-            if not ENABLE_CHECKSUM:
+
+        # 为不同库使用不同的缓存文件
+        self.temp_file = f"{TEMP_PATH}/assets_{target}.pickle"
+        self.logger.info(f"使用缓存文件: {self.temp_file}")
+
+        self.generate_or_load_assets(scan_paths)
+
+        # 根据目标获取对应的 session
+        try:
+            session = get_session_by_target(target)
+        except (ValueError, FileNotFoundError) as e:
+            self.logger.error(f"无法获取目标库 session: {e}")
+            self.is_scanning = False
+            raise
+
+        try:
+            with session:
+                # 删除不存在的文件记录
+                if not self.is_continue_scan:  # 非断点恢复的情况下才删除
+                    delete_record_if_not_exist(session, set(self.assets.keys()))
+                # 将没有变化的文件从assets中移除(不启用checksum的时候直接检查，如果启用，这个会很慢，留到正式扫描再检查)
+                if not ENABLE_CHECKSUM:
+                    for path in self.assets.copy():
+                        modify_time = self.assets[path]
+                        # 如果数据库里有这个文件，并且没有发生变化，则跳过
+                        if path.lower().endswith(IMAGE_EXTENSIONS):  # 图片
+                            not_modified = delete_image_if_outdated(session, path, modify_time)
+                            if not_modified:
+                                del self.assets[path]
+                                continue
+                        elif path.lower().endswith(VIDEO_EXTENSIONS):  # 视频
+                            not_modified = delete_video_if_outdated(session, path, modify_time)
+                            if not_modified:
+                                del self.assets[path]
+                                continue
+                # 扫描文件
+                self.scanning_files = len(self.assets)
+                image_batch_dict = {}  # 批量处理文件的字典，用字典方便某个图片有问题的时候的处理
                 for path in self.assets.copy():
+                    self.scanned_files += 1
+                    if self.scanned_files % AUTO_SAVE_INTERVAL == 0:  # 每扫描 AUTO_SAVE_INTERVAL 个文件重新save一下
+                        self.save_assets()
+                    if auto and not self.is_current_auto_scan_time():  # 如果是自动扫描，判断时间自动停止
+                        self.logger.info(f"超出自动扫描时间，停止扫描")
+                        break
+                    # 如果文件不存在，则忽略（扫描时文件被移动或删除则会触发这种情况）
+                    if not os.path.isfile(path):
+                        continue
                     modify_time = self.assets[path]
-                    # 如果数据库里有这个文件，并且没有发生变化，则跳过
+                    checksum = None
+                    if ENABLE_CHECKSUM or modify_time is None:  # 如果启用checksum则用checksum
+                        checksum = get_file_hash(path)
+                    # 如果数据库里有这个文件，并且没有发生变化，则跳过，否则进行预处理并入库
                     if path.lower().endswith(IMAGE_EXTENSIONS):  # 图片
-                        not_modified = delete_image_if_outdated(session, path, modify_time)
+                        not_modified = delete_image_if_outdated(session, path, modify_time, checksum)
                         if not_modified:
                             del self.assets[path]
                             continue
+                        image_batch_dict[path] = (modify_time, checksum)
+                        # 达到SCAN_PROCESS_BATCH_SIZE再进行批量处理
+                        if len(image_batch_dict) == SCAN_PROCESS_BATCH_SIZE:
+                            self.handle_image_batch(session, image_batch_dict)
+                            image_batch_dict = {}
+                        continue
                     elif path.lower().endswith(VIDEO_EXTENSIONS):  # 视频
-                        not_modified = delete_video_if_outdated(session, path, modify_time)
+                        not_modified = delete_video_if_outdated(session, path, modify_time, checksum)
                         if not_modified:
                             del self.assets[path]
                             continue
-            # 扫描文件
-            self.scanning_files = len(self.assets)
-            image_batch_dict = {}  # 批量处理文件的字典，用字典方便某个图片有问题的时候的处理
-            for path in self.assets.copy():
-                self.scanned_files += 1
-                if self.scanned_files % AUTO_SAVE_INTERVAL == 0:  # 每扫描 AUTO_SAVE_INTERVAL 个文件重新save一下
-                    self.save_assets()
-                if auto and not self.is_current_auto_scan_time():  # 如果是自动扫描，判断时间自动停止
-                    self.logger.info(f"超出自动扫描时间，停止扫描")
-                    break
-                # 如果文件不存在，则忽略（扫描时文件被移动或删除则会触发这种情况）
-                if not os.path.isfile(path):
-                    continue
-                modify_time = self.assets[path]
-                checksum = None
-                if ENABLE_CHECKSUM or modify_time is None:  # 如果启用checksum则用checksum
-                    checksum = get_file_hash(path)
-                # 如果数据库里有这个文件，并且没有发生变化，则跳过，否则进行预处理并入库
-                if path.lower().endswith(IMAGE_EXTENSIONS):  # 图片
-                    not_modified = delete_image_if_outdated(session, path, modify_time, checksum)
-                    if not_modified:
-                        del self.assets[path]
-                        continue
-                    image_batch_dict[path] = (modify_time, checksum)
-                    # 达到SCAN_PROCESS_BATCH_SIZE再进行批量处理
-                    if len(image_batch_dict) == SCAN_PROCESS_BATCH_SIZE:
-                        self.handle_image_batch(session, image_batch_dict)
-                        image_batch_dict = {}
-                    continue
-                elif path.lower().endswith(VIDEO_EXTENSIONS):  # 视频
-                    not_modified = delete_video_if_outdated(session, path, modify_time, checksum)
-                    if not_modified:
-                        del self.assets[path]
-                        continue
-                    add_video(session, path, modify_time, checksum, process_video(path))
-                    self.total_video_frames = get_video_frame_count(session)
-                    self.total_videos = get_video_count(session)
-                del self.assets[path]
-            if len(image_batch_dict) != 0:  # 最后如果图片数量没达到SCAN_PROCESS_BATCH_SIZE，也进行一次处理
-                self.handle_image_batch(session, image_batch_dict)
-            # 最后重新统计一下数量
-            self.total_images = get_image_count(session)
-            self.total_videos = get_video_count(session)
-            self.total_video_frames = get_video_frame_count(session)
-        self.scanning_files = 0
-        self.scanned_files = 0
-        os.remove(self.temp_file)
-        self.logger.info("扫描完成，用时%d秒" % int(time.time() - self.scan_start_time))
-        clean_cache()  # 清空搜索缓存
-        self.is_scanning = False
+                        add_video(session, path, modify_time, checksum, process_video(path))
+                        self.total_video_frames = get_video_frame_count(session)
+                        self.total_videos = get_video_count(session)
+                    del self.assets[path]
+                if len(image_batch_dict) != 0:  # 最后如果图片数量没达到SCAN_PROCESS_BATCH_SIZE，也进行一次处理
+                    self.handle_image_batch(session, image_batch_dict)
+                # 最后重新统计一下数量
+                self.total_images = get_image_count(session)
+                self.total_videos = get_video_count(session)
+                self.total_video_frames = get_video_frame_count(session)
+
+            # 扫描完成后，如果是项目库，更新项目统计
+            if target.startswith('proj_'):
+                try:
+                    from project_manager import get_project_manager
+                    pm = get_project_manager()
+                    pm.update_project_stats(target)
+                    self.logger.info(f"已更新项目统计: {target}")
+                except Exception as e:
+                    self.logger.warning(f"更新项目统计失败: {e}")
+
+        finally:
+            self.scanning_files = 0
+            self.scanned_files = 0
+            if os.path.exists(self.temp_file):
+                os.remove(self.temp_file)
+            self.logger.info("扫描完成，用时%d秒" % int(time.time() - self.scan_start_time))
+            clean_cache()  # 清空搜索缓存
+            self.is_scanning = False
 
 
 scanner = Scanner()

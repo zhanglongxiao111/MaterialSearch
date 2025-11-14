@@ -1,0 +1,651 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <title>MaterialSearch Workspace - Auto Theme Preview</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Space+Grotesk:wght@400;500;600&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="materialsearch_theme_2.css" />
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+  <style>
+    body { overflow: hidden !important; }
+    .material-layout { 
+      display: flex !important;
+      flex-direction: column !important;
+      min-height: 100vh !important;
+      background:
+        radial-gradient(circle at top left, rgba(124,58,237,0.08), transparent),
+        radial-gradient(circle at top right, rgba(45,212,191,0.06), transparent),
+        var(--background) !important;
+      color: var(--foreground) !important;
+    }
+    .material-header {
+      display: flex !important;
+      align-items: center !important;
+      justify-content: space-between !important;
+      padding: 0.9rem 1.6rem !important;
+      border-bottom: 1px solid var(--border) !important;
+      background: color-mix(in oklch, var(--background) 90%, white 10%) !important;
+      box-shadow: var(--shadow-xs) !important;
+    }
+    .material-logo {
+      width: 24px !important;
+      height: 24px !important;
+      border-radius: 8px !important;
+      background: radial-gradient(circle at 30% 0%, var(--accent), transparent),
+                  radial-gradient(circle at 80% 80%, var(--primary), transparent) !important;
+    }
+    .material-header-title { display:flex !important; flex-direction:column !important; }
+    .material-header-title span.label {
+      font-size: 11px !important;
+      letter-spacing: 0.06em !important;
+      text-transform: uppercase !important;
+      color: var(--muted-foreground) !important;
+    }
+    .material-header-title h1 {
+      font-size: 20px !important;
+      font-weight: 500 !important;
+      color: var(--foreground) !important;
+    }
+    .material-header-right { display:flex !important; align-items:center !important; gap:0.6rem !important; }
+    .material-chip {
+      padding: 0.12rem 0.6rem !important;
+      border-radius: 999px !important;
+      border: 1px solid var(--border) !important;
+      font-size: 10px !important;
+      color: var(--muted-foreground) !important;
+    }
+    .material-btn-primary {
+      padding: 0.34rem 0.9rem !important;
+      border-radius: 999px !important;
+      border: none !important;
+      background: var(--primary) !important;
+      color: var(--primary-foreground) !important;
+      transition: background-color 0.18s ease, color 0.18s ease, box-shadow 0.18s ease !important;
+      font-size: 12px !important;
+      display: inline-flex !important;
+      align-items: center !important;
+      gap: 0.35rem !important;
+      cursor: pointer !important;
+      box-shadow: var(--shadow-sm) !important;
+    }
+    .material-btn-ghost {
+      padding: 0.32rem 0.85rem !important;
+      border-radius: 999px !important;
+      border: 1px solid var(--border) !important;
+      background: transparent !important;
+      color: var(--muted-foreground) !important;
+      transition: background-color 0.18s ease, color 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease !important;
+      font-size: 12px !important;
+      display: inline-flex !important;
+      align-items: center !important;
+      gap: 0.35rem !important;
+      cursor: pointer !important;
+      box-shadow: var(--shadow-2xs) !important;
+    }
+    .material-shell { display:flex !important; flex:1 !important; overflow:hidden !important; }
+    .material-sidebar {
+      width: 260px !important;
+      padding: 1rem 1rem 1rem 1.3rem !important;
+      border-right: 1px solid var(--sidebar-border) !important;
+      background: color-mix(in oklch, var(--sidebar) 92%, white 8%) !important;
+      display: flex !important;
+      flex-direction: column !important;
+      gap: 1rem !important;
+    }
+    .material-sidebar-section-title {
+      font-size: 11px !important;
+      letter-spacing: 0.14em !important;
+      text-transform: uppercase !important;
+      color: var(--muted-foreground) !important;
+      margin-bottom: 0.1rem !important;
+    }
+    .material-sidebar-pills { display:flex !important; gap:0.35rem !important; }
+    .material-pill {
+      flex: 1 !important;
+      padding: 0.25rem 0.55rem !important;
+      border-radius: 999px !important;
+      font-size: 11px !important;
+      background: var(--muted) !important;
+      color: var(--muted-foreground) !important;
+      border: 1px solid transparent !important;
+    }
+    .material-pill.active {
+      background: var(--sidebar-primary) !important;
+      color: var(--sidebar-primary-foreground) !important;
+      border-color: var(--sidebar-ring) !important;
+    }
+    .material-project-list {
+      display:flex !important;
+      flex-direction:column !important;
+      gap:0.3rem !important;
+      max-height:40vh !important;
+      overflow-y:auto !important;
+    }
+    .material-project-item {
+      padding:0.35rem 0.55rem !important;
+      border-radius:0.45rem !important;
+      background:transparent !important;
+      cursor:pointer !important;
+      display:flex !important;
+      flex-direction:column !important;
+      gap:0.1rem !important;
+      border:1px solid transparent !important;
+      color:var(--muted-foreground) !important;
+    }
+    .material-project-item.active {
+      background: var(--secondary) !important;
+      border-color: var(--sidebar-ring) !important;
+      color: var(--secondary-foreground) !important;
+    }
+    .material-scan-card {
+      margin-top:0.2rem !important;
+      padding:0.5rem 0.6rem !important;
+      border-radius:0.5rem !important;
+      background:var(--muted) !important;
+      color:var(--muted-foreground) !important;
+      font-size:11px !important;
+      box-shadow:var(--shadow-2xs) !important;
+    }
+    .material-main {
+      flex:1 !important;
+      padding:1rem 1.4rem 1.2rem !important;
+      display:flex !important;
+      flex-direction:column !important;
+      gap:0.6rem !important;
+      overflow:hidden !important;
+    }
+    .material-scope-text {
+      font-size:12px !important;
+      color:var(--muted-foreground) !important;
+    }
+    .material-tabs {
+      display:inline-flex !important;
+      align-items:center !important;
+      background:var(--muted) !important;
+      padding:0.18rem !important;
+      border-radius:999px !important;
+      gap:0.2rem !important;
+      box-shadow:var(--shadow-2xs) !important;
+    }
+    .material-tab {
+      padding:0.24rem 0.78rem !important;
+      border-radius:999px !important;
+      font-size:11px !important;
+      color:var(--muted-foreground) !important;
+      cursor:pointer !important;
+      white-space:nowrap !important;
+    }
+    .material-tab.active {
+      background:var(--primary) !important;
+      color:var(--primary-foreground) !important;
+    }
+    .material-search-panel {
+      margin-top:0.4rem !important;
+      padding:0.7rem 0.9rem !important;
+      border-radius:0.7rem !important;
+      background:var(--card) !important;
+      border:1px solid var(--border) !important;
+      box-shadow:var(--shadow-2xs) !important;
+      display:flex !important;
+      flex-direction:column !important;
+      gap:0.6rem !important;
+    }
+    .material-search-row {
+      display:flex !important;
+      gap:0.5rem !important;
+    }
+    .material-input-main {
+      flex:1 !important;
+      padding:0.5rem 0.7rem !important;
+      border-radius:0.5rem !important;
+      border:1px solid var(--border) !important;
+      background:var(--input) !important;
+      color:var(--foreground) !important;
+      font-size:13px !important;
+    }
+    .material-select {
+      padding:0.4rem 0.6rem !important;
+      border-radius:0.5rem !important;
+      border:1px solid var(--border) !important;
+      background:var(--input) !important;
+      color:var(--muted-foreground) !important;
+      font-size:11px !important;
+    }
+    .material-results {
+      flex:1 !important;
+      margin-top:0.2rem !important;
+      display:grid !important;
+      grid-template-columns:repeat(auto-fill, minmax(220px, 1fr)) !important;
+      gap:0.6rem !important;
+      overflow-y:auto !important;
+    }
+    .material-result-card {
+      background:var(--card) !important;
+      border-radius:0.65rem !important;
+      border:1px solid var(--border) !important;
+      padding:0.4rem !important;
+      box-shadow:var(--shadow-2xs) !important;
+      display:flex !important;
+      flex-direction:column !important;
+      gap:0.25rem !important;
+    }
+    .material-result-thumb {
+      width:100% !important;
+      height:130px !important;
+      border-radius:0.45rem !important;
+      background:var(--muted) !important;
+      overflow:hidden !important;
+    }
+    .material-result-meta {
+      display:flex !important;
+      flex-wrap:wrap !important;
+      gap:0.2rem !important;
+      align-items:center !important;
+      font-size:9px !important;
+    }
+    .material-result-actions {
+      margin-top:0.1rem !important;
+      display:flex !important;
+      gap:0.3rem !important;
+      flex-wrap:wrap !important;
+    }
+    @media (max-width: 1024px) {
+      .material-sidebar { display:none !important; }
+      .material-main { padding:0.8rem 0.9rem 1rem !important; }
+    }
+  </style>
+</head>
+<body class="material-layout">
+  <header class="material-header">
+    <div class="material-header-left flex items-center gap-3">
+      <div class="material-logo"></div>
+      <div class="material-header-title">
+        <span class="label">MaterialSearch Workspace</span>
+        <h1>素材搜索与项目素材管理中心</h1>
+      </div>
+      <div class="material-chip">当前命中范围：仅 永久素材库</div>
+    </div>
+    <div class="material-header-right">
+      <button class="material-btn-ghost">
+        <span>永久素材库</span>
+      </button>
+      <button class="material-btn-ghost">
+        <i data-lucide="folder-open" class="w-3.5 h-3.5"></i>
+        项目管理
+      </button>
+      <button class="material-btn-primary">
+        <i data-lucide="upload-cloud" class="w-3.5 h-3.5"></i>
+        批量上载素材
+      </button>
+      <button class="material-btn-ghost">
+        <i data-lucide="scan-line" class="w-3.5 h-3.5"></i>
+        更新索引
+      </button>
+      <div class="material-chip">
+        <span id="theme-label">系统主题自动</span>
+      </div>
+      <div class="material-chip">User</div>
+    </div>
+  </header>
+
+  <div class="material-shell">
+    <aside class="material-sidebar">
+      <div>
+        <div class="material-sidebar-section-title">搜索模式 / 库类型</div>
+        <div class="material-sidebar-pills">
+          <div class="material-pill active">永久库</div>
+          <div class="material-pill">项目库</div>
+        </div>
+      </div>
+      <div>
+        <div class="material-sidebar-section-title">项目列表</div>
+        <div class="material-project-list">
+          <div class="material-project-item active">
+            <div class="flex justify-between text-[11px]">
+              <span>Brand Launch 2025</span>
+              <span class="text-[9px] text-emerald-500">进行中</span>
+            </div>
+            <div class="text-[9px] text-slate-500">客户端：Acme Studio · 3240 素材</div>
+          </div>
+          <div class="material-project-item">
+            <div class="flex justify-between text-[11px]">
+              <span>Summer Campaign</span>
+              <span class="text-[9px] text-slate-500">已完成</span>
+            </div>
+            <div class="text-[9px] text-slate-500">客户端：Ocean Film · 1860 素材</div>
+          </div>
+          <div class="material-project-item">
+            <div class="flex justify-between text-[11px]">
+              <span>Internal Library</span>
+              <span class="text-[9px] text-emerald-500">进行中</span>
+            </div>
+            <div class="text-[9px] text-slate-500">内部资产 · 920 素材</div>
+          </div>
+          <div class="material-project-item">
+            <span class="text-[11px] text-fuchsia-500">+ 新建项目</span>
+          </div>
+        </div>
+      </div>
+      <div>
+        <div class="material-sidebar-section-title">索引 / 扫描状态</div>
+        <div class="material-scan-card">
+          <div class="flex items-center justify-between">
+            <span>永久库最近扫描</span>
+            <span class="text-[9px] text-emerald-500">完成</span>
+          </div>
+          <div class="mt-1 h-[4px] w-full bg-slate-200 rounded-full overflow-hidden">
+            <div class="h-full bg-emerald-500" style="width:100%"></div>
+          </div>
+          <div class="mt-1 text-[9px] text-slate-500">共 12,430 素材，视频帧 86,210</div>
+        </div>
+        <div class="material-scan-card mt-2">
+          <div class="flex items-center justify-between">
+            <span>Brand Launch 2025</span>
+            <span class="text-[9px] text-amber-500">索引中 · 72%</span>
+          </div>
+          <div class="mt-1 h-[4px] w-full bg-slate-200 rounded-full overflow-hidden">
+            <div class="h-full bg-amber-400" style="width:72%"></div>
+          </div>
+          <div class="mt-1 text-[9px] text-slate-500">预计剩余 06:12 · 处理中 184/256</div>
+        </div>
+      </div>
+    </aside>
+
+    <main class="material-main">
+      <div class="flex items-center justify-between gap-4">
+        <div class="material-scope-text">
+          当前命中范围：<span class="text-emerald-600">永久素材库</span> · 支持 文本、图像、视频、多模态 搜索
+        </div>
+        <div class="material-tabs">
+          <div class="material-tab active">搜索与结果</div>
+          <div class="material-tab">批量上传</div>
+          <div class="material-tab">项目统计 / 历史</div>
+        </div>
+      </div>
+
+      <section class="material-search-panel">
+        <div class="material-search-row">
+          <input class="material-input-main" placeholder="描述你要找的画面，如：夜景 城市 高楼 航拍 霓虹灯 雨后反光" />
+          <select class="material-select">
+            <option>Top 12</option>
+            <option>Top 30</option>
+            <option>Top 150</option>
+            <option>Top 600</option>
+            <option>全部结果</option>
+          </select>
+          <button class="material-btn-primary">
+            <i data-lucide="search" class="w-3.5 h-3.5"></i>
+            搜索
+          </button>
+        </div>
+        <div class="flex items-center gap-3 text-[10px] text-slate-500 mt-1">
+          <div class="flex items-center gap-1 cursor-pointer">
+            <i data-lucide="settings-2" class="w-3 h-3"></i>
+            高级筛选（路径 / 时间范围 / 正负权重）
+          </div>
+          <div class="flex items-center gap-1">
+            <i data-lucide="loader-2" class="w-3 h-3 animate-spin"></i>
+            实时命中自：永久库
+          </div>
+          <div class="flex items-center gap-1">
+            <i data-lucide="copy" class="w-3 h-3"></i>
+            一键复制全部结果路径
+          </div>
+        </div>
+      </section>
+
+      <section class="material-results" id="results-section">
+        <!-- 视图切换：瀑布 / 网格 -->
+        <div class="flex items-center justify-between mb-2 text-[10px] text-slate-500">
+          <div>示意结果：可切换瀑布视图（真实比例）与网格视图（统一高度）进行对比</div>
+          <div class="inline-flex items-center gap-1 border border-slate-200 rounded-full px-1.5 py-0.5 text-[9px]" id="view-toggle">
+            <span class="px-1.5 py-0.5 rounded-full bg-slate-900 text-white cursor-pointer" data-view="masonry">瀑布</span>
+            <span class="px-1.5 py-0.5 rounded-full text-slate-600 cursor-pointer" data-view="grid">网格</span>
+          </div>
+        </div>
+        <div id="results-wrapper" class="columns-3 gap-2 md:columns-4">
+        <article class="material-result-card inline-block w-full mb-2">
+          <div class="material-result-thumb">
+            <img src="https://images.pexels.com/photos/313782/pexels-photo-313782.jpeg?auto=compress&cs=tinysrgb&w=800" alt="city night" class="w-full h-full object-cover" />
+          </div>
+          <div class="material-result-meta">
+            <span class="px-1.5 py-0.5 rounded-full bg-fuchsia-500/10 text-[8px] text-fuchsia-600">永久库</span>
+            <span class="px-1.5 py-0.5 rounded-full bg-emerald-500/10 text-[8px] text-emerald-600">匹配度 96.4%</span>
+            <span class="text-[8px] text-slate-500 truncate">/library/city/night/neon_001.jpg</span>
+          </div>
+          <div class="material-result-actions">
+            <button class="material-btn-ghost !px-2 !py-1 text-[9px]">
+              <i data-lucide="image" class="w-3 h-3"></i>
+              以图搜图
+            </button>
+            <button class="material-btn-ghost !px-2 !py-1 text-[9px]">
+              <i data-lucide="film" class="w-3 h-3"></i>
+              搜索相关视频
+            </button>
+            <button class="material-btn-ghost !px-2 !py-1 text-[9px]">
+              <i data-lucide="copy" class="w-3 h-3"></i>
+              复制路径
+            </button>
+          </div>
+        </article>
+
+        <article class="material-result-card inline-block w-full mb-2">
+          <div class="material-result-thumb">
+            <img src="https://images.pexels.com/photos/8541033/pexels-photo-8541033.jpeg?auto=compress&cs=tinysrgb&w=800" alt="editor" class="w-full h-full object-cover" />
+          </div>
+          <div class="material-result-meta">
+            <span class="px-1.5 py-0.5 rounded-full bg-emerald-500/10 text-[8px] text-emerald-600">项目库 · Brand Launch 2025</span>
+            <span class="px-1.5 py-0.5 rounded-full bg-emerald-500/15 text-[8px] text-emerald-600">匹配度 91.2%</span>
+            <span class="text-[8px] text-slate-500 truncate">Z:/brand_launch/shot_023_a001.mov</span>
+          </div>
+          <div class="material-result-actions">
+            <button class="material-btn-ghost !px-2 !py-1 text-[9px]">
+              <i data-lucide="scissors" class="w-3 h-3"></i>
+              导出片段
+            </button>
+            <button class="material-btn-ghost !px-2 !py-1 text-[9px]">
+              <i data-lucide="copy" class="w-3 h-3"></i>
+              复制路径
+            </button>
+          </div>
+        </article>
+
+        <!-- 竖图示例 -->
+        <article class="material-result-card inline-block w-full mb-2">
+          <div class="material-result-thumb">
+            <img src="https://images.pexels.com/photos/1770809/pexels-photo-1770809.jpeg?auto=compress&cs=tinysrgb&w=600" alt="vertical" class="w-full h-auto object-cover" />
+          </div>
+          <div class="material-result-meta">
+            <span class="px-1.5 py-0.5 rounded-full bg-fuchsia-500/10 text-[8px] text-fuchsia-600">永久库 · 效果图</span>
+            <span class="px-1.5 py-0.5 rounded-full bg-emerald-500/10 text-[8px] text-emerald-600">匹配度 88.6%</span>
+            <span class="text-[8px] text-slate-500 truncate">/permanent/cg/interior/loft_012.png</span>
+          </div>
+          <div class="material-result-actions">
+            <button class="material-btn-ghost !px-2 !py-1 text-[9px]">
+              <i data-lucide="copy" class="w-3 h-3"></i>
+              复制路径
+            </button>
+          </div>
+        </article>
+
+        <!-- 宽横图示例 -->
+        <article class="material-result-card inline-block w-full mb-2">
+          <div class="material-result-thumb">
+            <img src="https://images.pexels.com/photos/240040/pexels-photo-240040.jpeg?auto=compress&cs=tinysrgb&w=1200" alt="wide" class="w-full h-auto object-cover" />
+          </div>
+          <div class="material-result-meta">
+            <span class="px-1.5 py-0.5 rounded-full bg-emerald-500/10 text-[8px] text-emerald-600">项目库 · Summer Campaign</span>
+            <span class="px-1.5 py-0.5 rounded-full bg-emerald-500/15 text-[8px] text-emerald-600">匹配度 89.4%</span>
+            <span class="text-[8px] text-slate-500 truncate">D:/summer/shot_pool_008.jpg</span>
+          </div>
+          <div class="material-result-actions">
+            <button class="material-btn-ghost !px-2 !py-1 text-[9px]">
+              <i data-lucide="archive" class="w-3 h-3"></i>
+              归档到永久库
+            </button>
+            <button class="material-btn-ghost !px-2 !py-1 text-[9px]">
+              <i data-lucide="trash-2" class="w-3 h-3"></i>
+              删除索引
+            </button>
+          </div>
+        </article>
+
+        <article class="material-result-card opacity-70 inline-block w-full mb-2">
+          <div class="material-result-thumb bg-slate-100 animate-pulse"></div>
+          <div class="material-result-meta mt-1">
+            <span class="w-10 h-3 bg-slate-200 rounded-full"></span>
+            <span class="w-14 h-3 bg-slate-200 rounded-full"></span>
+          </div>
+          <div class="mt-1 h-3 bg-slate-100 rounded"></div>
+        </article>
+      </section>
+    </main>
+  </div>
+
+  <script>
+    lucide.createIcons();
+
+    // 视图切换：瀑布(多列) / 网格(统一高度)
+    (function() {
+      const toggle = document.getElementById('view-toggle');
+      const spans = toggle.querySelectorAll('span');
+      const wrapper = document.getElementById('results-wrapper');
+
+      function setView(view) {
+        if (view === 'grid') {
+          wrapper.classList.remove('columns-3', 'md:columns-4');
+          wrapper.classList.add('grid');
+          wrapper.style.gridTemplateColumns = 'repeat(auto-fill, minmax(220px, 1fr))';
+          document.querySelectorAll('.material-result-thumb').forEach(el => {
+            el.style.height = '130px';
+            const img = el.querySelector('img');
+            if (img) { img.style.height = '100%'; img.style.objectFit = 'cover'; }
+          });
+        } else {
+          wrapper.classList.remove('grid');
+          wrapper.style.gridTemplateColumns = '';
+          wrapper.classList.add('columns-3', 'md:columns-4');
+          document.querySelectorAll('.material-result-thumb').forEach(el => {
+            el.style.height = 'auto';
+            const img = el.querySelector('img');
+            if (img) { img.style.height = 'auto'; img.style.objectFit = 'cover'; }
+          });
+        }
+      }
+
+      spans.forEach(s => {
+        s.addEventListener('click', () => {
+          spans.forEach(x => { x.classList.remove('bg-slate-900', 'text-white'); x.classList.add('text-slate-600'); });
+          s.classList.remove('text-slate-600');
+          s.classList.add('bg-slate-900', 'text-white');
+          setView(s.dataset.view);
+        });
+      });
+    })();
+
+    // 图片点击放大预览 + 字段信息面板
+    (function() {
+      const modal = document.createElement('div');
+      modal.id = 'preview-modal';
+      modal.style.position = 'fixed';
+      modal.style.inset = '0';
+      modal.style.background = 'rgba(0,0,0,0.72)';
+      modal.style.display = 'none';
+      modal.style.alignItems = 'center';
+      modal.style.justifyContent = 'center';
+      modal.style.zIndex = '50';
+      modal.innerHTML = `
+        <div id="preview-backdrop" style="position:absolute;inset:0;"></div>
+        <div style="position:relative;max-width:88vw;max-height:88vh;display:flex;gap:16px;align-items:flex-start;">
+          <div style="flex:3;max-height:88vh;overflow:hidden;border-radius:14px;background:#020817;display:flex;align-items:center;justify-content:center;">
+            <img id="preview-image" src="" alt="preview" style="max-width:100%;max-height:88vh;object-fit:contain;" />
+          </div>
+          <div style="flex:2;padding:10px 12px;border-radius:14px;background:rgba(15,23,42,0.96);color:#e5e7eb;font-size:10px;display:flex;flex-direction:column;gap:6px;min-width:220px;max-height:88vh;overflow:auto;">
+            <div style="display:flex;justify-content:space-between;align-items:center;gap:6px;">
+              <div style="font-size:11px;font-weight:600;">素材详情</div>
+              <button id="preview-close" style="border:none;background:transparent;color:#9ca3af;cursor:pointer;font-size:11px;">关闭 ✕</button>
+            </div>
+            <div id="preview-meta" style="display:flex;flex-direction:column;gap:4px;"></div>
+            <div style="margin-top:4px;opacity:0.7;">// TODO 后端：填充真实数据库字段，如 file_id、库类型、项目ID、创建时间、标签等，并支持在此编辑。</div>
+          </div>
+        </div>
+      `;
+      document.body.appendChild(modal);
+
+      const previewImg = modal.querySelector('#preview-image');
+      const previewMeta = modal.querySelector('#preview-meta');
+      const closeBtn = modal.querySelector('#preview-close');
+      const backdrop = modal.querySelector('#preview-backdrop');
+
+      function bindImages() {
+        document.querySelectorAll('#results-section .material-result-thumb img').forEach(img => {
+          img.style.cursor = 'zoom-in';
+          img.onclick = () => {
+            const card = img.closest('.material-result-card');
+            const pathEl = card.querySelector('.material-result-meta span.text-[8px].text-slate-500');
+            const tagEls = card.querySelectorAll('.material-result-meta span.px-1.5');
+            const lib = tagEls[0]?.innerText || '';
+            const score = tagEls[1]?.innerText || '';
+            previewImg.src = img.src;
+            previewMeta.innerHTML = `
+              <div><span style="opacity:.6;">路径 Path：</span><span>${pathEl ? pathEl.textContent : '未知路径'}</span></div>
+              <div><span style="opacity:.6;">所属库 Library：</span><span>${lib || 'N/A'}</span></div>
+              <div><span style="opacity:.6;">匹配度 Score：</span><span>${score || 'N/A'}</span></div>
+              <div><span style="opacity:.6;">文件ID File ID：</span><span>// TODO from backend</span></div>
+              <div><span style="opacity:.6;">标签 Tags：</span><span>// TODO 可编辑，多选标签写回后端</span></div>
+            `;
+            modal.style.display = 'flex';
+          };
+        });
+      }
+
+      bindImages();
+
+      function close() { modal.style.display = 'none'; }
+      closeBtn.onclick = close;
+      backdrop.onclick = close;
+      document.addEventListener('keydown', e => { if (e.key === 'Escape') close(); });
+    })();
+
+    // 手动主题切换：在 <html> 上切换 data-theme="light" / "dark" / "auto"
+    (function() {
+      const root = document.documentElement;
+      const label = document.getElementById('theme-label');
+      const PREF_KEY = 'materialsearch-theme';
+
+      function applyTheme(mode) {
+        if (mode === 'light') {
+          root.dataset.theme = 'light';
+          root.style.colorScheme = 'light';
+          label.textContent = '浅色模式';
+        } else if (mode === 'dark') {
+          root.dataset.theme = 'dark';
+          root.style.colorScheme = 'dark';
+          label.textContent = '深色模式';
+        } else {
+          root.dataset.theme = 'auto';
+          root.style.colorScheme = '';
+          label.textContent = '系统主题自动';
+        }
+      }
+
+      function cycleTheme() {
+        const current = localStorage.getItem(PREF_KEY) || 'auto';
+        const next = current === 'auto' ? 'light' : current === 'light' ? 'dark' : 'auto';
+        localStorage.setItem(PREF_KEY, next);
+        applyTheme(next);
+      }
+
+      // 初始化
+      applyTheme(localStorage.getItem(PREF_KEY) || 'auto');
+
+      // 点击 chip 切换主题
+      label.parentElement.addEventListener('click', function() {
+        cycleTheme();
+      });
+    })();
+  </script>
+</body>
+</html>

@@ -1,7 +1,7 @@
 # batch-indexing 规范
 
 ## Purpose
-待定 - 通过归档变更 improve-project-upload 创建。归档后更新目的。
+规范批量索引工作流的端到端行为，明确路径预览、缩略图生成、后台任务管理、重复处理、错误报告与性能约束，确保本地/项目库导入体验一致、可追踪且高性能。
 ## Requirements
 ### Requirement: 路径预览API
 系统 SHALL 提供路径预览API，接收路径列表并返回文件元信息。
@@ -276,4 +276,3 @@
 - **THEN** 包含临时文件
 - **AND** 标记为 `is_temp=true`
 - **AND** 前端默认取消勾选
-

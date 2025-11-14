@@ -1,6 +1,6 @@
 # Spec Delta: Image Storage（图片存储）
 
-## MODIFIED Requirements
+## ADDED Requirements
 
 ### Requirement: 图片数据库存储
 系统 SHALL 支持多数据库架构，分别存储永久库和项目库图片。
@@ -216,7 +216,7 @@
 
 ---
 
-## MODIFIED Requirements（更新现有需求）
+## ADDED Requirements（更新现有需求）
 
 ### Requirement: 图片扫描和入库
 系统 SHALL 扫描 NAS 上的图片文件，提取特征并入库（更新：增加元数据提取）。

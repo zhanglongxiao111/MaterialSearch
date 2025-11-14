@@ -391,6 +391,72 @@ class ProjectManager:
         finally:
             session_meta.close()
 
+    def delete_project_images(self, project_id: str, image_ids: List[int]) -> Dict:
+        """
+        删除项目库中的图片记录（仅标记数据库，不删除源文件）
+
+        Args:
+            project_id: 项目 ID
+            image_ids: 需要删除的图片 ID 列表
+
+        Returns:
+            Dict: 删除结果统计
+        """
+        if not image_ids:
+            raise ValueError("未指定要删除的图片")
+
+        project_session: Optional[Session] = None
+        deleted_count = 0
+        already_deleted_count = 0
+        missing_count = 0
+        now = datetime.now()
+
+        try:
+            project_session = self.db_manager.get_project_session(project_id)
+        except Exception as exc:
+            logger.error(f"打开项目数据库失败: {exc}")
+            raise
+
+        try:
+            images = project_session.query(ProjectImage).filter(
+                ProjectImage.id.in_(image_ids)
+            ).all()
+
+            found_ids = set()
+            for image in images:
+                found_ids.add(image.id)
+                if image.is_deleted:
+                    already_deleted_count += 1
+                    continue
+
+                image.is_deleted = True
+                image.deleted_time = now
+                deleted_count += 1
+
+            # 未找到的 ID 视为缺失
+            missing_count = len(image_ids) - len(found_ids)
+
+            project_session.commit()
+            logger.info(
+                f"项目 {project_id} 删除图片完成: 删除 {deleted_count} 条, "
+                f"已删除 {already_deleted_count} 条, 未找到 {missing_count} 条"
+            )
+
+            return {
+                "deleted": deleted_count,
+                "already_deleted": already_deleted_count,
+                "missing": missing_count
+            }
+
+        except Exception as e:
+            if project_session:
+                project_session.rollback()
+            logger.error(f"删除项目图片失败: {e}")
+            raise
+        finally:
+            if project_session:
+                project_session.close()
+
 
 # 全局项目管理器实例
 _project_manager: Optional[ProjectManager] = None

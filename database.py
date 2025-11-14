@@ -3,7 +3,7 @@ import logging
 import os
 from typing import Optional, Dict
 
-from sqlalchemy import asc, create_engine, text, or_
+from sqlalchemy import asc, create_engine, text, or_, inspect
 from sqlalchemy.orm import Session, sessionmaker
 
 from models import Image, Video, PexelsVideo, Project, ProjectImage, ProjectVideo, BaseModel, BaseModelProject
@@ -80,6 +80,7 @@ class ProjectDatabaseManager:
         )
         # 创建表结构
         BaseModel.metadata.create_all(bind=self.permanent_engine)
+        self._ensure_image_dedup_columns(self.permanent_engine)
         logger.info(f"永久库已初始化: {self.permanent_db_path}")
 
     def _init_metadata_db(self):
@@ -94,6 +95,39 @@ class ProjectDatabaseManager:
         # 创建表结构
         BaseModel.metadata.create_all(bind=self.metadata_engine)
         logger.info(f"项目元信息库已初始化: {self.metadata_db_path}")
+
+    def _ensure_table_columns(self, engine, table_name: str, column_sql: dict):
+        """
+        确保指定表包含给定列，没有则自动新增
+        """
+        if not engine:
+            return
+        try:
+            inspector = inspect(engine)
+            existing = {col["name"] for col in inspector.get_columns(table_name)}
+        except Exception as exc:
+            logger.warning(f"检查表结构失败 {table_name}: {exc}")
+            return
+
+        for column_name, ddl in column_sql.items():
+            if column_name in existing:
+                continue
+            try:
+                with engine.connect() as conn:
+                    conn.execute(text(f"ALTER TABLE {table_name} ADD COLUMN {ddl}"))
+                    conn.commit()
+                logger.info(f"为 {table_name} 添加列 {column_name} ({ddl})")
+            except Exception as exc:
+                logger.error(f"添加列失败 {table_name}.{column_name}: {exc}")
+
+    def _ensure_image_dedup_columns(self, engine):
+        """保证 image 表具备去重相关列"""
+        dedup_columns = {
+            "master_image_id": "INTEGER",
+            "duplicate_type": "VARCHAR(32)",
+            "duplicate_confidence": "FLOAT"
+        }
+        self._ensure_table_columns(engine, "image", dedup_columns)
 
     def get_permanent_session(self) -> Session:
         """获取永久库 session"""
@@ -130,6 +164,7 @@ class ProjectDatabaseManager:
         self.project_engines[project_id] = engine
         self.project_session_factories[project_id] = session_factory
         logger.info(f"项目数据库已加载: {project_id}")
+        self._ensure_image_dedup_columns(engine)
 
     def create_project_database(self, project_id: str) -> str:
         """
@@ -151,6 +186,7 @@ class ProjectDatabaseManager:
 
         # 创建表结构
         BaseModelProject.metadata.create_all(bind=engine)
+        self._ensure_image_dedup_columns(engine)
 
         # 缓存连接
         session_factory = sessionmaker(autocommit=False, autoflush=False, bind=engine)
@@ -486,14 +522,20 @@ def get_image_id_path_features(session: Session) -> tuple[list[int], list[str], 
         return [], [], []
 
 
-def get_image_id_path_features_filter_by_path_time(session: Session, path: str, start_time: int, end_time: int) -> tuple[
-    list[int], list[str], list[bytes]]:
+def get_image_id_path_features_filter_by_path_time(
+        session: Session,
+        path: str,
+        start_time: int,
+        end_time: int,
+        exclude_duplicates: bool = False) -> tuple[list[int], list[str], list[bytes]]:
     """
     根据路径和时间，筛选出对应图片的 id, 路径, 特征，返回三个列表
     """
     session.query(Image).filter(Image.features.is_(None)).delete()
     session.commit()
     query = session.query(Image.id, Image.path, Image.features, Image.modify_time).filter(NOT_DELETED_IMAGE)
+    if exclude_duplicates:
+        query = query.filter(or_(Image.is_duplicate.is_(False), Image.is_duplicate.is_(None)))
     if start_time:
         query = query.filter(Image.modify_time >= datetime.datetime.fromtimestamp(start_time))
     if end_time:

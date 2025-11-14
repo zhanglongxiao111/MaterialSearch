@@ -35,10 +35,18 @@
         .scope-stat-pill{border:1px dashed var(--border);border-radius:10px;padding:0.35rem 0.75rem;font-size:11px;display:flex;flex-direction:column;gap:2px;min-width:120px;}
         .scope-stat-pill .value{font-size:16px;font-weight:600;color:var(--foreground);}
         .material-search-panel{border:1px solid var(--border);border-radius:16px;padding:1rem;background:color-mix(in oklch, var(--background) 92%, white 8%);box-shadow:var(--shadow-sm);}
+        .image-search-panel{border:1px dashed var(--border);border-radius:14px;padding:0.75rem;background:color-mix(in oklch, var(--background) 98%, white 2%);margin-top:0.8rem;display:flex;flex-direction:column;gap:0.6rem;}
+        .image-search-actions{display:flex;flex-wrap:wrap;gap:8px;align-items:center;}
+        .image-search-preview{max-width:220px;}
+        .image-search-preview img{width:100%;border-radius:12px;border:1px solid var(--border);object-fit:cover;}
         .material-search-row{display:flex;gap:0.6rem;}
         .material-input-main{flex:1;border:1px solid var(--border);border-radius:999px;padding:0.55rem 1rem;background:var(--card);}
         .material-select{border:1px solid var(--border);border-radius:999px;padding:0.4rem 0.8rem;}
         .material-btn-primary{background:var(--primary);color:#fff;border:none;border-radius:999px;padding:0.4rem 1rem;display:flex;align-items:center;gap:6px;cursor:pointer;}
+        .dedup-panel{margin-top:0.75rem;border:1px dashed var(--border);border-radius:12px;padding:0.6rem 0.8rem;background:color-mix(in oklch, var(--background) 96%, white 4%);}
+        .dedup-panel .btn-inline{font-size:11px;}
+        .dedup-report-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:0.75rem;margin-top:0.75rem;}
+        .dedup-report-card{border:1px solid var(--border);border-radius:12px;padding:0.55rem 0.75rem;background:var(--card);}
         .material-pill-search-mode{border:1px solid var(--border);border-radius:999px;padding:0.2rem 0.8rem;cursor:pointer;display:flex;gap:4px;align-items:center;transition:all .18s ease;}
         .material-pill-search-mode.active{background:var(--primary);color:#fff;border-color:var(--primary);}
         .material-pill-search-mode.disabled{opacity:.4;cursor:not-allowed;}
@@ -138,14 +146,24 @@
 .duplicate-actions{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:0.8rem;}
 .duplicate-actions .remember{font-size:12px;color:var(--muted-foreground);display:flex;align-items:center;gap:0.4rem;}
 .duplicate-actions .action-buttons{display:flex;gap:0.6rem;}
+.project-dialog-panel{max-width:520px;flex-direction:column;}
+.project-dialog-panel .form-field{display:flex;flex-direction:column;gap:4px;}
+.project-dialog-panel .form-field label{font-size:12px;color:var(--muted-foreground);}
+.project-dialog-panel .form-field input,
+.project-dialog-panel .form-field textarea{padding:10px 12px;border:1px solid var(--border);border-radius:12px;background:var(--surface);color:var(--text);}
+.project-dialog-panel .form-field textarea{min-height:96px;resize:vertical;}
+.project-dialog-panel .dialog-actions{display:flex;justify-content:flex-end;gap:12px;margin-top:20px;}
+.project-dialog-panel .error-text{color:#f43f5e;font-size:12px;margin-top:8px;}
         .material-header-stats{display:flex;gap:12px;padding:0.5rem 1.6rem;border-bottom:1px solid var(--border);background:color-mix(in oklch, var(--background) 96%, white 4%);}
         .header-stat{flex:1;min-width:140px;border:1px dashed var(--border);border-radius:12px;padding:0.5rem 0.8rem;display:flex;flex-direction:column;gap:4px;font-size:11px;}
         .header-stat .value{font-size:18px;font-weight:600;}
         .workspace-detail-overlay{position:fixed;inset:0;background:rgba(10,10,10,0.6);backdrop-filter:blur(6px);display:flex;align-items:center;justify-content:center;z-index:30;padding:1.5rem;}
-        .workspace-detail-panel{background:var(--card);border-radius:20px;border:1px solid var(--border);box-shadow:var(--shadow-lg);max-width:1200px;width:100%;display:flex;gap:16px;padding:1rem;position:relative;}
-        .detail-media{flex:1.4;min-height:420px;border:1px solid var(--border);border-radius:16px;padding:0.5rem;background:color-mix(in oklch, var(--background) 95%, white 5%);}
-        .detail-viewer img{max-width:100%;width:100%;display:block;}
-        .detail-info{flex:1;display:flex;flex-direction:column;gap:12px;}
+        .workspace-detail-panel{background:var(--card);border-radius:20px;border:1px solid var(--border);box-shadow:var(--shadow-lg);max-width:1200px;width:100%;display:flex;gap:24px;padding:1rem;position:relative;max-height:90vh;overflow:hidden;}
+        .dedup-report-panel{max-width:640px;flex-direction:column;}
+        .detail-media{flex:1.4;min-height:320px;max-height:80vh;border:1px solid var(--border);border-radius:16px;padding:0.5rem;background:color-mix(in oklch, var(--background) 95%, white 5%);display:flex;align-items:center;justify-content:center;overflow:hidden;}
+        .detail-viewer{width:100%;height:100%;}
+        .detail-viewer img{width:100%;height:100%;display:block;object-fit:contain;}
+        .detail-info{flex:1;display:flex;flex-direction:column;gap:12px;max-height:80vh;overflow:auto;padding-right:4px;}
         .detail-info-header{display:flex;justify-content:space-between;align-items:flex-start;}
         .detail-title{font-size:18px;font-weight:600;margin-bottom:4px;}
         .detail-meta{display:flex;flex-direction:column;gap:8px;font-size:13px;}
@@ -187,7 +205,6 @@
         <div class="flex items-center gap-2 text-sm">
             <div class="material-chip">{{ scopeHeadline }}</div>
             <button class="material-chip interactive" @click="cycleTheme"><i data-lucide="sun-moon"></i> {{ themeLabel }}</button>
-            <button class="material-chip interactive" @click="openClassic">回到经典界面</button>
         </div>
     </header>
     <div class="material-header-stats" v-if="statusChips.length">
@@ -220,7 +237,13 @@
                         <div class="flex justify-between text-xs"><span>{{ project.name }}</span><span class="text-[10px]" :class="project.status==='active' ? 'text-emerald-600' : 'text-slate-500'">{{ project.status==='active' ? '进行中' : '已归档' }}</span></div>
                         <div class="text-[10px] text-slate-500">图片 {{ formatNumber(project.image_count) }} · 视频 {{ formatNumber(project.video_count) }}</div>
                     </div>
-                    <div class="material-list-item" @click="openClassic">+ 新建项目</div>
+                    <div class="material-list-item action" @click="openProjectDialog">
+                        <div class="flex items-center justify-between text-xs">
+                            <span>+ 新建项目</span>
+                            <span class="text-[10px] text-slate-500">Workspace</span>
+                        </div>
+                        <div class="text-[10px] text-slate-500">创建新的项目库并立即使用</div>
+                    </div>
                 </div>
             </div>
         </aside>
@@ -256,10 +279,45 @@
                     <div class="flex items-center gap-1 cursor-pointer" @click="advancedOpen=!advancedOpen"><i data-lucide="sliders"></i> 高级筛选</div>
                     <div class="flex items-center gap-1 cursor-pointer" @click="copyAllPaths"><i data-lucide="copy"></i> 复制全部路径</div>
                     <div class="view-toggle"><span :class="{active: viewMode==='masonry'}" @click="setViewMode('masonry')">瀑布流</span><span :class="{active: viewMode==='grid'}" @click="setViewMode('grid')">网格</span></div>
+                    <label class="material-pill-search-mode" v-if="currentLibrary==='permanent'">
+                        <input type="checkbox" v-model="form.include_duplicates" class="hidden" />
+                        <i data-lucide="layers"></i> 包含重复
+                    </label>
                     <div class="flex items-center gap-1">
                         <span>缩略图 ({{ columnCount }} 列)</span>
                         <input type="range" min="2" max="6" step="1" v-model.number="thumbnailScale" />
                     </div>
+                    <div class="dedup-panel" v-if="currentLibrary==='permanent'">
+                        <div class="flex flex-wrap items-center gap-2 text-[11px] text-slate-600">
+                            <button class="btn-inline" @click="startDedupJob" :disabled="dedup.loading || dedup.running">
+                                <i data-lucide="sparkles"></i> {{ dedup.running ? '扫描中' : '去重扫描' }}
+                            </button>
+                            <span :class="dedup.running ? 'text-emerald-600' : 'text-slate-500'">{{ dedupStatusText }}</span>
+                            <button class="btn-inline" @click="loadLatestDedupReport" :disabled="dedup.loading">刷新报告</button>
+                            <button class="btn-inline" @click="openDedupReport(dedup.latestReport)" :disabled="!dedup.latestReport">查看报告</button>
+                            <span class="text-rose-500" v-if="dedup.error">{{ dedup.error }}</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="image-search-panel" v-if="searchMode===1">
+                    <input type="file" ref="searchImageInput" class="hidden" accept="image/*" @change="handleSearchImageChange">
+                    <div class="image-search-actions">
+                        <button class="material-btn-primary" type="button" @click="triggerSearchImagePick" :disabled="searchImage.uploading">
+                            <i data-lucide="image"></i> {{ searchImage.name ? '重新选择图片' : '选择参考图' }}
+                        </button>
+                        <button class="btn-inline" type="button" v-if="searchImage.name" @click="clearSearchImage" :disabled="searchImage.uploading">
+                            <i data-lucide="x"></i> 清除
+                        </button>
+                        <span class="text-[11px] text-slate-500" v-if="searchImage.name">
+                            {{ searchImage.name }} · {{ formatBytes(searchImage.size) }}
+                        </span>
+                        <span class="text-[11px] text-slate-500" v-if="searchImage.uploading">上传中...</span>
+                    </div>
+                    <div class="image-search-preview" v-if="searchImage.preview">
+                        <img :src="searchImage.preview" alt="参考图片预览">
+                    </div>
+                    <div class="text-[11px] text-rose-500 mt-1" v-if="searchImage.error">{{ searchImage.error }}</div>
+                    <div class="text-[11px] text-slate-500 mt-1">提示：上传 25MB 以内的图片，点击“搜索”即可在当前库中查找相似素材。</div>
                 </div>
                 <div class="mt-2" v-show="advancedOpen">
                     <div class="flex gap-2">
@@ -311,6 +369,7 @@
                                 <button class="btn-inline" @click.stop="copyPath(item.path)"><i data-lucide="copy"></i>复制</button>
                                 <button class="btn-inline" v-if="isProjectResult(item)" @click.stop="archiveItems([item])"><i data-lucide="archive"></i>归档</button>
                                 <button class="btn-inline" v-if="isProjectResult(item)" @click.stop="deleteItems([item])"><i data-lucide="trash-2"></i>删除</button>
+                                <button class="btn-inline" @click.stop="searchSimilar(item)" :disabled="!item.id"><i data-lucide="sparkles"></i>找相似</button>
                                 <button class="btn-inline" @click.stop="openDetail(item)"><i data-lucide="maximize"></i>查看</button>
                             </div>
                         </article>
@@ -332,6 +391,7 @@
                                 <button class="btn-inline" @click.stop="copyPath(item.path)"><i data-lucide="copy"></i>复制</button>
                                 <button class="btn-inline" v-if="isProjectResult(item)" @click.stop="archiveItems([item])"><i data-lucide="archive"></i>归档</button>
                                 <button class="btn-inline" v-if="isProjectResult(item)" @click.stop="deleteItems([item])"><i data-lucide="trash-2"></i>删除</button>
+                                <button class="btn-inline" @click.stop="searchSimilar(item)" :disabled="!item.id"><i data-lucide="sparkles"></i>找相似</button>
                                 <button class="btn-inline" @click.stop="openDetail(item)"><i data-lucide="maximize"></i>查看</button>
                             </div>
                         </article>
@@ -393,7 +453,6 @@
                             <i data-lucide="scan"></i> {{ uploadLoadingPreview ? '扫描中...' : '扫描并预览' }}
                         </button>
                         <button class="btn-inline" @click="clearUploadInput"><i data-lucide="eraser"></i> 清空输入</button>
-                        <button class="btn-inline" @click="openClassic"><i data-lucide="external-link"></i> 打开经典上传界面</button>
                     </div>
                     <div class="upload-history" v-if="uploadHistory.length">
                         <div class="upload-history-header">
@@ -567,11 +626,11 @@
     <div class="workspace-detail-overlay" v-if="detailDialog.visible" @click.self="closeDetail">
         <div class="workspace-detail-panel">
             <button class="detail-close" @click="closeDetail">×</button>
-            <div class="detail-media">
-                <div class="detail-viewer" ref="detailViewer">
-                    <img :src="detailImageSrc" :alt="detailItemName" />
+                <div class="detail-media">
+                    <div class="detail-viewer">
+                        <img :src="detailImageSrc" :alt="detailItemName" ref="detailImage" />
+                    </div>
                 </div>
-            </div>
             <div class="detail-info" v-if="detailDialog.item">
                 <div class="detail-info-header">
                     <div>
@@ -587,7 +646,75 @@
                 </div>
                 <div class="detail-actions">
                     <button class="btn-inline" @click="copyPath(detailDialog.item.path)"><i data-lucide="copy"></i>复制路径</button>
+                    <button class="btn-inline" @click="searchSimilar(detailDialog.item)" :disabled="!(detailDialog.item && detailDialog.item.id)"><i data-lucide="sparkles"></i>找相似</button>
+                    <button class="btn-inline" @click="openDetailInNewTab"><i data-lucide="external-link"></i>新窗口查看</button>
                     <button class="btn-inline" @click="closeDetail"><i data-lucide="x"></i>关闭</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="workspace-detail-overlay" v-if="dedupReportDialog.visible" @click.self="closeDedupReport">
+        <div class="workspace-detail-panel dedup-report-panel">
+            <div class="detail-info">
+                <div class="detail-info-header">
+                    <div>
+                        <div class="detail-title">去重报告</div>
+                        <div class="text-[12px] text-slate-500">{{ formatDateTime(dedupReportDialog.meta?.completed_at || dedupReportDialog.meta?.created_at) }}</div>
+                    </div>
+                    <button class="btn-inline" @click="closeDedupReport"><i data-lucide="x"></i>关闭</button>
+                </div>
+                <div class="dedup-report-grid" v-if="dedupReportDialog.meta">
+                    <div class="dedup-report-card">
+                        <div class="text-[11px] text-slate-500">重复组</div>
+                        <div class="text-lg font-semibold">{{ dedupReportDialog.meta.duplicate_groups || 0 }}</div>
+                    </div>
+                    <div class="dedup-report-card">
+                        <div class="text-[11px] text-slate-500">重复素材</div>
+                        <div class="text-lg font-semibold">{{ dedupReportDialog.meta.duplicates_marked || 0 }}</div>
+                    </div>
+                    <div class="dedup-report-card">
+                        <div class="text-[11px] text-slate-500">预计释放</div>
+                        <div class="text-lg font-semibold">{{ formatBytes(dedupReportDialog.meta.space_saving_bytes || 0) }}</div>
+                    </div>
+                </div>
+                <div class="dedup-report-grid" v-if="dedupReportDialog.report?.stages?.length">
+                    <div class="dedup-report-card" v-for="stage in dedupReportDialog.report.stages" :key="stage.stage">
+                        <div class="font-medium">{{ dedupStageTitle(stage.stage) }}</div>
+                        <div class="text-[11px] text-slate-400">{{ dedupStageDescription(stage.stage) }}</div>
+                        <div class="text-[12px] text-slate-500 mt-1">组 {{ stage.groups || 0 }} · 重复 {{ stage.duplicates || 0 }}</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="workspace-detail-overlay" v-if="projectDialog.visible" @click.self="closeProjectDialog">
+        <div class="workspace-detail-panel project-dialog-panel">
+            <div class="detail-info">
+                <div class="detail-info-header">
+                    <div>
+                        <div class="detail-title">创建新项目</div>
+                        <div class="text-[12px] text-slate-500">项目会作为独立库参与搜索与上传</div>
+                    </div>
+                    <button class="btn-inline" @click="closeProjectDialog" :disabled="projectDialog.loading"><i data-lucide="x"></i>关闭</button>
+                </div>
+                <div class="form-field">
+                    <label>项目名称 *</label>
+                    <input type="text" v-model="projectDialog.form.name" placeholder="例如：万科三期样板间" :disabled="projectDialog.loading">
+                </div>
+                <div class="form-field">
+                    <label>客户/业主</label>
+                    <input type="text" v-model="projectDialog.form.client_name" placeholder="可选" :disabled="projectDialog.loading">
+                </div>
+                <div class="form-field">
+                    <label>项目描述</label>
+                    <textarea v-model="projectDialog.form.description" placeholder="补充背景、交付要求等" :disabled="projectDialog.loading"></textarea>
+                </div>
+                <div class="error-text" v-if="projectDialog.error">{{ projectDialog.error }}</div>
+                <div class="dialog-actions">
+                    <button class="btn-inline" @click="closeProjectDialog" :disabled="projectDialog.loading">取消</button>
+                    <button class="material-btn-primary" @click="submitProject" :disabled="projectDialog.loading">
+                        <i data-lucide="plus"></i> {{ projectDialog.loading ? '创建中...' : '创建项目' }}
+                    </button>
                 </div>
             </div>
         </div>

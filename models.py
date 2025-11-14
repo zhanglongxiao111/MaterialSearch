@@ -77,6 +77,9 @@ class Image(BaseModel):
     # 去重预留
     phash = Column(String(64), index=True)  # 感知哈希（用于去重）
     duplicate_group = Column(String(64))  # 重复组ID
+    master_image_id = Column(Integer)  # 主图ID
+    duplicate_type = Column(String(32))  # 重复类型
+    duplicate_confidence = Column(Float)  # 重复置信度
     is_duplicate = Column(Boolean, default=False)  # 是否为重复图片
 
     # AI 增强
@@ -208,6 +211,9 @@ class ProjectImage(BaseModelProject):
     # 去重预留
     phash = Column(String(64), index=True)
     duplicate_group = Column(String(64))
+    master_image_id = Column(Integer)
+    duplicate_type = Column(String(32))
+    duplicate_confidence = Column(Float)
     is_duplicate = Column(Boolean, default=False)
 
     # AI 增强
@@ -303,3 +309,24 @@ class ProjectVideo(BaseModelProject):
     archived = Column(Boolean, default=False, index=True)
     archived_to_id = Column(Integer)
     archived_time = Column(DateTime)
+
+
+class DedupJob(BaseModel):
+    __tablename__ = "dedup_job"
+
+    id = Column(String(64), primary_key=True)
+    library_type = Column(String(32), default="permanent", index=True)
+    status = Column(String(32), default="pending", index=True)  # pending/running/completed/failed
+    phase = Column(String(32))  # checksum/phash/clip
+    progress = Column(Float, default=0.0)
+    created_at = Column(DateTime, default=datetime.datetime.utcnow, index=True)
+    updated_at = Column(DateTime, default=datetime.datetime.utcnow, onupdate=datetime.datetime.utcnow)
+    completed_at = Column(DateTime)
+    created_by = Column(String(128))
+    total_scanned = Column(Integer, default=0)
+    duplicate_groups = Column(Integer, default=0)
+    duplicates_marked = Column(Integer, default=0)
+    space_saving = Column(Integer, default=0)  # bytes
+    report = Column(Text)  # JSON 字符串
+    notes = Column(Text)
+    error = Column(Text)

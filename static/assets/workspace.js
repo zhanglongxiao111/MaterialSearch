@@ -8,6 +8,8 @@ const WorkspaceApp = Vue.createApp({
         const normalizedThumb = Number.isFinite(savedThumb)
             ? (savedThumb > 6 ? Math.min(6, Math.max(2, Math.round(savedThumb / 30))) : savedThumb)
             : 4;
+        const savedIncludeDuplicates = localStorage.getItem('workspace-include-duplicates');
+        const includePreference = savedIncludeDuplicates === 'true';
         return {
             sidebarLibrary: savedLibrary === 'permanent' ? 'permanent' : 'project',
             projects: [],
@@ -26,9 +28,10 @@ const WorkspaceApp = Vue.createApp({
             advancedOpen: false,
             viewMode: localStorage.getItem('workspace-view-mode') || 'masonry',
             thumbnailScale: normalizedThumb || 4,
+            includeDuplicatesPreference: includePreference,
             searchModes: [
                 { value: 0, label: '文本', icon: 'type', searchType: 0, description: '文本搜索图片' },
-                { value: 1, label: '图片', icon: 'image', searchType: 1, description: '相似图检索（即将上线）', disabled: true },
+                { value: 1, label: '图片', icon: 'image', searchType: 1, description: '上传参考图进行相似检索' },
                 { value: 2, label: '视频', icon: 'film', searchType: 2, description: '文本搜索视频' }
             ],
             searchMode: Number(localStorage.getItem('workspace-search-mode') || 0),
@@ -45,7 +48,8 @@ const WorkspaceApp = Vue.createApp({
                 image_threshold: Number(localStorage.getItem('form.image_threshold') || 75),
                 img_id: -1,
                 start_time: 0,
-                end_time: 0
+                end_time: 0,
+                include_duplicates: includePreference
             },
             themeMode: localStorage.getItem('workspace-theme') || 'auto',
             timeFilterLabel: '',
@@ -68,6 +72,13 @@ const WorkspaceApp = Vue.createApp({
                 visible: false,
                 item: null,
                 viewer: null
+            },
+            searchImage: {
+                uploading: false,
+                name: '',
+                size: 0,
+                preview: '',
+                error: ''
             },
             selectedIds: [],
             selectionProjectId: null,
@@ -101,6 +112,30 @@ const WorkspaceApp = Vue.createApp({
                 payload: null,
                 remember: false,
                 loading: false
+            },
+            dedup: {
+                loading: false,
+                running: false,
+                jobId: null,
+                status: null,
+                latestReport: null,
+                pollingTimer: null,
+                error: ''
+            },
+            dedupReportDialog: {
+                visible: false,
+                meta: null,
+                report: null
+            },
+            projectDialog: {
+                visible: false,
+                loading: false,
+                error: '',
+                form: {
+                    name: '',
+                    client_name: '',
+                    description: ''
+                }
             }
         };
     },
@@ -273,6 +308,23 @@ const WorkspaceApp = Vue.createApp({
                 return payload.existing_file;
             }
             return null;
+        },
+        dedupStatusText() {
+            if (this.dedup.running && this.dedup.status) {
+                const phase = this.dedup.status.phase || 'processing';
+                const phaseLabel = this.dedupPhaseLabel(phase);
+                const progress = typeof this.dedup.status.progress === 'number'
+                    ? `${Math.round(this.dedup.status.progress * 100)}%`
+                    : '';
+                return `进行中 · ${phaseLabel} ${progress}`.trim();
+            }
+            if (this.dedup.status && this.dedup.status.status === 'failed') {
+                return `失败：${this.dedup.status.error || '未知错误'}`;
+            }
+            if (this.dedup.latestReport && this.dedup.latestReport.completed_at) {
+                return `上次：${this.formatDateTime(this.dedup.latestReport.completed_at)}`;
+            }
+            return '尚未执行去重任务';
         }
     },
 
@@ -288,6 +340,9 @@ const WorkspaceApp = Vue.createApp({
         searchMode(val) {
             localStorage.setItem('workspace-search-mode', val);
             this.form.search_type = this.resolveSearchType(val);
+            if (val !== 1) {
+                this.clearSearchImage();
+            }
         },
         viewMode(val) {
             localStorage.setItem('workspace-view-mode', val);
@@ -323,6 +378,12 @@ const WorkspaceApp = Vue.createApp({
         },
         uploadPreviewFiles() {
             this.syncUploadSelection();
+        },
+        'form.include_duplicates'(val) {
+            if (this.form.library_type === 'permanent') {
+                this.includeDuplicatesPreference = !!val;
+                localStorage.setItem('workspace-include-duplicates', val ? 'true' : 'false');
+            }
         }
     },
 
@@ -335,8 +396,15 @@ const WorkspaceApp = Vue.createApp({
         this.applyTheme();
         this.loadProjects();
         this.loadStatus();
+        this.loadLatestDedupReport();
         this.statusTimer = setInterval(() => this.loadStatus(), 15000);
         this.refreshIcons();
+    },
+    beforeUnmount() {
+        if (this.statusTimer) {
+            clearInterval(this.statusTimer);
+        }
+        this.stopDedupPolling();
     },
     beforeUnmount() {
         if (this.statusTimer) {
@@ -401,9 +469,11 @@ const WorkspaceApp = Vue.createApp({
             if (this.currentLibrary === 'permanent') {
                 this.form.library_type = 'permanent';
                 this.form.project_id = null;
+                this.form.include_duplicates = this.includeDuplicatesPreference;
             } else {
                 this.form.library_type = 'project';
                 this.form.project_id = this.currentLibrary;
+                this.form.include_duplicates = true;
             }
         },
         switchSidebar(type) {
@@ -413,7 +483,9 @@ const WorkspaceApp = Vue.createApp({
             } else if (this.projects.length > 0) {
                 this.currentLibrary = this.projects[0].id;
             } else {
-                this.showToast('warning', '当前没有可用项目，请先在经典界面创建项目');
+                this.showToast('info', '当前没有项目，请先创建一个新项目');
+                this.openProjectDialog();
+                return;
             }
             this.clearSelection();
         },
@@ -432,7 +504,7 @@ const WorkspaceApp = Vue.createApp({
         selectSearchMode(modeValue) {
             const mode = this.searchModes.find((item) => item.value === modeValue);
             if (mode?.disabled) {
-                this.showToast('info', '图片相似搜索将在下一阶段开放，可先使用经典 UI');
+                this.showToast('info', '图片相似搜索将在下一阶段开放，敬请期待');
                 return;
             }
             this.searchMode = modeValue;
@@ -496,15 +568,99 @@ const WorkspaceApp = Vue.createApp({
             this.form.end_time = 0;
             this.timeFilterLabel = '';
         },
+        resetProjectDialogForm() {
+            this.projectDialog.form = {
+                name: '',
+                client_name: '',
+                description: ''
+            };
+            this.projectDialog.error = '';
+        },
+        openProjectDialog() {
+            this.resetProjectDialogForm();
+            this.projectDialog.visible = true;
+            this.$nextTick(() => this.refreshIcons());
+        },
+        closeProjectDialog() {
+            if (this.projectDialog.loading) return;
+            this.projectDialog.visible = false;
+        },
+        async submitProject() {
+            const payload = {
+                name: (this.projectDialog.form.name || '').trim(),
+                client_name: (this.projectDialog.form.client_name || '').trim() || null,
+                description: (this.projectDialog.form.description || '').trim() || null
+            };
+            if (!payload.name) {
+                this.projectDialog.error = '请输入项目名称';
+                return;
+            }
+            this.projectDialog.error = '';
+            this.projectDialog.loading = true;
+            try {
+                const { data } = await axios.post('/api/projects', payload);
+                if (!data?.success || !data.data) {
+                    throw new Error(data?.error || '创建项目失败');
+                }
+                this.projectDialog.visible = false;
+                await this.loadProjects();
+                this.currentLibrary = data.data.id;
+                this.sidebarLibrary = 'project';
+                this.activeTab = 'search';
+                this.showToast('success', '项目已创建');
+            } catch (error) {
+                const message = error?.response?.data?.error || error.message || '创建项目失败';
+                this.projectDialog.error = message;
+            } finally {
+                this.projectDialog.loading = false;
+            }
+        },
+        dedupStageMeta(code) {
+            const dictionary = {
+                reset: { title: '初始化', description: '清空历史去重标记，准备重新扫描。' },
+                init: { title: '初始化', description: '准备去重任务所需的数据。' },
+                checksum: { title: '校验和去重', description: '使用文件校验和识别完全相同的素材。' },
+                phash: { title: '感知哈希去重', description: '根据 pHash 查找画面几乎一致的图片。' },
+                clip: { title: '语义相似去重', description: '利用 CLIP 向量发现语义接近的素材。' },
+                completed: { title: '已完成', description: '去重任务完成，结果已保存。' },
+                failed: { title: '已失败', description: '任务失败，请查看错误信息。' }
+            };
+            if (!code) {
+                return { title: '处理中', description: '正在执行去重任务。' };
+            }
+            return dictionary[code] || {
+                title: code.toUpperCase(),
+                description: '该阶段用于去重扫描。'
+            };
+        },
+        dedupStageTitle(code) {
+            return this.dedupStageMeta(code).title;
+        },
+        dedupStageDescription(code) {
+            return this.dedupStageMeta(code).description;
+        },
+        dedupPhaseLabel(code) {
+            return this.dedupStageMeta(code).title;
+        },
         async search() {
             if (this.isLoading) return;
-            if (!this.form.positive && !this.form.path) {
+            if (this.searchMode !== 1 && !this.form.positive && !this.form.path) {
                 this.showToast('warning', '请输入关键词或限定路径');
                 return;
             }
             if (this.form.library_type === 'project' && !this.form.project_id) {
                 this.showToast('warning', '请选择一个项目后再搜索');
                 return;
+            }
+            if (this.searchMode === 1) {
+                if (this.searchImage.uploading) {
+                    this.showToast('info', '图片正在上传，请稍候');
+                    return;
+                }
+                if (!this.searchImage.name) {
+                    this.showToast('warning', '请选择一张参考图片');
+                    return;
+                }
             }
             this.isLoading = true;
             this.lastSearchError = '';
@@ -516,11 +672,19 @@ const WorkspaceApp = Vue.createApp({
                 top_n: parseInt(this.form.top_n, 10) || 30,
                 search_type: this.resolveSearchType(this.searchMode)
             };
+            await this.performSearch(payload, {
+                successMessage: this.searchMode === 1 ? '以图搜图' : '搜索完成'
+            });
+        },
+        async performSearch(payload, options = {}) {
+            const { successMessage = '搜索完成' } = options;
             try {
                 const { data } = await axios.post('/api/match', payload);
                 if (Array.isArray(data)) {
                     this.files = data.map((item, index) => this.normalizeResult(item, index));
-                    this.showToast('success', `共 ${this.files.length} 条结果`);
+                    if (successMessage) {
+                        this.showToast('success', `${successMessage} · ${this.files.length} 条`);
+                    }
                 } else {
                     this.files = [];
                     this.showToast('warning', '没有找到匹配的素材');
@@ -587,9 +751,6 @@ const WorkspaceApp = Vue.createApp({
             html.dataset.theme = this.themeMode;
             html.style.colorScheme = this.themeMode === 'auto' ? '' : this.themeMode;
         },
-        openClassic() {
-            window.location.href = '/classic';
-        },
         showToast(type, message) {
             this.toast.type = type;
             this.toast.message = message;
@@ -635,23 +796,103 @@ const WorkspaceApp = Vue.createApp({
             if (Number.isNaN(date.getTime())) return ts;
             return date.toLocaleString('zh-CN');
         },
+        triggerSearchImagePick() {
+            if (this.searchImage.uploading) return;
+            if (this.$refs.searchImageInput) {
+                this.$refs.searchImageInput.click();
+            }
+        },
+        async handleSearchImageChange(event) {
+            const files = event?.target?.files;
+            const file = files && files[0];
+            if (!file) return;
+            await this.uploadSearchImage(file);
+            if (event && event.target) {
+                event.target.value = '';
+            }
+        },
+        async uploadSearchImage(file) {
+            if (!file) return;
+            this.searchImage.error = '';
+            const limit = 25 * 1024 * 1024;
+            if (file.size > limit) {
+                this.searchImage.error = '请选择 25MB 以内的图片';
+                return;
+            }
+            const formData = new FormData();
+            formData.append('file', file);
+            this.searchImage.uploading = true;
+            try {
+                await axios.post('/api/upload', formData);
+                this.searchImage.name = file.name;
+                this.searchImage.size = file.size;
+                this.previewSearchImage(file);
+                this.showToast('success', '图片已上传，可进行以图搜图');
+            } catch (error) {
+                const message = error?.response?.data?.error || error?.response?.data || error.message || '上传失败，请稍后重试';
+                this.searchImage.error = message;
+                this.showToast('error', message);
+            } finally {
+                this.searchImage.uploading = false;
+            }
+        },
+        previewSearchImage(file) {
+            if (!(file instanceof Blob)) {
+                this.searchImage.preview = '';
+                return;
+            }
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                this.searchImage.preview = e.target?.result || '';
+            };
+            reader.readAsDataURL(file);
+        },
+        clearSearchImage() {
+            Object.assign(this.searchImage, {
+                uploading: false,
+                name: '',
+                size: 0,
+                preview: '',
+                error: ''
+            });
+            if (this.$refs.searchImageInput) {
+                this.$refs.searchImageInput.value = '';
+            }
+        },
         openDetail(item) {
             this.detailDialog.item = { ...item };
             this.detailDialog.visible = true;
-            this.$nextTick(() => this.refreshIcons());
+            this.$nextTick(() => {
+                this.refreshIcons();
+                this.initDetailViewer();
+            });
         },
         closeDetail() {
             this.detailDialog.visible = false;
             this.detailDialog.item = null;
+            this.destroyDetailViewer();
         },
         initDetailViewer() {
-            if (!window.Viewer || !this.$refs.detailViewer) {
+            if (!this.detailDialog.visible || !window.Viewer || !this.$refs.detailImage) {
                 return;
             }
-            this.destroyDetailViewer();
-            this.detailDialog.viewer = new window.Viewer(this.$refs.detailViewer, {
-                inline: true,
+            if (this.detailDialog.viewer) {
+                this.detailDialog.viewer.update();
+                return;
+            }
+            this.detailDialog.viewer = new window.Viewer(this.$refs.detailImage, {
+                inline: false,
                 navbar: false,
+                title: false,
+                tooltip: false,
+                movable: true,
+                zoomable: true,
+                rotatable: true,
+                scalable: true,
+                transition: false,
+                backdrop: true,
+                fullscreen: true,
+                className: 'workspace-viewer',
                 toolbar: {
                     zoomIn: true,
                     zoomOut: true,
@@ -660,13 +901,16 @@ const WorkspaceApp = Vue.createApp({
                     rotateLeft: true,
                     rotateRight: true,
                     flipHorizontal: true,
-                    flipVertical: true
+                    flipVertical: true,
+                    prev: false,
+                    next: false
                 },
-                tooltip: false,
-                movable: true,
-                rotatable: true,
-                scalable: true,
-                transition: false
+                viewed: () => {
+                    const viewer = this.detailDialog.viewer;
+                    if (viewer) {
+                        viewer.zoomTo(1);
+                    }
+                }
             });
         },
         destroyDetailViewer() {
@@ -674,6 +918,60 @@ const WorkspaceApp = Vue.createApp({
                 this.detailDialog.viewer.destroy();
                 this.detailDialog.viewer = null;
             }
+        },
+        openDetailInNewTab() {
+            if (!this.detailDialog.item) {
+                this.showToast('warning', '没有可查看的素材');
+                return;
+            }
+            const candidate = this.detailDialog.item.raw_url
+                || this.detailDialog.item.url
+                || this.detailDialog.item.thumbnail
+                || '';
+            if (candidate) {
+                window.open(candidate, '_blank', 'noopener');
+                return;
+            }
+            if (this.detailDialog.item.path) {
+                const encoded = encodeURIComponent(this.detailDialog.item.path);
+                window.open(`/api/thumbnail?path=${encoded}&size=1024`, '_blank', 'noopener');
+                return;
+            }
+            this.showToast('warning', '素材缺少可打开的链接');
+        },
+        async searchSimilar(item) {
+            if (this.isLoading) return;
+            if (!item || item.id == null) {
+                this.showToast('info', '该素材暂不支持找相似');
+                return;
+            }
+            const libraryType = item.library_type
+                || (item.project_id ? 'project' : (this.form.library_type || 'permanent'));
+            const projectId = libraryType === 'project'
+                ? (item.project_id || this.form.project_id)
+                : null;
+            this.isLoading = true;
+            this.lastSearchError = '';
+            this.clearSelection();
+            const payload = {
+                positive: '',
+                negative: '',
+                positive_threshold: this.form.positive_threshold,
+                negative_threshold: this.form.negative_threshold,
+                image_threshold: this.form.image_threshold,
+                top_n: parseInt(this.form.top_n, 10) || 30,
+                search_type: 5,
+                img_id: item.id,
+                path: '',
+                start_time: 0,
+                end_time: 0,
+                library_type: libraryType,
+                project_id: projectId,
+                include_duplicates: libraryType === 'permanent'
+                    ? this.includeDuplicatesPreference
+                    : true
+            };
+            await this.performSearch(payload, { successMessage: '相似素材' });
         },
         isProjectResult(item) {
             const libraryType = item.library_type || this.form.library_type || 'permanent';
@@ -1154,6 +1452,111 @@ const WorkspaceApp = Vue.createApp({
             const hh = `${date.getHours()}`.padStart(2, '0');
             const mi = `${date.getMinutes()}`.padStart(2, '0');
             return `${mm}-${dd} ${hh}:${mi}`;
+        },
+        async loadLatestDedupReport() {
+            try {
+                const { data } = await axios.get('/api/dedup/jobs/latest');
+                if (data?.success) {
+                    this.dedup.latestReport = data.data;
+                }
+            } catch (error) {
+                console.error('加载去重报告失败', error);
+            }
+        },
+        async startDedupJob() {
+            if (this.dedup.loading || this.dedup.running) return;
+            if (!window.confirm('将对永久库执行多阶段去重扫描，该过程可能耗时数分钟，确认继续吗？')) {
+                return;
+            }
+            this.dedup.loading = true;
+            this.dedup.error = '';
+            try {
+                const { data } = await axios.post('/api/dedup/jobs', { library_type: 'permanent' });
+                if (data?.success && data.job_id) {
+                    this.dedup.running = true;
+                    this.dedup.jobId = data.job_id;
+                    this.dedup.status = { status: 'running', progress: 0 };
+                    this.showToast('info', '去重任务已启动');
+                    this.pollDedupJob();
+                } else {
+                    throw new Error(data?.error || '启动失败');
+                }
+            } catch (error) {
+                const message = error?.response?.data?.error || error.message || '启动失败';
+                this.dedup.error = message;
+                this.showToast('error', message);
+            } finally {
+                this.dedup.loading = false;
+            }
+        },
+        async pollDedupJob() {
+            if (!this.dedup.jobId) return;
+            try {
+                const { data } = await axios.get(`/api/dedup/jobs/${this.dedup.jobId}`);
+                if (data?.success && data.data) {
+                    this.dedup.status = data.data;
+                    if (['completed', 'failed'].includes(data.data.status)) {
+                        this.dedup.running = false;
+                        this.dedup.jobId = null;
+                        this.stopDedupPolling();
+                        await this.loadStatus();
+                        await this.loadLatestDedupReport();
+                        if (data.data.status === 'completed') {
+                            this.showToast('success', '去重任务完成');
+                        } else {
+                            this.showToast('error', data.data.error || '去重任务失败');
+                        }
+                    } else {
+                        this.dedup.pollingTimer = setTimeout(() => this.pollDedupJob(), 5000);
+                    }
+                } else {
+                    throw new Error(data?.error || '查询失败');
+                }
+            } catch (error) {
+                const message = error?.response?.data?.error || error.message || '任务状态获取失败';
+                this.dedup.error = message;
+                this.showToast('error', message);
+                this.stopDedupPolling();
+            }
+        },
+        stopDedupPolling() {
+            if (this.dedup.pollingTimer) {
+                clearTimeout(this.dedup.pollingTimer);
+                this.dedup.pollingTimer = null;
+            }
+        },
+        openDedupReport(report) {
+            if (!report) {
+                this.showToast('info', '暂无报告');
+                return;
+            }
+            const payload = report.report || report;
+            this.dedupReportDialog.meta = report;
+            this.dedupReportDialog.report = payload;
+            this.dedupReportDialog.visible = true;
+        },
+        closeDedupReport() {
+            this.dedupReportDialog.visible = false;
+            this.dedupReportDialog.meta = null;
+            this.dedupReportDialog.report = null;
+        },
+        formatDateTime(value) {
+            if (!value) return '';
+            const date = new Date(value);
+            if (Number.isNaN(date.getTime())) return value;
+            return date.toLocaleString();
+        },
+        formatBytes(bytes) {
+            if (!Number.isFinite(bytes)) return '0 B';
+            const units = ['B', 'KB', 'MB', 'GB'];
+            let size = bytes;
+            let unit = 0;
+            while (size >= 1024 && unit < units.length - 1) {
+                size /= 1024;
+                unit += 1;
+            }
+            const precision = unit === 0 ? 0 : 1;
+            return `${size.toFixed(precision)} ${units[unit]}`;
         },
         finishUploadWizard() {
             this.resetUploadWizard();
