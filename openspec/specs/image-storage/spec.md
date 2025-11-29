@@ -9,6 +9,7 @@
 #### Scenario: 计算精确宽高比
 - **WHEN** 系统扫描图片时
 - **THEN** 计算 `aspect_ratio = width / height`
+- **AND** 对于 `.3dm` 等容器格式，使用提取出的预览图尺寸进行计算
 - **AND** 精确到小数点后 3 位（如 1.778）
 - **AND** 存储到 `aspect_ratio` 字段
 
@@ -31,8 +32,6 @@
 - **WHEN** 用户查询特定宽高比的图片
 - **THEN** 系统可按 `aspect_ratio_standard` 精确匹配（如"16:9"）
 - **OR** 按 `aspect_ratio` 范围查询（如 1.7 ~ 1.8 之间）
-
----
 
 ### Requirement: 扩展元数据存储
 系统 SHALL 为每张图片存储丰富的元数据，支持多维度筛选和管理。
@@ -217,4 +216,15 @@
 - **WHEN** 调用 `GET /api/dedup/jobs/<id>`
 - **THEN** 返回 `status`, `phase`, `progress`, `duplicates_found`
 - **AND** 若任务失败，包含错误信息与可重试提示
+
+### Requirement: 复杂格式预览图提取
+系统 SHALL 能够从非标准图片格式的容器文件中提取预览图像。
+
+#### Scenario: Rhino 预览图提取
+- **GIVEN** 一个有效的 Rhino (.3dm) 文件
+- **WHEN** 系统处理该文件时
+- **THEN** 尝试读取文件头部的二进制数据
+- **AND** 识别并提取内嵌的 BMP 或 PNG 格式预览图
+- **AND** 如果提取成功，使用该预览图进行后续的特征计算和缩略图生成
+- **AND** 如果提取失败，记录错误并使用默认占位符
 

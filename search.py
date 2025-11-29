@@ -1,5 +1,6 @@
 import base64
 import logging
+import os
 import time
 from functools import lru_cache
 
@@ -14,6 +15,7 @@ from database import (
     get_pexels_video_features,
     get_session_by_target,
     get_db_manager,
+    get_pdf_page_features,
 )
 from models import DatabaseSession, DatabaseSessionPexelsVideo
 from process_assets import match_batch, process_image, process_text
@@ -83,15 +85,48 @@ def search_image_by_feature(
     if session is not None:
         ids, paths, features = get_image_id_path_features_filter_by_path_time(
             session, filter_path, start_time, end_time, exclude_duplicates=exclude_duplicates)
+        pdf_entries = get_pdf_page_features(session, filter_path, start_time, end_time, only_primary=True)
     else:
         with DatabaseSession() as default_session:
             ids, paths, features = get_image_id_path_features_filter_by_path_time(
                 default_session, filter_path, start_time, end_time, exclude_duplicates=exclude_duplicates)
+            pdf_entries = get_pdf_page_features(default_session, filter_path, start_time, end_time, only_primary=True)
 
-    if len(ids) == 0:  # 没有素材，直接返回空
+    combined_bytes = []
+    meta = []
+
+    for id, path, feature_bytes in zip(ids, paths, features):
+        if not feature_bytes:
+            continue
+        combined_bytes.append(feature_bytes)
+        meta.append({
+            "type": "image",
+            "id": int(id) if id is not None else None,
+            "path": path
+        })
+
+    for entry in pdf_entries or []:
+        feat = entry.get("features")
+        if not feat:
+            continue
+        combined_bytes.append(feat)
+        meta.append({
+            "type": "pdf",
+            "id": entry.get("id"),
+            "path": entry.get("source_path"),
+            "page_no": entry.get("page_no"),
+            "page_count": entry.get("page_count"),
+            "pages_truncated": entry.get("pages_truncated"),
+            "thumbnail_path": entry.get("thumbnail_path"),
+            "width": entry.get("width"),
+            "height": entry.get("height"),
+            "file_size": entry.get("file_size"),
+        })
+
+    if len(combined_bytes) == 0:  # 没有素材，直接返回空
         return []
-    features = np.frombuffer(b"".join(features), dtype=np.float32).reshape(len(features), -1)
-    scores = match_batch(positive_feature, negative_feature, features, positive_threshold, negative_threshold)
+    features_np = np.frombuffer(b"".join(combined_bytes), dtype=np.float32).reshape(len(combined_bytes), -1)
+    scores = match_batch(positive_feature, negative_feature, features_np, positive_threshold, negative_threshold)
     return_list = []
 
     # 确定目标库用于URL生成
@@ -113,15 +148,37 @@ def search_image_by_feature(
     else:
         url_target = 'permanent'
 
-    for id, path, score in zip(ids, paths, scores):
+    for item, score in zip(meta, scores):
         if not score:
             continue
-        return_list.append({
-            "id": int(id) if id is not None else None,
-            "url": f"api/get_image/{id}?target={url_target}",
-            "path": path,
-            "score": float(score),
-        })
+        if item.get("type") == "pdf":
+            page_id = item.get("id")
+            return_list.append({
+                "id": page_id,
+                "url": f"api/pdf/page/{page_id}?target={url_target}",
+                "thumbnail": f"api/pdf/page/{page_id}?target={url_target}&size=512",
+                "path": item.get("path"),
+                "doc_path": item.get("path"),
+                "page_no": item.get("page_no"),
+                "page_count": item.get("page_count"),
+                "pages_truncated": item.get("pages_truncated"),
+                "type": "pdf",
+                "filename": os.path.basename(item.get("path") or "") if item.get("path") else "",
+                "width": item.get("width"),
+                "height": item.get("height"),
+                "size": item.get("file_size"),
+                "score": float(score),
+            })
+        else:
+            img_id = item.get("id")
+            path = item.get("path")
+            return_list.append({
+                "id": img_id,
+                "url": f"api/get_image/{img_id}?target={url_target}",
+                "path": path,
+                "type": "image",
+                "score": float(score),
+            })
     return_list = sorted(return_list, key=lambda x: x["score"], reverse=True)
     logger.info("查询使用时间：%.2f" % (time.time() - t0))
     return return_list

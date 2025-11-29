@@ -6,12 +6,28 @@ from typing import Optional, Dict
 from sqlalchemy import asc, create_engine, text, or_, inspect
 from sqlalchemy.orm import Session, sessionmaker
 
-from models import Image, Video, PexelsVideo, Project, ProjectImage, ProjectVideo, BaseModel, BaseModelProject
+from models import Image, Video, PexelsVideo, Project, ProjectImage, ProjectVideo, PDFPage, ProjectPDFPage, BaseModel, BaseModelProject
 
 logger = logging.getLogger(__name__)
 
 # 通用过滤条件：仅返回未被软删除的记录（兼容旧数据 is_deleted 为空的情况）
 NOT_DELETED_IMAGE = or_(Image.is_deleted.is_(False), Image.is_deleted.is_(None))
+NOT_DELETED_PDF_PAGE = or_(PDFPage.is_deleted.is_(False), PDFPage.is_deleted.is_(None))
+
+
+def _pdf_not_deleted(model):
+    return or_(model.is_deleted.is_(False), model.is_deleted.is_(None))
+
+
+def _resolve_pdf_model(session):
+    """根据 session 绑定的数据库选择 PDF 模型。"""
+    try:
+        url = str(session.bind.url)
+    except Exception:
+        url = ""
+    if 'proj_' in url or 'projects' in url:
+        return ProjectPDFPage
+    return PDFPage
 
 
 class ProjectDatabaseManager:
@@ -159,6 +175,8 @@ class ProjectDatabaseManager:
 
         db_url = f'sqlite:///{db_path}'
         engine = self._create_engine_with_wal(db_url)
+        # 确保新表结构存在
+        BaseModelProject.metadata.create_all(bind=engine)
         session_factory = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
         self.project_engines[project_id] = engine
@@ -278,8 +296,11 @@ def get_image_features_by_id(session: Session, image_id: int):
         .first()
     )
     if not features:
-        logger.warning("用数据库的图来进行搜索，但id在数据库中不存在")
-        return None
+        pdf_feature = get_pdf_features_by_id(session, image_id)
+        if not pdf_feature:
+            logger.warning("用数据库的图来进行搜索，但id在数据库中不存在")
+            return None
+        return pdf_feature
     return features[0]
 
 
@@ -476,6 +497,150 @@ def add_pexels_video(session: Session, content_loc: str, duration: int, view_cou
     session.commit()
 
 
+def add_pdf_page(session: Session,
+                 source_path: str,
+                 page_no: int,
+                 page_count: int,
+                 is_primary: bool,
+                 pages_truncated: bool,
+                 modify_time: datetime.datetime,
+                 checksum: str,
+                 features: bytes,
+                 width: int,
+                 height: int,
+                 file_size: int,
+                 thumbnail_path: str):
+    """添加 PDF 页面记录。"""
+    model = _resolve_pdf_model(session)
+    pdf_page = model(
+        source_path=source_path,
+        page_no=page_no,
+        page_count=page_count,
+        is_primary=is_primary,
+        pages_truncated=pages_truncated,
+        modify_time=modify_time,
+        checksum=checksum,
+        features=features,
+        width=width,
+        height=height,
+        file_size=file_size,
+        thumbnail_path=thumbnail_path
+    )
+    session.add(pdf_page)
+    session.commit()
+    return pdf_page
+
+
+def delete_pdf_pages_by_path(session: Session, source_path: str):
+    """删除指定 PDF 文件的所有页面记录。"""
+    model = _resolve_pdf_model(session)
+    session.query(model).filter(model.source_path == source_path).delete()
+    session.commit()
+
+
+def delete_pdf_if_outdated(session: Session, source_path: str, modify_time: datetime.datetime, checksum: str = None) -> bool:
+    """
+    判断 PDF 是否修改，若修改则删除所有页面记录
+    :param session: Session, 数据库 session
+    :param source_path: str, PDF 路径
+    :param modify_time: datetime.datetime, 文件修改时间
+    :param checksum: str, 文件 hash
+    :return: bool, 若文件未修改返回 True
+    """
+    model = _resolve_pdf_model(session)
+    record = session.query(model).filter(model.source_path == source_path).first()
+    if not record:
+        return False
+    # 如果有 checksum，则判断 checksum
+    if checksum and record.checksum:
+        if record.checksum == checksum:
+            logger.debug(f"文件无变更，跳过：{source_path}")
+            return True
+    else:  # 否则判断 modify_time
+        if record.modify_time == modify_time:
+            logger.debug(f"文件无变更，跳过：{source_path}")
+            return True
+    logger.info(f"文件有更新：{source_path}")
+    session.query(model).filter(model.source_path == source_path).delete()
+    session.commit()
+    return False
+
+
+def get_pdf_page_by_id(session: Session, page_id: int):
+    """根据 ID 获取单个 PDF 页面。"""
+    model = _resolve_pdf_model(session)
+    return session.query(model).filter(model.id == page_id).first()
+
+
+def get_pdf_features_by_id(session: Session, page_id: int):
+    """返回指定 PDF 页面的特征。"""
+    model = _resolve_pdf_model(session)
+    record = (
+        session.query(model.features)
+        .filter(model.id == page_id)
+        .filter(_pdf_not_deleted(model))
+        .first()
+    )
+    return record[0] if record else None
+
+
+def get_pdf_page_features(session: Session,
+                          filter_path: str = "",
+                          start_time: int = None,
+                          end_time: int = None,
+                          only_primary: bool = True):
+    """获取 PDF 页面特征及元数据列表。"""
+    model = _resolve_pdf_model(session)
+    query = session.query(
+        model.id,
+        model.source_path,
+        model.features,
+        model.page_no,
+        model.page_count,
+        model.thumbnail_path,
+        model.pages_truncated,
+        model.width,
+        model.height,
+        model.file_size
+    ).filter(model.features.isnot(None)).filter(_pdf_not_deleted(model))
+    if only_primary:
+        query = query.filter(model.is_primary.is_(True))
+    if start_time:
+        query = query.filter(model.modify_time >= datetime.datetime.fromtimestamp(start_time))
+    if end_time:
+        query = query.filter(model.modify_time <= datetime.datetime.fromtimestamp(end_time))
+    if filter_path:
+        query = query.filter(model.source_path.like("%" + filter_path + "%"))
+    rows = query.order_by(model.page_no).all()
+    result = []
+    for row in rows:
+        result.append({
+            "id": row.id,
+            "source_path": row.source_path,
+            "features": row.features,
+            "page_no": row.page_no,
+            "page_count": row.page_count,
+            "thumbnail_path": row.thumbnail_path,
+            "pages_truncated": bool(row.pages_truncated),
+            "width": row.width,
+            "height": row.height,
+            "file_size": row.file_size
+        })
+    return result
+
+
+def get_pdf_pages_by_source(session: Session, source_path: str):
+    """返回指定 PDF 的全部页面元数据。"""
+    model = _resolve_pdf_model(session)
+    return (
+        session.query(model)
+        .filter(model.source_path == source_path)
+        .filter(_pdf_not_deleted(model))
+        .order_by(model.page_no)
+        .all()
+    )
+
+
 def delete_record_if_not_exist(session: Session, assets: set):
     """
     删除不存在于 assets 集合中的图片 / 视频的数据库记录
@@ -489,6 +654,12 @@ def delete_record_if_not_exist(session: Session, assets: set):
         if path not in assets:
             logger.info(f"文件已删除：{path}")
             session.query(Video).filter_by(path=path).delete()
+    # 同步清理已被删除的 PDF 记录
+    pdf_model = _resolve_pdf_model(session)
+    for page in session.query(pdf_model).all():
+        if page.source_path not in assets:
+            logger.info(f"PDF 已删除：{page.source_path}")
+            session.delete(page)
     session.commit()
 
 

@@ -8,6 +8,7 @@ from PIL import Image, ImageOps, ImageDraw
 from pillow_heif import register_heif_opener
 
 from config import LOG_LEVEL
+from utils_image import extract_rhino_preview
 
 logging.basicConfig(level=LOG_LEVEL, format='%(asctime)s %(name)s %(levelname)s %(message)s')
 logger = logging.getLogger(__name__)
@@ -121,7 +122,12 @@ def create_checkerboard(size, block_size=16, color1=(220, 220, 220), color2=(255
 
 
 def resize_image_with_aspect_ratio(image_path, target_size, convert_rgb=False):
-    image = Image.open(image_path)
+    if image_path.lower().endswith('.3dm'):
+        image = extract_rhino_preview(image_path)
+        if image is None:
+            raise IOError(f"Cannot extract preview from {image_path}")
+    else:
+        image = Image.open(image_path)
     image = ImageOps.exif_transpose(image)  # 根据 EXIF 信息自动旋转图像
     if convert_rgb:
         # 如果有透明通道，就添加棋盘格背景

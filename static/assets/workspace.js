@@ -71,7 +71,9 @@ const WorkspaceApp = Vue.createApp({
             detailDialog: {
                 visible: false,
                 item: null,
-                viewer: null
+                viewer: null,
+                pages: [],
+                pagesLoading: false
             },
             searchImage: {
                 uploading: false,
@@ -233,6 +235,12 @@ const WorkspaceApp = Vue.createApp({
                 { label: '匹配度', value: this.formatScore(item.score) },
                 { label: '库类型', value: item.library_type === 'project' ? '项目库' : '永久库' }
             ];
+            if (item.type === 'pdf') {
+                meta.push({ label: '页码', value: item.page_count ? `第 ${item.page_no || 1} / ${item.page_count}` : (item.page_no || 1) });
+                if (item.pages_truncated) {
+                    meta.push({ label: '提示', value: '已按上限截断' });
+                }
+            }
             if (item.project_id) {
                 meta.push({ label: '所属项目', value: item.project_id });
             }
@@ -278,6 +286,9 @@ const WorkspaceApp = Vue.createApp({
             }
             if (this.uploadFilter === 'video') {
                 return this.uploadPreviewFiles.filter((file) => file.type === 'video');
+            }
+            if (this.uploadFilter === 'pdf') {
+                return this.uploadPreviewFiles.filter((file) => file.type === 'pdf');
             }
             return this.uploadPreviewFiles;
         },
@@ -644,12 +655,14 @@ const WorkspaceApp = Vue.createApp({
         },
         async search() {
             if (this.isLoading) return;
-            if (this.searchMode !== 1 && !this.form.positive && !this.form.path) {
-                this.showToast('warning', '请输入关键词或限定路径');
-                return;
-            }
+            const searchType = this.resolveSearchType(this.searchMode);
+            const blankQuery = this.isBlankQuery(searchType);
             if (this.form.library_type === 'project' && !this.form.project_id) {
                 this.showToast('warning', '请选择一个项目后再搜索');
+                return;
+            }
+            if (this.form.library_type === 'permanent' && blankQuery && (searchType === 0 || searchType === 2)) {
+                this.showToast('warning', '永久库数据量较大，请输入关键词或路径后再搜索');
                 return;
             }
             if (this.searchMode === 1) {
@@ -665,16 +678,44 @@ const WorkspaceApp = Vue.createApp({
             this.isLoading = true;
             this.lastSearchError = '';
             this.clearSelection();
+            const requestedTopN = parseInt(this.form.top_n, 10);
+            const positive = this.form.positive.trim();
+            const negative = this.form.negative.trim();
+            let topN = Number.isFinite(requestedTopN) ? requestedTopN : 30;
+            if (blankQuery) {
+                const estimate = this.estimateTotalResults(searchType);
+                topN = estimate || 0; // 0 交给后端返回全部
+            }
             const payload = {
                 ...this.form,
-                positive: this.form.positive.trim(),
-                negative: this.form.negative.trim(),
-                top_n: parseInt(this.form.top_n, 10) || 30,
-                search_type: this.resolveSearchType(this.searchMode)
+                positive,
+                negative,
+                top_n: topN,
+                search_type: searchType
             };
             await this.performSearch(payload, {
-                successMessage: this.searchMode === 1 ? '以图搜图' : '搜索完成'
+                successMessage: blankQuery ? '已加载全部素材' : (this.searchMode === 1 ? '以图搜图' : '搜索完成')
             });
+        },
+        isBlankQuery(searchType) {
+            if (searchType === 1) return false;
+            const hasPath = !!(this.form.path && this.form.path.trim());
+            const hasPositive = !!(this.form.positive && this.form.positive.trim());
+            const hasNegative = !!(this.form.negative && this.form.negative.trim());
+            const hasTimeRange = !!this.form.start_time || !!this.form.end_time;
+            return !(hasPath || hasPositive || hasNegative || hasTimeRange);
+        },
+        estimateTotalResults(searchType) {
+            if (this.form.library_type === 'project') {
+                const projectId = this.form.project_id || this.currentLibrary;
+                const project = this.projects.find((p) => p.id === projectId);
+                if (!project) return 0;
+                return searchType === 2 ? Number(project.video_count || 0) : Number(project.image_count || 0);
+            }
+            if (searchType === 2) {
+                return Number(this.statusSummary.total_videos || 0);
+            }
+            return Number(this.statusSummary.total_images || 0);
         },
         async performSearch(payload, options = {}) {
             const { successMessage = '搜索完成' } = options;
@@ -715,7 +756,12 @@ const WorkspaceApp = Vue.createApp({
                 size: item.size || item.file_size || item.filesize || 0,
                 width: item.width,
                 height: item.height,
-                captured_at: item.captured_at || item.created_at || item.timestamp || null
+                captured_at: item.captured_at || item.created_at || item.timestamp || null,
+                type: item.type || 'image',
+                page_no: item.page_no,
+                page_count: item.page_count,
+                pages_truncated: item.pages_truncated,
+                doc_path: item.doc_path || item.path
             };
         },
         formatScore(score) {
@@ -861,7 +907,15 @@ const WorkspaceApp = Vue.createApp({
         },
         openDetail(item) {
             this.detailDialog.item = { ...item };
+            this.detailDialog.pages = [];
+            this.detailDialog.pagesLoading = false;
             this.detailDialog.visible = true;
+            if (item.type === 'pdf' && this.detailDialog.viewer) {
+                this.destroyDetailViewer();
+            }
+            if (item.type === 'pdf') {
+                this.loadPdfPages(item);
+            }
             this.$nextTick(() => {
                 this.refreshIcons();
                 this.initDetailViewer();
@@ -873,7 +927,54 @@ const WorkspaceApp = Vue.createApp({
             this.destroyDetailViewer();
         },
         initDetailViewer() {
-            if (!this.detailDialog.visible || !window.Viewer || !this.$refs.detailImage) {
+            if (!this.detailDialog.visible || !window.Viewer) {
+                return;
+            }
+
+            // PDF：对包含多页缩略的容器启用 Viewer
+            if (this.detailDialog.item && this.detailDialog.item.type === 'pdf') {
+                const container = this.$refs.pdfPagesContainer;
+                if (!container) return;
+                if (this.detailDialog.viewer) {
+                    this.detailDialog.viewer.update();
+                    return;
+                }
+                this.detailDialog.viewer = new window.Viewer(container, {
+                    inline: false,
+                    navbar: false,
+                    title: false,
+                    tooltip: false,
+                    movable: true,
+                    zoomable: true,
+                    rotatable: true,
+                    scalable: true,
+                    transition: false,
+                    backdrop: true,
+                    fullscreen: true,
+                    className: 'workspace-viewer',
+                    toolbar: {
+                        zoomIn: true,
+                        zoomOut: true,
+                        oneToOne: true,
+                        reset: true,
+                        rotateLeft: true,
+                        rotateRight: true,
+                        flipHorizontal: true,
+                        flipVertical: true,
+                        prev: true,
+                        next: true
+                    },
+                    viewed: () => {
+                        const viewer = this.detailDialog.viewer;
+                        if (viewer) {
+                            viewer.zoomTo(1);
+                        }
+                    }
+                });
+                return;
+            }
+
+            if (!this.$refs.detailImage) {
                 return;
             }
             if (this.detailDialog.viewer) {
@@ -938,6 +1039,48 @@ const WorkspaceApp = Vue.createApp({
                 return;
             }
             this.showToast('warning', '素材缺少可打开的链接');
+        },
+        openOriginalFile(path) {
+            if (!path) {
+                this.showToast('warning', '文件路径不存在');
+                return;
+            }
+            // 使用 file:// 协议打开本地文件（需浏览器/系统支持）
+            const fileUrl = 'file:///' + path.replace(/\\/g, '/');
+            window.open(fileUrl, '_blank', 'noopener');
+        },
+        async loadPdfPages(item) {
+            this.detailDialog.pages = [];
+            this.detailDialog.pagesLoading = true;
+            try {
+                const target = item.library_type === 'project'
+                    ? (item.project_id || this.currentLibrary)
+                    : 'permanent';
+                const { data } = await axios.get('/api/pdf/pages', {
+                    params: {
+                        doc_id: item.id,
+                        target
+                    }
+                });
+                if (data?.pages) {
+                    this.detailDialog.pages = data.pages.map((p) => ({
+                        ...p,
+                        image: p.image || p.thumbnail
+                    }));
+                    this.detailDialog.item.page_count = data.page_count || item.page_count;
+                    this.detailDialog.item.pages_truncated = data.pages_truncated;
+                    this.$nextTick(() => {
+                        this.destroyDetailViewer();
+                        this.initDetailViewer();
+                    });
+                }
+            } catch (error) {
+                console.error('加载 PDF 页面失败', error);
+                const message = error?.response?.data?.error || '加载 PDF 页面失败';
+                this.showToast('error', message);
+            } finally {
+                this.detailDialog.pagesLoading = false;
+            }
         },
         async searchSimilar(item) {
             if (this.isLoading) return;
@@ -1305,6 +1448,7 @@ const WorkspaceApp = Vue.createApp({
                     success: 0,
                     failed: [],
                     duplicates: [],
+                    truncated: [],
                     status: 'running'
                 };
                 this.uploadTaskProgress = 0;
@@ -1342,6 +1486,7 @@ const WorkspaceApp = Vue.createApp({
                     success: data.success || 0,
                     failed: data.failed || [],
                     duplicates: data.duplicates || [],
+                    truncated: data.truncated || [],
                     status: data.status || 'running',
                     remain_time: data.remain_time || 0
                 };
@@ -1438,6 +1583,7 @@ const WorkspaceApp = Vue.createApp({
         },
         uploadFileTypeLabel(file) {
             if (file?.type === 'video') return '视频';
+            if (file?.type === 'pdf') return 'PDF';
             return '图片';
         },
         uploadStatusBadge(file) {

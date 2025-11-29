@@ -39,6 +39,11 @@ If you encounter any issues with the version dependencies in `requirements.txt` 
 
 To use the "Download Video Segments" feature, you need to install `ffmpeg`. If you are using Windows, you can run `install_ffmpeg.bat` to install.
 
+To use the "PDF Indexing" feature, you need to install `poppler`:
+- **Windows**: Download from [poppler-windows](https://github.com/oschwartz10612/poppler-windows/releases) and add the `bin` directory to your system PATH
+- **Linux**: `apt install poppler-utils` or `yum install poppler-utils`
+- **macOS**: `brew install poppler`
+
 ### Deployment via Docker
 
 Supports `amd64` architectures. It includes the default models (`OFA-Sys/chinese-clip-vit-base-patch16`) and supports GPU acceleration.

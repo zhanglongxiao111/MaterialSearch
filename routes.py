@@ -33,12 +33,25 @@ from flask import Flask, abort, redirect, request, send_file, session, url_for, 
 from PIL import Image as PILImage
 
 from config import *
-from database import get_image_path_by_id, is_video_exist, get_db_manager, add_image, add_video
+from database import (
+    get_image_path_by_id,
+    is_video_exist,
+    get_db_manager,
+    add_image,
+    add_video,
+    add_pdf_page,
+    delete_pdf_pages_by_path,
+    get_pdf_pages_by_source,
+    get_pdf_page_by_id,
+)
 from models import DatabaseSession, Image, DedupJob
-from process_assets import match_text_and_image, process_image, process_text, process_images, process_video
+from process_assets import (
+    match_text_and_image, process_image, process_text, process_images, process_video,
+    get_pdf_page_count, render_pdf_pages, resize_pdf_image, save_pdf_page_image, process_pdf_pages
+)
 from scan import scanner  # noqa
 from utils import get_file_hash
-from utils_image import calculate_image_properties
+from utils_image import calculate_image_properties, extract_rhino_preview
 from search import (
     search_image_by_image,
     search_image_by_text_path_time,
@@ -68,6 +81,7 @@ THUMBNAIL_LARGE_FILE_THRESHOLD = 100 * 1024 * 1024
 THUMBNAIL_TIMEOUT_SECONDS = 5
 TASK_RETENTION_SECONDS = 24 * 3600
 MAX_DUPLICATE_WAIT_SECONDS = 300
+PDF_PAGE_CACHE_DIR = os.path.join(TEMP_PATH, 'pdf_pages')
 
 thumbnail_cache_last_cleanup = 0
 default_thumbnail_bytes = {}
@@ -256,7 +270,10 @@ def api_upload():
 @login_required
 def api_match():
     data = request.get_json()
-    top_n = int(data["top_n"])
+    try:
+        top_n = int(data.get("top_n", 0))
+    except (TypeError, ValueError):
+        top_n = 0
     search_type = data["search_type"]
     positive_threshold = data["positive_threshold"]
     negative_threshold = data["negative_threshold"]
@@ -290,6 +307,17 @@ def api_match():
         if not upload_file_path or not os.path.exists(upload_file_path):
             return "你没有上传文件！", 400
     logger.debug(data)
+    blank_query = False
+    if search_type in (0, 2):
+        blank_query = not any([
+            data.get("positive"),
+            data.get("negative"),
+            path,
+            start_time,
+            end_time,
+        ])
+    if library_type == "permanent" and blank_query:
+        return jsonify({"error": "永久库暂不支持空搜索，请输入关键词或路径"}), 400
     if search_type == 0:
         results = search_image_by_text_path_time(data["positive"], data["negative"], positive_threshold, negative_threshold,
                                                  path, start_time, end_time, library_type, project_id, include_duplicates=include_duplicates)
@@ -312,7 +340,10 @@ def api_match():
     else:
         logger.warning(f"search_type不正确：{search_type}")
         abort(400)
-    return jsonify(results[:top_n])
+    if isinstance(results, list):
+        limit = len(results) if top_n <= 0 else top_n
+        return jsonify(results[:limit])
+    return jsonify(results)
 
 
 # ============================================
@@ -706,8 +737,17 @@ def api_get_image_with_target(image_id):
             img.save(img_io, 'JPEG', quality=60)
             img_io.seek(0)
             return send_file(img_io, mimetype='image/jpeg')
-        else:
-            return send_file(image.path)
+        
+        # 如果是 Rhino 3dm 文件，返回提取的预览图
+        if image.path.lower().endswith('.3dm'):
+            img = extract_rhino_preview(image.path)
+            if img:
+                img_io = BytesIO()
+                img.save(img_io, 'JPEG', quality=95)
+                img_io.seek(0)
+                return send_file(img_io, mimetype='image/jpeg')
+        
+        return send_file(image.path)
 
 
 @app.route("/api/get_video/<path:video_path>", methods=["GET"])
@@ -777,7 +817,7 @@ def api_preview_files():
 
         def is_supported_file(filepath: str) -> bool:
             ext = os.path.splitext(filepath)[1].lower()
-            return ext in IMAGE_EXTENSIONS or ext in VIDEO_EXTENSIONS
+            return ext in IMAGE_EXTENSIONS or ext in VIDEO_EXTENSIONS or ext in PDF_EXTENSIONS
 
         result = []
         visited_files = set()
@@ -794,6 +834,8 @@ def api_preview_files():
                         file_type = 'image'
                     elif ext in VIDEO_EXTENSIONS:
                         file_type = 'video'
+                    elif ext in PDF_EXTENSIONS:
+                        file_type = 'pdf'
                     else:
                         return None
 
@@ -801,6 +843,12 @@ def api_preview_files():
                     mtime = int(os.path.getmtime(filepath))
 
                     existing = session.query(Image).filter(Image.path == filepath).first()
+                    pdf_existing = None
+                    if not existing and file_type == 'pdf':
+                        try:
+                            pdf_existing = get_pdf_pages_by_source(session, filepath)
+                        except Exception:
+                            pdf_existing = None
 
                     return {
                         'path': filepath,
@@ -809,8 +857,10 @@ def api_preview_files():
                         'type': file_type,
                         'ext': ext,
                         'mtime': mtime,
-                        'is_indexed': existing is not None,
-                        'phash': existing.phash if existing else None
+                        'is_indexed': existing is not None or (pdf_existing is not None and len(pdf_existing) > 0),
+                        'phash': existing.phash if existing else None,
+                        'thumbnailUrl': f"/api/thumbnail?path={quote(filepath, safe='')}&size=96&page=1" if file_type == 'pdf' else None,
+                        'page_count': get_pdf_page_count(filepath) if file_type == 'pdf' else None
                     }
 
                 except Exception as err:
@@ -878,12 +928,18 @@ def api_thumbnail():
         size = int(request.args.get('size', 128))
         if size <= 0:
             size = 128
+        try:
+            page = int(request.args.get('page', 1))
+        except (TypeError, ValueError):
+            page = 1
+        if page < 1:
+            page = 1
 
         os.makedirs(THUMBNAIL_CACHE_DIR, exist_ok=True)
         cleanup_thumbnail_cache(THUMBNAIL_CACHE_DIR)
 
         mtime = os.path.getmtime(file_path)
-        cache_key = hashlib.md5(f"{file_path}_{mtime}_{size}".encode('utf-8')).hexdigest()
+        cache_key = hashlib.md5(f"{file_path}_{mtime}_{size}_{page}".encode('utf-8')).hexdigest()
         cache_path = os.path.join(THUMBNAIL_CACHE_DIR, f"{cache_key}.jpg")
 
         if os.path.exists(cache_path):
@@ -917,10 +973,13 @@ def api_thumbnail():
                     from pdf2image import convert_from_path
                 except ImportError:
                     raise RuntimeError("缺少 pdf2image 依赖")
-                images = convert_from_path(file_path, first_page=1, last_page=1, size=(size, size))
+                kwargs = {"first_page": page, "last_page": page, "size": (size * 2, size * 2)}
+                if PDF_POPPLER_PATH:
+                    kwargs["poppler_path"] = PDF_POPPLER_PATH
+                images = convert_from_path(file_path, **kwargs)
                 if not images:
                     raise RuntimeError("无法渲染 PDF 页面")
-                img = images[0]
+                img = images[0].convert('RGB')
                 img.thumbnail((size, size), PILImage.Resampling.LANCZOS)
                 return img
             raise ValueError("不支持的文件类型")
@@ -940,6 +999,8 @@ def api_thumbnail():
 
     except RuntimeError as runtime_err:
         logger.error(f"缩略图生成失败: {runtime_err}")
+        if "pdf2image" in str(runtime_err):
+            return serve_default_thumbnail(size)
         return jsonify({"error": str(runtime_err)}), 500
     except Exception as e:
         logger.error(f"缩略图生成失败: {e}", exc_info=True)
@@ -979,6 +1040,7 @@ def api_batch_index():
             'success': 0,
             'failed': [],
             'duplicates': [],
+            'truncated': [],
             'current_file': '',
             'status': 'running',
             'cancelled': False,
@@ -1212,6 +1274,57 @@ def process_batch_index(task_id, files, target, duplicate_strategy):
                     )
 
                     task['success'] += 1
+                elif ext in PDF_EXTENSIONS:
+                    try:
+                        delete_pdf_pages_by_path(db_session, file_path)
+                        saved_pages = 0
+                        page_count = None
+                        pages_truncated = False
+                        
+                        for page_result in process_pdf_pages(file_path):
+                            page_count = page_result['page_count']
+                            pages_truncated = page_result['pages_truncated']
+                            
+                            if page_result['error']:
+                                task['failed'].append({
+                                    'path': f"{file_path}#p{page_result['page_no']}",
+                                    'error': page_result['error']
+                                })
+                                continue
+                            
+                            add_pdf_page(
+                                db_session,
+                                source_path=file_path,
+                                page_no=page_result['page_no'],
+                                page_count=page_result['page_count'],
+                                is_primary=page_result['is_primary'],
+                                pages_truncated=page_result['pages_truncated'],
+                                modify_time=mtime,
+                                checksum=checksum,
+                                features=page_result['feature'].tobytes(),
+                                width=page_result['width'],
+                                height=page_result['height'],
+                                file_size=os.path.getsize(file_path),
+                                thumbnail_path=page_result['thumbnail_path']
+                            )
+                            saved_pages += 1
+
+                        if pages_truncated and page_count:
+                            task['truncated'].append({'path': file_path, 'kept_pages': saved_pages, 'page_count': page_count})
+                        if saved_pages:
+                            task['success'] += 1
+                        else:
+                            task['failed'].append({'path': file_path, 'error': 'PDF 特征提取失败'})
+                            
+                    except TimeoutError as timeout_err:
+                        task['failed'].append({'path': file_path, 'error': str(timeout_err)})
+                        continue
+                    except RuntimeError as dep_err:
+                        task['failed'].append({'path': file_path, 'error': str(dep_err)})
+                        continue
+                    except Exception as pdf_err:
+                        task['failed'].append({'path': file_path, 'error': f'PDF 处理失败: {pdf_err}'})
+                        continue
 
                 else:
                     task['failed'].append({'path': file_path, 'error': f'不支持的文件类型: {ext}'})
@@ -1226,6 +1339,11 @@ def process_batch_index(task_id, files, target, duplicate_strategy):
         task['end_time'] = time.time()
         task['duration'] = task['end_time'] - task['start_time']
         task['updated_at'] = time.time()
+
+        try:
+            clean_cache()
+        except Exception as cache_err:
+            logger.warning(f"清理搜索缓存失败: {cache_err}")
 
         update_project_stats_safe()
 
@@ -1400,6 +1518,7 @@ def api_batch_index_status(task_id):
             'current_file': task['current_file'],
             'failed': task['failed'],
             'duplicates': task['duplicates'],
+            'truncated': task.get('truncated', []),
             'status': task['status'],
             'progress': progress,
             'remain_time': remain_time,
@@ -1444,6 +1563,134 @@ def api_batch_index_cancel(task_id):
     except Exception as e:
         logger.error(f"取消任务失败: {e}", exc_info=True)
         return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/pdf/page/<int:page_id>", methods=["GET"])
+@login_required
+def api_pdf_page(page_id: int):
+    """返回指定 PDF 页面的图片，可通过 size/thumbnail 控制输出尺寸。"""
+    target = request.args.get('target', 'permanent')
+    try:
+        size = int(request.args.get('size', 0))
+    except (TypeError, ValueError):
+        size = 0
+    thumb_param = request.args.get('thumbnail')
+    if thumb_param is None:
+        is_thumb = size > 0
+    else:
+        is_thumb = str(thumb_param).lower() in {"1", "true", "yes", "on"}
+    cache_size = size if size > 0 else 512
+
+    if target == 'permanent':
+        session = get_db_manager().get_permanent_session()
+    elif target.startswith('proj_'):
+        session = get_db_manager().get_project_session(target)
+    else:
+        return jsonify({"error": f"无效的目标库: {target}"}), 400
+
+    with session:
+        page = get_pdf_page_by_id(session, page_id)
+        if not page:
+            return jsonify({"error": "页面不存在"}), 404
+
+        image_path = page.thumbnail_path
+        if not image_path or not os.path.exists(image_path):
+            try:
+                images = render_pdf_pages(page.source_path, page.page_no, page.page_no, timeout=PDF_RENDER_TIMEOUT)
+            except Exception as exc:
+                logger.error(f"渲染 PDF 页面失败 {page.source_path}: {exc}")
+                return jsonify({"error": f"渲染失败: {exc}"}), 500
+            if not images:
+                return jsonify({"error": "无法渲染 PDF 页面"}), 500
+            rendered = images[0].convert('RGB')
+            rendered = resize_pdf_image(rendered, PDF_RENDER_WIDTH)
+            image_path = save_pdf_page_image(
+                rendered,
+                page.source_path,
+                page.page_no,
+                page.modify_time.timestamp() if page.modify_time else time.time(),
+                PDF_PAGE_CACHE_DIR
+            )
+            page.thumbnail_path = image_path
+            session.commit()
+
+        if not is_thumb:
+            return send_file(image_path, mimetype='image/jpeg')
+
+        cache_key = hashlib.md5(f"pdf_page_{page_id}_{cache_size}".encode('utf-8')).hexdigest()
+        cache_path = os.path.join(THUMBNAIL_CACHE_DIR, f"{cache_key}.jpg")
+        if os.path.exists(cache_path) and (time.time() - os.path.getmtime(cache_path) < THUMBNAIL_CACHE_TTL):
+            return send_file(cache_path, mimetype='image/jpeg')
+
+        try:
+            img = PILImage.open(image_path).convert('RGB')
+            img.thumbnail((cache_size, cache_size), PILImage.Resampling.LANCZOS)
+            os.makedirs(THUMBNAIL_CACHE_DIR, exist_ok=True)
+            img.save(cache_path, 'JPEG', quality=85)
+            return send_file(cache_path, mimetype='image/jpeg')
+        except Exception as exc:
+            logger.warning(f"生成 PDF 页面缩略图失败 {image_path}: {exc}")
+            return serve_default_thumbnail(cache_size)
+
+
+@app.route("/api/pdf/pages", methods=["GET"])
+@login_required
+def api_pdf_pages():
+    """返回指定 PDF 的全部页面元数据及缩略图。"""
+    target = request.args.get('target', 'permanent')
+    raw_path = request.args.get('path')
+    doc_id = request.args.get('doc_id')
+
+    if target == 'permanent':
+        session = get_db_manager().get_permanent_session()
+    elif target.startswith('proj_'):
+        session = get_db_manager().get_project_session(target)
+    else:
+        return jsonify({"error": f"无效的目标库: {target}"}), 400
+
+    source_path = None
+    with session:
+        if doc_id:
+            try:
+                page = get_pdf_page_by_id(session, int(doc_id))
+            except ValueError:
+                return jsonify({"error": "doc_id 无效"}), 400
+            if not page:
+                return jsonify({"error": "页面不存在"}), 404
+            source_path = page.source_path
+        elif raw_path:
+            source_path = unquote(raw_path)
+
+        if not source_path:
+            return jsonify({"error": "缺少 path 或 doc_id"}), 400
+
+        pages = get_pdf_pages_by_source(session, source_path)
+
+    if pages is None:
+        return jsonify({"error": "未找到页面"}), 404
+
+    page_count = pages[0].page_count if pages else 0
+    pages_truncated = any(getattr(p, 'pages_truncated', False) for p in pages)
+    payload = []
+    for p in pages:
+        thumb_url = f"/api/pdf/page/{p.id}?target={target}&size=512"
+        full_url = f"/api/pdf/page/{p.id}?target={target}"
+        payload.append({
+            "id": p.id,
+            "page_no": p.page_no,
+            "page_count": p.page_count,
+            "thumbnail": thumb_url,
+            "image": full_url,
+            "path": p.source_path,
+            "pages_truncated": bool(getattr(p, 'pages_truncated', False))
+        })
+
+    return jsonify({
+        "path": source_path,
+        "page_count": page_count or len(pages),
+        "pages_truncated": pages_truncated,
+        "pages": payload
+    })
 
 
 # 执行加密路由代码（在新路由定义之后，避免被覆盖）

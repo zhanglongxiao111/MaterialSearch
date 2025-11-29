@@ -12,7 +12,7 @@ import re
 from sqlalchemy.orm import Session
 from sqlalchemy import desc
 
-from models import Project, ProjectImage, ProjectVideo
+from models import Project, ProjectImage, ProjectVideo, ProjectPDFPage
 from database import get_db_manager
 
 logger = logging.getLogger(__name__)
@@ -320,6 +320,13 @@ class ProjectManager:
                         ProjectVideo.is_deleted == False
                     ).count()
 
+                    # PDF 计入素材数量（按文档：只统计首页 is_primary）
+                    pdf_docs = session_proj.query(ProjectPDFPage.file_size).filter(
+                        ProjectPDFPage.is_deleted == False,
+                        ProjectPDFPage.is_primary == True
+                    ).all()
+                    image_count += len(pdf_docs)
+
                     # 计算总大小
                     total_size = 0
                     images = session_proj.query(ProjectImage.file_size).filter(
@@ -333,6 +340,9 @@ class ProjectManager:
                         ProjectVideo.file_size.isnot(None)
                     ).all()
                     total_size += sum(vid.file_size or 0 for vid in videos)
+
+                    # PDF 尺寸只统计一次（按文档）
+                    total_size += sum(pdf.file_size or 0 for pdf in pdf_docs)
 
                 finally:
                     session_proj.close()
@@ -393,7 +403,7 @@ class ProjectManager:
 
     def delete_project_images(self, project_id: str, image_ids: List[int]) -> Dict:
         """
-        删除项目库中的图片记录（仅标记数据库，不删除源文件）
+        删除项目库中的图片/PDF记录（仅标记数据库，不删除源文件）
 
         Args:
             project_id: 项目 ID
@@ -418,8 +428,14 @@ class ProjectManager:
             raise
 
         try:
+            # 图片
             images = project_session.query(ProjectImage).filter(
                 ProjectImage.id.in_(image_ids)
+            ).all()
+
+            # PDF 页面（按首页计一条素材；这里对所有选中页做软删）
+            pdf_pages = project_session.query(ProjectPDFPage).filter(
+                ProjectPDFPage.id.in_(image_ids)
             ).all()
 
             found_ids = set()
@@ -431,6 +447,15 @@ class ProjectManager:
 
                 image.is_deleted = True
                 image.deleted_time = now
+                deleted_count += 1
+
+            for page in pdf_pages:
+                found_ids.add(page.id)
+                if page.is_deleted:
+                    already_deleted_count += 1
+                    continue
+                page.is_deleted = True
+                page.deleted_time = now
                 deleted_count += 1
 
             # 未找到的 ID 视为缺失

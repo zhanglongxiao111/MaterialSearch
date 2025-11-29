@@ -137,6 +137,26 @@ class Video(BaseModel):
     deleted_time = Column(DateTime)  # 删除时间
 
 
+class PDFPage(BaseModel):
+    """PDF 页面模型 - 以页面为粒度参与检索。"""
+    __tablename__ = "pdf_page"
+    id = Column(Integer, primary_key=True, index=True)
+    source_path = Column(String(4096), index=True)  # 原始 PDF 路径
+    page_no = Column(Integer, index=True)  # 页码（从 1 开始）
+    page_count = Column(Integer)  # 文档总页数
+    is_primary = Column(Boolean, default=False, index=True)  # 是否首页
+    pages_truncated = Column(Boolean, default=False)  # 是否因上限截断
+    modify_time = Column(DateTime, index=True)  # 文件修改时间
+    checksum = Column(String(40), index=True)  # 文件SHA1
+    features = Column(BINARY)  # 页面特征
+    width = Column(Integer)  # 渲染后宽度
+    height = Column(Integer)  # 渲染后高度
+    file_size = Column(Integer)  # PDF 文件大小（字节）
+    thumbnail_path = Column(String(4096))  # 渲染后的页面图片路径
+    is_deleted = Column(Boolean, default=False, index=True)  # 软删除标记
+    deleted_time = Column(DateTime)
+
+
 class PexelsVideo(BaseModelPexelsVideo):
     __tablename__ = "PexelsVideo"
     id = Column(Integer, primary_key=True, index=True)
@@ -309,6 +329,26 @@ class ProjectVideo(BaseModelProject):
     archived = Column(Boolean, default=False, index=True)
     archived_to_id = Column(Integer)
     archived_time = Column(DateTime)
+
+
+class ProjectPDFPage(BaseModelProject):
+    """项目 PDF 页面模型"""
+    __tablename__ = "pdf_page"
+    id = Column(Integer, primary_key=True, index=True)
+    source_path = Column(String(4096), index=True)
+    page_no = Column(Integer, index=True)
+    page_count = Column(Integer)
+    is_primary = Column(Boolean, default=False, index=True)
+    pages_truncated = Column(Boolean, default=False)
+    modify_time = Column(DateTime, index=True)
+    checksum = Column(String(40), index=True)
+    features = Column(BINARY)
+    width = Column(Integer)
+    height = Column(Integer)
+    file_size = Column(Integer)
+    thumbnail_path = Column(String(4096))
+    is_deleted = Column(Boolean, default=False, index=True)
+    deleted_time = Column(DateTime)
 
 
 class DedupJob(BaseModel):

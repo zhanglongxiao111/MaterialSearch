@@ -1,5 +1,6 @@
 import datetime
 import logging
+import os
 import pickle
 import time
 from pathlib import Path
@@ -12,13 +13,16 @@ from database import (
     delete_record_if_not_exist,
     delete_image_if_outdated,
     delete_video_if_outdated,
+    delete_pdf_if_outdated,
     add_video,
     add_image,
     get_session_by_target,
     get_db_manager,
+    add_pdf_page,
+    delete_pdf_pages_by_path,
 )
 from models import create_tables, DatabaseSession
-from process_assets import process_images, process_video
+from process_assets import process_images, process_video, process_image, process_pdf_pages
 from search import clean_cache
 from utils import get_file_hash
 from utils_image import calculate_image_properties
@@ -52,7 +56,7 @@ class Scanner:
         # 处理跳过路径
         self.skip_paths = [Path(i) for i in SKIP_PATH if i]
         self.ignore_keywords = [i for i in IGNORE_STRINGS if i]
-        self.extensions = IMAGE_EXTENSIONS + VIDEO_EXTENSIONS
+        self.extensions = IMAGE_EXTENSIONS + VIDEO_EXTENSIONS + PDF_EXTENSIONS
 
     def init(self):
         create_tables()
@@ -209,6 +213,49 @@ class Scanner:
             del self.assets[path]
         self.total_images = get_image_count(session)
 
+    def handle_pdf(self, session, file_path, modify_time, checksum):
+        """处理单个 PDF 文件：渲染页面、提取特征、写入数据库"""
+        try:
+            # 删除旧记录
+            delete_pdf_pages_by_path(session, file_path)
+            
+            saved_pages = 0
+            file_size = os.path.getsize(file_path)
+            
+            for page_result in process_pdf_pages(file_path):
+                if page_result['error']:
+                    self.logger.warning(f"PDF 页面处理失败: {file_path}#p{page_result['page_no']}: {page_result['error']}")
+                    continue
+                
+                add_pdf_page(
+                    session,
+                    source_path=file_path,
+                    page_no=page_result['page_no'],
+                    page_count=page_result['page_count'],
+                    is_primary=page_result['is_primary'],
+                    pages_truncated=page_result['pages_truncated'],
+                    modify_time=modify_time,
+                    checksum=checksum,
+                    features=page_result['feature'].tobytes(),
+                    width=page_result['width'],
+                    height=page_result['height'],
+                    file_size=file_size,
+                    thumbnail_path=page_result['thumbnail_path']
+                )
+                saved_pages += 1
+            
+            if saved_pages:
+                self.logger.info(f"已索引 PDF: {file_path} ({saved_pages} 页)")
+            else:
+                self.logger.warning(f"PDF 索引失败（无有效页面）: {file_path}")
+                
+        except RuntimeError as dep_err:
+            self.logger.warning(f"缺少 PDF 依赖，跳过: {file_path} - {dep_err}")
+        except TimeoutError as timeout_err:
+            self.logger.error(f"PDF 渲染超时: {file_path} - {timeout_err}")
+        except Exception as exc:
+            self.logger.error(f"处理 PDF 失败 {file_path}: {exc}")
+
     def scan(self, auto=False, target='permanent', scan_paths=None):
         """
         扫描资源。如果存在assets.pickle，则直接读取并开始扫描。如果不存在，则先读取所有文件路径，并写入assets.pickle，然后开始扫描。
@@ -255,6 +302,11 @@ class Scanner:
                             if not_modified:
                                 del self.assets[path]
                                 continue
+                        elif path.lower().endswith(PDF_EXTENSIONS):  # PDF
+                            not_modified = delete_pdf_if_outdated(session, path, modify_time)
+                            if not_modified:
+                                del self.assets[path]
+                                continue
                 # 扫描文件
                 self.scanning_files = len(self.assets)
                 image_batch_dict = {}  # 批量处理文件的字典，用字典方便某个图片有问题的时候的处理
@@ -292,6 +344,12 @@ class Scanner:
                         add_video(session, path, modify_time, checksum, process_video(path))
                         self.total_video_frames = get_video_frame_count(session)
                         self.total_videos = get_video_count(session)
+                    elif path.lower().endswith(PDF_EXTENSIONS):  # PDF
+                        not_modified = delete_pdf_if_outdated(session, path, modify_time, checksum)
+                        if not_modified:
+                            del self.assets[path]
+                            continue
+                        self.handle_pdf(session, path, modify_time, checksum)
                     del self.assets[path]
                 if len(image_batch_dict) != 0:  # 最后如果图片数量没达到SCAN_PROCESS_BATCH_SIZE，也进行一次处理
                     self.handle_image_batch(session, image_batch_dict)

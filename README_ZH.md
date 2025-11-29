@@ -60,6 +60,11 @@ B站视频教程：[点击这里，求三连支持](https://www.bilibili.com/vid
 
 如果想使用"下载视频片段"的功能，需要安装`ffmpeg`。Windows系统可以运行`install_ffmpeg.bat`进行安装。
 
+如果想使用"PDF索引"功能，需要安装`poppler`：
+- **Windows**: 从 [poppler-windows](https://github.com/oschwartz10612/poppler-windows/releases) 下载并将 `bin` 目录添加到系统 PATH
+- **Linux**: `apt install poppler-utils` 或 `yum install poppler-utils`
+- **macOS**: `brew install poppler`
+
 ### 通过Docker部署
 
 支持`amd64`，打包了默认模型（`OFA-Sys/chinese-clip-vit-base-patch16`）并且支持GPU。

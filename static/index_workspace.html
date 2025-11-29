@@ -358,11 +358,17 @@
                                     <input type="checkbox" :checked="isSelected(item)" @change.stop="toggleSelection(item)">
                                 </label>
                             </div>
-                            <div class="result-thumb" @click="openDetail(item)"><img :src="resultImage(item)" :alt="formatName(item)" loading="lazy"></div>
+                            <div class="result-thumb" style="position: relative;" @click="openDetail(item)">
+                                <div class="material-chip" v-if="item.type==='pdf'" style="position:absolute;top:10px;left:10px;background:rgba(0,0,0,0.55);color:#fff;">
+                                    PDF · {{ item.page_count || '多页' }}
+                                </div>
+                                <img :src="resultImage(item)" :alt="formatName(item)" loading="lazy">
+                            </div>
                             <div class="result-meta">
                                 <span class="text-[11px] text-slate-500">{{ formatSource(item) }}</span>
                                 <span class="font-medium truncate cursor-pointer" @click="openDetail(item)">{{ formatName(item) }}</span>
                                 <span class="text-[11px]">匹配度 {{ formatScore(item.score) }}</span>
+                                <span class="text-[11px]" v-if="item.type==='pdf'">PDF · {{ item.page_count || '多页' }}</span>
                                 <span class="text-[11px] text-slate-500 truncate">{{ item.path }}</span>
                             </div>
                             <div class="result-actions">
@@ -381,11 +387,17 @@
                                     <input type="checkbox" :checked="isSelected(item)" @change.stop="toggleSelection(item)">
                                 </label>
                             </div>
-                            <div class="result-thumb" @click="openDetail(item)"><img :src="resultImage(item)" :alt="formatName(item)"></div>
+                            <div class="result-thumb" style="position: relative;" @click="openDetail(item)">
+                                <div class="material-chip" v-if="item.type==='pdf'" style="position:absolute;top:10px;left:10px;background:rgba(0,0,0,0.55);color:#fff;">
+                                    PDF · {{ item.page_count || '多页' }}
+                                </div>
+                                <img :src="resultImage(item)" :alt="formatName(item)">
+                            </div>
                             <div class="result-meta">
                                 <span class="text-[11px] text-slate-500">{{ formatSource(item) }}</span>
                                 <span class="font-medium truncate cursor-pointer" @click="openDetail(item)">{{ formatName(item) }}</span>
                                 <span class="text-[11px]">匹配度 {{ formatScore(item.score) }}</span>
+                                <span class="text-[11px]" v-if="item.type==='pdf'">PDF · {{ item.page_count || '多页' }}</span>
                             </div>
                             <div class="result-actions">
                                 <button class="btn-inline" @click.stop="copyPath(item.path)"><i data-lucide="copy"></i>复制</button>
@@ -485,6 +497,7 @@
                             <button class="pill" :class="{active: uploadFilter==='all'}" @click="setUploadFilter('all')">全部</button>
                             <button class="pill" :class="{active: uploadFilter==='image'}" @click="setUploadFilter('image')">图片</button>
                             <button class="pill" :class="{active: uploadFilter==='video'}" @click="setUploadFilter('video')">视频</button>
+                            <button class="pill" :class="{active: uploadFilter==='pdf'}" @click="setUploadFilter('pdf')">PDF</button>
                         </div>
                     </div>
                     <div class="upload-list" v-if="filteredUploadFiles.length">
@@ -561,6 +574,15 @@
                                 </li>
                             </ul>
                         </div>
+                        <div class="detail-panel" v-if="(uploadTaskInfo.truncated || []).length">
+                            <h4>截断的 PDF</h4>
+                            <ul>
+                                <li v-for="item in uploadTaskInfo.truncated" :key="'trunc-run-' + item.path">
+                                    <span class="path">{{ item.path }}</span>
+                                    <span class="hint">保留 {{ item.kept_pages || '部分' }} / {{ item.page_count || '未知' }} 页</span>
+                                </li>
+                            </ul>
+                        </div>
                     </div>
                 </div>
 
@@ -569,7 +591,7 @@
                         <i :data-lucide="(uploadTaskInfo.failed || []).length ? 'alert-triangle' : 'check-circle'"></i>
                         <div>
                             <div class="title">{{ (uploadTaskInfo.failed || []).length ? '导入完成（部分失败）' : '导入完成' }}</div>
-                            <div class="desc">成功 {{ uploadTaskInfo.success || 0 }} 项 · 失败 {{ (uploadTaskInfo.failed || []).length }} 项 · 重复 {{ (uploadTaskInfo.duplicates || []).length }} 项</div>
+                            <div class="desc">成功 {{ uploadTaskInfo.success || 0 }} 项 · 失败 {{ (uploadTaskInfo.failed || []).length }} 项 · 重复 {{ (uploadTaskInfo.duplicates || []).length }} 项 · 截断 {{ (uploadTaskInfo.truncated || []).length }} 项</div>
                         </div>
                     </div>
                     <div class="upload-summary-grid">
@@ -584,6 +606,10 @@
                         <div class="summary-pill">
                             <span>重复处理</span>
                             <strong>{{ (uploadTaskInfo.duplicates || []).length }}</strong>
+                        </div>
+                        <div class="summary-pill">
+                            <span>截断</span>
+                            <strong>{{ (uploadTaskInfo.truncated || []).length }}</strong>
                         </div>
                     </div>
                     <div class="upload-detail-panels">
@@ -603,6 +629,15 @@
                                     <span class="path">{{ item.path }}</span>
                                     <span class="hint">→ {{ item.existing_path }}</span>
                                     <span class="status">{{ item.action }}</span>
+                                </li>
+                            </ul>
+                        </div>
+                        <div class="detail-panel" v-if="(uploadTaskInfo.truncated || []).length">
+                            <h4>截断的 PDF</h4>
+                            <ul>
+                                <li v-for="item in uploadTaskInfo.truncated" :key="'trunc-' + item.path">
+                                    <span class="path">{{ item.path }}</span>
+                                    <span class="hint">保留 {{ item.kept_pages || '部分' }} / {{ item.page_count || '未知' }} 页</span>
                                 </li>
                             </ul>
                         </div>
@@ -627,8 +662,18 @@
         <div class="workspace-detail-panel">
             <button class="detail-close" @click="closeDetail">×</button>
                 <div class="detail-media">
-                    <div class="detail-viewer">
+                    <div class="detail-viewer" v-if="detailDialog.item?.type!=='pdf'">
                         <img :src="detailImageSrc" :alt="detailItemName" ref="detailImage" />
+                    </div>
+                    <div v-else class="w-full h-full overflow-auto space-y-2" ref="pdfPagesContainer">
+                        <div class="text-[12px] text-slate-500" v-if="detailDialog.pagesLoading">加载 PDF 页面...</div>
+                        <div class="text-[12px] text-rose-500" v-if="detailDialog.item?.pages_truncated">已按上限截断，仅展示部分页面</div>
+                        <div class="grid gap-3" style="grid-template-columns: repeat(auto-fit,minmax(220px,1fr));" v-if="detailDialog.pages.length">
+                            <div class="border rounded-lg p-2 bg-white/40" v-for="page in detailDialog.pages" :key="page.id">
+                                <div class="text-[11px] text-slate-500 mb-1">第 {{ page.page_no }} 页</div>
+                                <img :src="page.image || page.thumbnail" class="w-full rounded-md" loading="lazy" />
+                            </div>
+                        </div>
                     </div>
                 </div>
             <div class="detail-info" v-if="detailDialog.item">
@@ -648,6 +693,7 @@
                     <button class="btn-inline" @click="copyPath(detailDialog.item.path)"><i data-lucide="copy"></i>复制路径</button>
                     <button class="btn-inline" @click="searchSimilar(detailDialog.item)" :disabled="!(detailDialog.item && detailDialog.item.id)"><i data-lucide="sparkles"></i>找相似</button>
                     <button class="btn-inline" @click="openDetailInNewTab"><i data-lucide="external-link"></i>新窗口查看</button>
+                    <button class="btn-inline" v-if="detailDialog.item?.type==='pdf'" @click="openOriginalFile(detailDialog.item.path)"><i data-lucide="file-text"></i>打开原文件</button>
                     <button class="btn-inline" @click="closeDetail"><i data-lucide="x"></i>关闭</button>
                 </div>
             </div>

@@ -410,11 +410,6 @@ const app = Vue.createApp({
             }
             this.upload.clearFiles();
             that.form.search_type = search_type;
-            if ((search_type === 0 || search_type === 2) && that.form.positive == "" && that.form.path == "") {
-                ElementPlus.ElMessage.error(that.$t('messages.searchContentEmpty'));
-                loadingInstance.close();
-                return;
-            }
             if ((search_type === 4 || search_type == 9) && that.form.positive == "") {
                 ElementPlus.ElMessage.error(that.$t('messages.textContentEmpty'));
                 loadingInstance.close();
@@ -428,12 +423,37 @@ const app = Vue.createApp({
                 that.form.end_time = null;
             }
 
-            // 设置搜索范围
-            that.form.library_type = that.searchScope;
-            that.form.project_id = (that.searchScope === 'project') ? that.currentLibrary : null;
-            that.form.include_duplicates = that.form.library_type === 'permanent' ? that.includeDuplicatesPreference : true;
+            const libraryType = that.searchScope;
+            const projectId = (that.searchScope === 'project') ? that.currentLibrary : null;
+            that.form.library_type = libraryType;
+            that.form.project_id = projectId;
+            that.form.include_duplicates = libraryType === 'permanent' ? that.includeDuplicatesPreference : true;
 
-            axios.post('/api/match', that.form)
+            const requestedTopN = parseInt(that.form.top_n, 10);
+            const blankQuery = (search_type === 0 || search_type === 2) &&
+                !(that.form.start_time || that.form.end_time) &&
+                !(that.form.path && that.form.path.trim()) &&
+                !(that.form.positive && that.form.positive.trim()) &&
+                !(that.form.negative && that.form.negative.trim());
+            if (libraryType === 'permanent' && blankQuery) {
+                ElementPlus.ElMessage.warning('永久库数据量较大，请输入关键词或路径后再搜索');
+                loadingInstance.close();
+                return;
+            }
+            const payload = {
+                ...that.form,
+                positive: (that.form.positive || '').trim(),
+                negative: (that.form.negative || '').trim(),
+                library_type: libraryType,
+                project_id: projectId,
+                include_duplicates: libraryType === 'permanent' ? that.includeDuplicatesPreference : true,
+                top_n: Number.isFinite(requestedTopN) ? requestedTopN : 6
+            };
+            if (blankQuery) {
+                payload.top_n = 0; // 0 表示请求全部素材
+            }
+
+            axios.post('/api/match', payload)
                 .then(function(response) {
                     console.log(response);
                     loadingInstance.close();
