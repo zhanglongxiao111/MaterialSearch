@@ -1,0 +1,19 @@
+[package]
+name = "materialsearch"
+version = "1.0.0"
+description = "MaterialSearch 素材搜索 - 建筑设计素材 AI 搜索系统"
+authors = ["SA Architects <info@sa-architects.com>"]
+edition = "2021"
+
+[lib]
+name = "materialsearch_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = ["tray-icon"] }
+tauri-plugin-opener = "2"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"

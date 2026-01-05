@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
+
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -12,805 +13,1968 @@
     <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
     <script src="https://unpkg.com/viewerjs@1.11.6/dist/viewer.min.js"></script>
     <style>
-        body.material-layout{min-height:100vh;background:var(--background);color:var(--foreground);margin:0;font-family:'Inter','PingFang SC',sans-serif;}
-        .material-header{display:flex;justify-content:space-between;align-items:center;padding:0.9rem 1.6rem;border-bottom:1px solid var(--border);background:color-mix(in oklch, var(--background) 94%, white 6%);box-shadow:var(--shadow-xs);backdrop-filter:blur(12px);}
-        .material-logo{width:28px;height:28px;border-radius:10px;background:radial-gradient(circle at 30% 0%, var(--accent), transparent),radial-gradient(circle at 80% 80%, var(--primary), transparent);}
-        .material-shell{display:flex;min-height:calc(100vh - 140px);}
-        .material-sidebar{width:260px;border-right:1px solid var(--border);padding:1rem;overflow-y:auto;}
-        .material-main{flex:1;padding:1.2rem 1.6rem;overflow-y:auto;}
-        .material-chip{font-size:12px;padding:0.2rem 0.5rem;border-radius:999px;background:var(--muted);color:var(--muted-foreground);}
-        .material-chip.interactive{cursor:pointer;}
-        .material-sidebar-pills{display:flex;gap:6px;margin:0.6rem 0;}
-        .material-pill{flex:1;text-align:center;padding:0.35rem 0.5rem;border-radius:8px;border:1px solid var(--border);cursor:pointer;font-size:12px;}
-        .material-pill.active{background:var(--primary);color:#fff;border-color:var(--primary);}
-        .material-sidebar-section-title{font-size:12px;color:var(--muted-foreground);margin-top:1rem;margin-bottom:0.4rem;text-transform:uppercase;letter-spacing:0.12em;}
-        .material-list{display:flex;flex-direction:column;gap:0.4rem;}
-        .material-list-item{padding:0.45rem 0.5rem;border-radius:10px;border:1px solid transparent;cursor:pointer;font-size:12px;transition:all .2s ease;}
-        .material-list-item:hover{background:color-mix(in oklch, var(--muted) 80%, transparent);}
-        .material-list-item.active{border-color:var(--primary);background:color-mix(in oklch, var(--primary) 12%, transparent);}
-        .material-tabs{display:flex;gap:8px;margin:1rem 0;}
-        .material-tab{padding:0.4rem 0.9rem;border-radius:999px;border:1px solid var(--border);font-size:12px;cursor:pointer;display:flex;align-items:center;gap:6px;}
-        .material-tab.active{background:var(--primary);color:#fff;border-color:var(--primary);}
-        .scope-stats{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:0.6rem;}
-        .scope-stat-pill{border:1px dashed var(--border);border-radius:10px;padding:0.35rem 0.75rem;font-size:11px;display:flex;flex-direction:column;gap:2px;min-width:120px;}
-        .scope-stat-pill .value{font-size:16px;font-weight:600;color:var(--foreground);}
-        .material-search-panel{border:1px solid var(--border);border-radius:16px;padding:1rem;background:color-mix(in oklch, var(--background) 92%, white 8%);box-shadow:var(--shadow-sm);}
-        .image-search-panel{border:1px dashed var(--border);border-radius:14px;padding:0.75rem;background:color-mix(in oklch, var(--background) 98%, white 2%);margin-top:0.8rem;display:flex;flex-direction:column;gap:0.6rem;}
-        .image-search-actions{display:flex;flex-wrap:wrap;gap:8px;align-items:center;}
-        .image-search-preview{max-width:220px;}
-        .image-search-preview img{width:100%;border-radius:12px;border:1px solid var(--border);object-fit:cover;}
-        .material-search-row{display:flex;gap:0.6rem;}
-        .material-input-main{flex:1;border:1px solid var(--border);border-radius:999px;padding:0.55rem 1rem;background:var(--card);}
-        .material-select{border:1px solid var(--border);border-radius:999px;padding:0.4rem 0.8rem;}
-        .material-btn-primary{background:var(--primary);color:#fff;border:none;border-radius:999px;padding:0.4rem 1rem;display:flex;align-items:center;gap:6px;cursor:pointer;}
-        .dedup-panel{margin-top:0.75rem;border:1px dashed var(--border);border-radius:12px;padding:0.6rem 0.8rem;background:color-mix(in oklch, var(--background) 96%, white 4%);}
-        .dedup-panel .btn-inline{font-size:11px;}
-        .dedup-report-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:0.75rem;margin-top:0.75rem;}
-        .dedup-report-card{border:1px solid var(--border);border-radius:12px;padding:0.55rem 0.75rem;background:var(--card);}
-        .material-pill-search-mode{border:1px solid var(--border);border-radius:999px;padding:0.2rem 0.8rem;cursor:pointer;display:flex;gap:4px;align-items:center;transition:all .18s ease;}
-        .material-pill-search-mode.active{background:var(--primary);color:#fff;border-color:var(--primary);}
-        .material-pill-search-mode.disabled{opacity:.4;cursor:not-allowed;}
-        .view-toggle{display:flex;border:1px solid var(--border);border-radius:999px;overflow:hidden;font-size:11px;}
-        .view-toggle span{padding:0.2rem 0.8rem;cursor:pointer;}
-        .view-toggle span.active{background:var(--primary);color:#fff;}
-        .results-masonry{column-count:4;column-gap:1rem;}
-        @media(max-width:1440px){.results-masonry{column-count:3;}}
-        @media(max-width:1024px){.material-sidebar{display:none;}.results-masonry{column-count:2;}}
-        @media(max-width:768px){.material-sidebar{display:none;}.results-masonry{column-count:1;}}
-        .result-card{break-inside:avoid;border:1px solid var(--border);border-radius:18px;margin-bottom:1rem;background:var(--card);box-shadow:var(--shadow-sm);overflow:hidden;display:flex;flex-direction:column;transition:transform .15s ease;position:relative;}
-        .result-card:hover{transform:translateY(-2px);}
-        .result-thumb{cursor:pointer;}
-        .result-thumb img{width:100%;display:block;}
-        .result-meta{padding:0.8rem;display:flex;flex-direction:column;gap:4px;font-size:12px;}
-        .result-actions{display:flex;padding:0 0.8rem 0.8rem;gap:6px;flex-wrap:wrap;}
-        .btn-inline{border:1px solid var(--border);background:transparent;border-radius:999px;padding:0.2rem 0.6rem;font-size:11px;cursor:pointer;display:flex;align-items:center;gap:4px;}
-        .btn-inline.danger{color:#dc2626;border-color:rgba(220,38,38,.4);}
-        .pill-small{border:1px solid var(--border);border-radius:999px;padding:0.1rem 0.5rem;cursor:pointer;}
-        .workspace-toast{position:fixed;right:24px;bottom:24px;padding:0.65rem 1rem;border-radius:12px;border:1px solid var(--border);background:color-mix(in oklch, var(--card) 90%, white 10%);box-shadow:var(--shadow-lg);font-size:12px;z-index:20;}
-        .workspace-toast.success{color:#0f5132;background:#d1e7dd;border-color:#badbcc;}
-        .workspace-toast.warning{color:#664d03;background:#fff3cd;border-color:#ffecb5;}
-        .workspace-toast.error{color:#842029;background:#f8d7da;border-color:#f5c2c7;}
-.workspace-toast.info{color:var(--foreground);}
-.upload-stepper{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:0.75rem;margin-bottom:1rem;}
-.upload-step{display:flex;gap:0.65rem;padding:0.6rem 0.8rem;border:1px dashed var(--border);border-radius:12px;background:color-mix(in oklch, var(--background) 96%, white 4%);align-items:center;}
-.upload-step .index{width:28px;height:28px;border-radius:50%;border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-weight:600;}
-.upload-step.active{border-color:var(--primary);background:color-mix(in oklch, var(--primary) 10%, transparent);}
-.upload-step.active .index{background:var(--primary);color:#fff;border-color:var(--primary);}
-.upload-step.done{border-style:solid;border-color:var(--primary);}
-.upload-step .title{font-weight:600;font-size:13px;}
-.upload-step .desc{font-size:11px;color:var(--muted-foreground);}
-.upload-card{border:1px solid var(--border);border-radius:16px;padding:1rem;background:var(--card);box-shadow:var(--shadow-sm);margin-top:0.5rem;}
-.upload-card-header h3{margin:0;font-size:18px;}
-.upload-card-header p{margin:0.35rem 0 0;color:var(--muted-foreground);}
-.upload-textarea{width:100%;min-height:180px;border:1px solid var(--border);border-radius:12px;padding:0.8rem;background:var(--background);resize:vertical;font-family:'Inter','PingFang SC',sans-serif;}
-.upload-actions{display:flex;flex-wrap:wrap;gap:0.6rem;margin-top:0.9rem;}
-.upload-history{margin-top:1rem;}
-.upload-history-header{display:flex;justify-content:space-between;font-size:12px;color:var(--muted-foreground);margin-bottom:0.35rem;}
-.upload-history-list{display:flex;flex-wrap:wrap;gap:0.5rem;}
-.history-chip{border:1px solid var(--border);border-radius:12px;padding:0.5rem 0.8rem;background:var(--background);display:flex;flex-direction:column;align-items:flex-start;gap:2px;cursor:pointer;min-width:200px;}
-.history-chip .path{font-size:12px;color:var(--foreground);max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-.history-chip .time{font-size:11px;color:var(--muted-foreground);}
-.upload-empty{padding:1rem;border:1px dashed var(--border);border-radius:12px;color:var(--muted-foreground);text-align:center;margin-top:0.75rem;}
-.upload-toolbar{display:flex;align-items:center;justify-content:space-between;gap:1rem;margin-bottom:0.9rem;}
-.btn-group{display:flex;gap:0.4rem;flex-wrap:wrap;}
-.pill{border:1px solid var(--border);border-radius:999px;padding:0.25rem 0.9rem;font-size:12px;background:var(--background);cursor:pointer;}
-.pill.active{background:var(--primary);color:#fff;border-color:var(--primary);}
-.upload-list{display:flex;flex-direction:column;gap:0.5rem;max-height:420px;overflow:auto;padding-right:0.25rem;}
-.upload-row{display:grid;grid-template-columns:auto 72px 1fr auto auto auto;gap:0.75rem;align-items:center;border:1px solid var(--border);border-radius:14px;padding:0.6rem;background:var(--background);}
-.upload-thumb{width:72px;height:72px;border-radius:12px;overflow:hidden;background:var(--muted);}
-.upload-thumb img{width:100%;height:100%;object-fit:cover;}
-.upload-file-meta .name{font-weight:600;font-size:14px;}
-.upload-file-meta .path{font-size:11px;color:var(--muted-foreground);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-.upload-tags{display:flex;gap:0.4rem;}
-.upload-tags .tag{font-size:11px;padding:0.15rem 0.5rem;border-radius:999px;background:var(--muted);color:var(--muted-foreground);}
-.upload-tags .tag.muted{background:color-mix(in oklch, var(--muted) 60%, transparent);}
-.upload-size{font-weight:600;}
-.upload-footer{display:flex;align-items:center;gap:0.6rem;margin-top:1rem;flex-wrap:wrap;}
-.flex-spacer{flex:1;}
-.btn-inline.sm{padding:0.25rem 0.5rem;font-size:11px;border-radius:8px;}
-.upload-progress-card{display:flex;flex-direction:column;gap:1rem;}
-.upload-progress-indicator{display:flex;flex-direction:column;gap:0.4rem;}
-.progress-value{font-size:32px;font-weight:700;}
-.progress-bar{width:100%;height:8px;border-radius:999px;background:var(--muted);}
-.progress-fill{height:100%;border-radius:999px;background:var(--primary);transition:width .2s;}
-.upload-progress-meta{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:0.5rem;font-size:13px;color:var(--muted-foreground);}
-.upload-progress-actions{display:flex;gap:0.6rem;flex-wrap:wrap;}
-.upload-progress-actions .danger{color:#dc2626;}
-.upload-detail-panels{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:0.75rem;}
-.detail-panel{border:1px solid var(--border);border-radius:12px;padding:0.75rem;background:var(--background);}
-.detail-panel h4{margin:0 0 0.5rem;font-size:13px;}
-.detail-panel ul{list-style:none;padding:0;margin:0;display:flex;flex-direction:column;gap:0.4rem;max-height:200px;overflow:auto;}
-.detail-panel li{display:flex;flex-direction:column;font-size:12px;}
-.detail-panel .path{font-weight:600;word-break:break-all;}
-.detail-panel .error{color:#dc2626;}
-.detail-panel .hint{color:var(--muted-foreground);font-size:11px;}
-.detail-panel .status{color:var(--primary);font-size:11px;}
-.upload-summary-header{display:flex;gap:0.8rem;align-items:center;margin-bottom:1rem;}
-.upload-summary-header i{width:36px;height:36px;border-radius:50%;background:color-mix(in oklch, var(--primary) 12%, transparent);display:flex;align-items:center;justify-content:center;}
-.upload-summary-header .title{font-weight:700;font-size:18px;}
-.upload-summary-header .desc{font-size:13px;color:var(--muted-foreground);}
-.upload-summary-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:0.75rem;margin-bottom:1rem;}
-.summary-pill{border:1px solid var(--border);border-radius:12px;padding:0.75rem;background:var(--background);display:flex;flex-direction:column;gap:0.2rem;font-size:13px;}
-.summary-pill strong{font-size:20px;}
-.upload-duplicate-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.45);backdrop-filter:blur(6px);display:flex;align-items:center;justify-content:center;z-index:40;padding:1rem;}
-.duplicate-panel{background:var(--card);border-radius:18px;border:1px solid var(--border);box-shadow:var(--shadow-lg);padding:1rem;max-width:720px;width:100%;display:flex;flex-direction:column;gap:1rem;}
-.duplicate-header h3{margin:0;font-size:18px;}
-.duplicate-header p{margin:0;color:var(--muted-foreground);}
-.duplicate-columns{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:0.75rem;}
-.duplicate-block{border:1px solid var(--border);border-radius:14px;padding:0.75rem;background:var(--background);display:flex;flex-direction:column;gap:0.5rem;}
-.duplicate-block .label{font-size:12px;color:var(--muted-foreground);}
-.duplicate-thumb{width:100%;height:160px;border-radius:12px;overflow:hidden;background:var(--muted);}
-.duplicate-thumb img{width:100%;height:100%;object-fit:cover;}
-.duplicate-meta{font-size:12px;display:flex;flex-direction:column;gap:4px;}
-.duplicate-meta .path{word-break:break-all;color:var(--muted-foreground);}
-.duplicate-actions{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:0.8rem;}
-.duplicate-actions .remember{font-size:12px;color:var(--muted-foreground);display:flex;align-items:center;gap:0.4rem;}
-.duplicate-actions .action-buttons{display:flex;gap:0.6rem;}
-.project-dialog-panel{max-width:520px;flex-direction:column;}
-.project-dialog-panel .form-field{display:flex;flex-direction:column;gap:4px;}
-.project-dialog-panel .form-field label{font-size:12px;color:var(--muted-foreground);}
-.project-dialog-panel .form-field input,
-.project-dialog-panel .form-field textarea{padding:10px 12px;border:1px solid var(--border);border-radius:12px;background:var(--surface);color:var(--text);}
-.project-dialog-panel .form-field textarea{min-height:96px;resize:vertical;}
-.project-dialog-panel .dialog-actions{display:flex;justify-content:flex-end;gap:12px;margin-top:20px;}
-.project-dialog-panel .error-text{color:#f43f5e;font-size:12px;margin-top:8px;}
-        .material-header-stats{display:flex;gap:12px;padding:0.5rem 1.6rem;border-bottom:1px solid var(--border);background:color-mix(in oklch, var(--background) 96%, white 4%);}
-        .header-stat{flex:1;min-width:140px;border:1px dashed var(--border);border-radius:12px;padding:0.5rem 0.8rem;display:flex;flex-direction:column;gap:4px;font-size:11px;}
-        .header-stat .value{font-size:18px;font-weight:600;}
-        .workspace-detail-overlay{position:fixed;inset:0;background:rgba(10,10,10,0.6);backdrop-filter:blur(6px);display:flex;align-items:center;justify-content:center;z-index:30;padding:1.5rem;}
-        .workspace-detail-panel{background:var(--card);border-radius:20px;border:1px solid var(--border);box-shadow:var(--shadow-lg);max-width:1200px;width:100%;display:flex;gap:24px;padding:1rem;position:relative;max-height:90vh;overflow:hidden;}
-        .dedup-report-panel{max-width:640px;flex-direction:column;}
-        .detail-media{flex:1.4;min-height:320px;max-height:80vh;border:1px solid var(--border);border-radius:16px;padding:0.5rem;background:color-mix(in oklch, var(--background) 95%, white 5%);display:flex;align-items:center;justify-content:center;overflow:hidden;}
-        .detail-viewer{width:100%;height:100%;}
-        .detail-viewer img{width:100%;height:100%;display:block;object-fit:contain;}
-        .detail-info{flex:1;display:flex;flex-direction:column;gap:12px;max-height:80vh;overflow:auto;padding-right:4px;}
-        .detail-info-header{display:flex;justify-content:space-between;align-items:flex-start;}
-        .detail-title{font-size:18px;font-weight:600;margin-bottom:4px;}
-        .detail-meta{display:flex;flex-direction:column;gap:8px;font-size:13px;}
-        .detail-meta-row{display:flex;justify-content:space-between;gap:8px;border-bottom:1px dashed var(--border);padding-bottom:4px;}
-        .detail-meta-row span:last-child{font-weight:600;text-align:right;}
-        .detail-actions{display:flex;flex-wrap:wrap;gap:8px;}
-        .detail-close{position:absolute;top:12px;right:12px;border:none;background:transparent;font-size:20px;cursor:pointer;color:var(--muted-foreground);}
-        .result-select{position:absolute;top:10px;left:10px;z-index:2;}
-        .select-checkbox{display:flex;align-items:center;gap:6px;}
-        .select-checkbox input{appearance:none;width:18px;height:18px;border:2px solid var(--border);border-radius:4px;background:rgba(255,255,255,0.85);cursor:pointer;display:inline-flex;justify-content:center;align-items:center;}
-        .select-checkbox input:checked{background:var(--primary);border-color:var(--primary);}
-        .select-checkbox input:checked::after{content:'✓';color:#fff;font-size:12px;line-height:1;}
-        .result-card.selected{box-shadow:inset 0 0 0 2px var(--primary);}
-        .selection-bar{position:fixed;left:24px;right:24px;bottom:24px;background:color-mix(in oklch, var(--card) 96%, white 4%);border:1px solid var(--border);border-radius:16px;padding:0.75rem 1rem;box-shadow:var(--shadow-lg);display:flex;justify-content:space-between;align-items:center;z-index:25;}
-        .selection-bar strong{font-size:16px;margin:0 4px;}
-        .selection-actions{display:flex;gap:8px;flex-wrap:wrap;}
-        .selection-actions .btn-inline{background:var(--card);}
-        .result-card.skeleton{pointer-events:none;}
-        .skeleton-thumb{height:200px;background:linear-gradient(120deg, var(--muted) 0%, color-mix(in srgb,var(--muted),white 20%) 50%, var(--muted) 100%);background-size:200% 200%;animation:skeleton 1.5s ease infinite;}
-        .skeleton-lines{padding:0.8rem;display:flex;flex-direction:column;gap:6px;}
-        .skeleton-line{height:12px;border-radius:999px;background:color-mix(in srgb,var(--muted),white 10%);}
-        @keyframes skeleton{
-            0%{background-position:0% 50%;}
-            50%{background-position:100% 50%;}
-            100%{background-position:0% 50%;}
+        body.material-layout {
+            min-height: 100vh;
+            background: var(--background);
+            color: var(--foreground);
+            margin: 0;
+            font-family: 'Inter', 'PingFang SC', sans-serif;
+        }
+
+        .material-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.9rem 1.6rem;
+            border-bottom: 1px solid var(--border);
+            background: color-mix(in oklch, var(--background) 94%, white 6%);
+            box-shadow: var(--shadow-xs);
+            backdrop-filter: blur(12px);
+        }
+
+        .material-logo {
+            width: 28px;
+            height: 28px;
+            border-radius: 10px;
+            background: radial-gradient(circle at 30% 0%, var(--accent), transparent), radial-gradient(circle at 80% 80%, var(--primary), transparent);
+        }
+
+        .material-shell {
+            display: flex;
+            min-height: calc(100vh - 140px);
+        }
+
+        .material-sidebar {
+            width: 260px;
+            border-right: 1px solid var(--border);
+            padding: 1rem;
+            overflow-y: auto;
+        }
+
+        .material-main {
+            flex: 1;
+            padding: 1.2rem 1.6rem;
+            overflow-y: auto;
+        }
+
+        .material-chip {
+            font-size: 12px;
+            padding: 0.2rem 0.5rem;
+            border-radius: 999px;
+            background: var(--muted);
+            color: var(--muted-foreground);
+        }
+
+        .material-chip.interactive {
+            cursor: pointer;
+        }
+
+        .material-sidebar-pills {
+            display: flex;
+            gap: 6px;
+            margin: 0.6rem 0;
+        }
+
+        .material-pill {
+            flex: 1;
+            text-align: center;
+            padding: 0.35rem 0.5rem;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            cursor: pointer;
+            font-size: 12px;
+        }
+
+        .material-pill.active {
+            background: var(--primary);
+            color: #fff;
+            border-color: var(--primary);
+        }
+
+        .material-sidebar-section-title {
+            font-size: 12px;
+            color: var(--muted-foreground);
+            margin-top: 1rem;
+            margin-bottom: 0.4rem;
+            text-transform: uppercase;
+            letter-spacing: 0.12em;
+        }
+
+        .material-list {
+            display: flex;
+            flex-direction: column;
+            gap: 0.4rem;
+        }
+
+        .material-list-item {
+            padding: 0.45rem 0.5rem;
+            border-radius: 10px;
+            border: 1px solid transparent;
+            cursor: pointer;
+            font-size: 12px;
+            transition: all .2s ease;
+        }
+
+        .material-list-item:hover {
+            background: color-mix(in oklch, var(--muted) 80%, transparent);
+        }
+
+        .material-list-item.active {
+            border-color: var(--primary);
+            background: color-mix(in oklch, var(--primary) 12%, transparent);
+        }
+
+        .material-tabs {
+            display: flex;
+            gap: 8px;
+            margin: 1rem 0;
+        }
+
+        .material-tab {
+            padding: 0.4rem 0.9rem;
+            border-radius: 999px;
+            border: 1px solid var(--border);
+            font-size: 12px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .material-tab.active {
+            background: var(--primary);
+            color: #fff;
+            border-color: var(--primary);
+        }
+
+        .scope-stats {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-bottom: 0.6rem;
+        }
+
+        .scope-stat-pill {
+            border: 1px dashed var(--border);
+            border-radius: 10px;
+            padding: 0.35rem 0.75rem;
+            font-size: 11px;
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+            min-width: 120px;
+        }
+
+        .scope-stat-pill .value {
+            font-size: 16px;
+            font-weight: 600;
+            color: var(--foreground);
+        }
+
+        .material-search-panel {
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 1rem;
+            background: color-mix(in oklch, var(--background) 92%, white 8%);
+            box-shadow: var(--shadow-sm);
+        }
+
+        .image-search-panel {
+            border: 1px dashed var(--border);
+            border-radius: 14px;
+            padding: 0.75rem;
+            background: color-mix(in oklch, var(--background) 98%, white 2%);
+            margin-top: 0.8rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.6rem;
+        }
+
+        .image-search-actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            align-items: center;
+        }
+
+        .image-search-preview {
+            max-width: 220px;
+        }
+
+        .image-search-preview img {
+            width: 100%;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            object-fit: cover;
+        }
+
+        .material-search-row {
+            display: flex;
+            gap: 0.6rem;
+        }
+
+        .material-input-main {
+            flex: 1;
+            border: 1px solid var(--border);
+            border-radius: 999px;
+            padding: 0.55rem 1rem;
+            background: var(--card);
+        }
+
+        .material-select {
+            border: 1px solid var(--border);
+            border-radius: 999px;
+            padding: 0.4rem 0.8rem;
+        }
+
+        .material-btn-primary {
+            background: var(--primary);
+            color: #fff;
+            border: none;
+            border-radius: 999px;
+            padding: 0.4rem 1rem;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            cursor: pointer;
+        }
+
+        .dedup-panel {
+            margin-top: 0.75rem;
+            border: 1px dashed var(--border);
+            border-radius: 12px;
+            padding: 0.6rem 0.8rem;
+            background: color-mix(in oklch, var(--background) 96%, white 4%);
+        }
+
+        .dedup-panel .btn-inline {
+            font-size: 11px;
+        }
+
+        .dedup-report-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 0.75rem;
+            margin-top: 0.75rem;
+        }
+
+        .dedup-report-card {
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 0.55rem 0.75rem;
+            background: var(--card);
+        }
+
+        .material-pill-search-mode {
+            border: 1px solid var(--border);
+            border-radius: 999px;
+            padding: 0.2rem 0.8rem;
+            cursor: pointer;
+            display: flex;
+            gap: 4px;
+            align-items: center;
+            transition: all .18s ease;
+        }
+
+        .material-pill-search-mode.active {
+            background: var(--primary);
+            color: #fff;
+            border-color: var(--primary);
+        }
+
+        .material-pill-search-mode.disabled {
+            opacity: .4;
+            cursor: not-allowed;
+        }
+
+        .view-toggle {
+            display: flex;
+            border: 1px solid var(--border);
+            border-radius: 999px;
+            overflow: hidden;
+            font-size: 11px;
+        }
+
+        .view-toggle span {
+            padding: 0.2rem 0.8rem;
+            cursor: pointer;
+        }
+
+        .view-toggle span.active {
+            background: var(--primary);
+            color: #fff;
+        }
+
+        .results-masonry {
+            column-count: 4;
+            column-gap: 1rem;
+        }
+
+        @media(max-width:1440px) {
+            .results-masonry {
+                column-count: 3;
+            }
+        }
+
+        @media(max-width:1024px) {
+            .material-sidebar {
+                display: none;
+            }
+
+            .results-masonry {
+                column-count: 2;
+            }
+        }
+
+        @media(max-width:768px) {
+            .material-sidebar {
+                display: none;
+            }
+
+            .results-masonry {
+                column-count: 1;
+            }
+        }
+
+        .result-card {
+            break-inside: avoid;
+            border: 1px solid var(--border);
+            border-radius: 18px;
+            margin-bottom: 1rem;
+            background: var(--card);
+            box-shadow: var(--shadow-sm);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            transition: transform .15s ease;
+            position: relative;
+        }
+
+        .result-card:hover {
+            transform: translateY(-2px);
+        }
+
+        .result-thumb {
+            cursor: pointer;
+        }
+
+        .result-thumb img {
+            width: 100%;
+            display: block;
+        }
+
+        .result-meta {
+            padding: 0.8rem;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            font-size: 12px;
+        }
+
+        .result-actions {
+            display: flex;
+            padding: 0 0.8rem 0.8rem;
+            gap: 6px;
+            flex-wrap: wrap;
+        }
+
+        .btn-inline {
+            border: 1px solid var(--border);
+            background: transparent;
+            border-radius: 999px;
+            padding: 0.2rem 0.6rem;
+            font-size: 11px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .btn-inline.danger {
+            color: #dc2626;
+            border-color: rgba(220, 38, 38, .4);
+        }
+
+        .pill-small {
+            border: 1px solid var(--border);
+            border-radius: 999px;
+            padding: 0.1rem 0.5rem;
+            cursor: pointer;
+        }
+
+        .workspace-toast {
+            position: fixed;
+            right: 24px;
+            bottom: 24px;
+            padding: 0.65rem 1rem;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            background: color-mix(in oklch, var(--card) 90%, white 10%);
+            box-shadow: var(--shadow-lg);
+            font-size: 12px;
+            z-index: 20;
+        }
+
+        .workspace-toast.success {
+            color: #0f5132;
+            background: #d1e7dd;
+            border-color: #badbcc;
+        }
+
+        .workspace-toast.warning {
+            color: #664d03;
+            background: #fff3cd;
+            border-color: #ffecb5;
+        }
+
+        .workspace-toast.error {
+            color: #842029;
+            background: #f8d7da;
+            border-color: #f5c2c7;
+        }
+
+        .workspace-toast.info {
+            color: var(--foreground);
+        }
+
+        .upload-stepper {
+            display: grid;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: 0.75rem;
+            margin-bottom: 1rem;
+        }
+
+        .upload-step {
+            display: flex;
+            gap: 0.65rem;
+            padding: 0.6rem 0.8rem;
+            border: 1px dashed var(--border);
+            border-radius: 12px;
+            background: color-mix(in oklch, var(--background) 96%, white 4%);
+            align-items: center;
+        }
+
+        .upload-step .index {
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            border: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+        }
+
+        .upload-step.active {
+            border-color: var(--primary);
+            background: color-mix(in oklch, var(--primary) 10%, transparent);
+        }
+
+        .upload-step.active .index {
+            background: var(--primary);
+            color: #fff;
+            border-color: var(--primary);
+        }
+
+        .upload-step.done {
+            border-style: solid;
+            border-color: var(--primary);
+        }
+
+        .upload-step .title {
+            font-weight: 600;
+            font-size: 13px;
+        }
+
+        .upload-step .desc {
+            font-size: 11px;
+            color: var(--muted-foreground);
+        }
+
+        .upload-card {
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 1rem;
+            background: var(--card);
+            box-shadow: var(--shadow-sm);
+            margin-top: 0.5rem;
+        }
+
+        .upload-card-header h3 {
+            margin: 0;
+            font-size: 18px;
+        }
+
+        .upload-card-header p {
+            margin: 0.35rem 0 0;
+            color: var(--muted-foreground);
+        }
+
+        .upload-textarea {
+            width: 100%;
+            min-height: 180px;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 0.8rem;
+            background: var(--background);
+            resize: vertical;
+            font-family: 'Inter', 'PingFang SC', sans-serif;
+        }
+
+        .upload-actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.6rem;
+            margin-top: 0.9rem;
+        }
+
+        .upload-history {
+            margin-top: 1rem;
+        }
+
+        .upload-history-header {
+            display: flex;
+            justify-content: space-between;
+            font-size: 12px;
+            color: var(--muted-foreground);
+            margin-bottom: 0.35rem;
+        }
+
+        .upload-history-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+        }
+
+        .history-chip {
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 0.5rem 0.8rem;
+            background: var(--background);
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 2px;
+            cursor: pointer;
+            min-width: 200px;
+        }
+
+        .history-chip .path {
+            font-size: 12px;
+            color: var(--foreground);
+            max-width: 100%;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .history-chip .time {
+            font-size: 11px;
+            color: var(--muted-foreground);
+        }
+
+        .upload-empty {
+            padding: 1rem;
+            border: 1px dashed var(--border);
+            border-radius: 12px;
+            color: var(--muted-foreground);
+            text-align: center;
+            margin-top: 0.75rem;
+        }
+
+        .upload-toolbar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1rem;
+            margin-bottom: 0.9rem;
+        }
+
+        .btn-group {
+            display: flex;
+            gap: 0.4rem;
+            flex-wrap: wrap;
+        }
+
+        .pill {
+            border: 1px solid var(--border);
+            border-radius: 999px;
+            padding: 0.25rem 0.9rem;
+            font-size: 12px;
+            background: var(--background);
+            cursor: pointer;
+        }
+
+        .pill.active {
+            background: var(--primary);
+            color: #fff;
+            border-color: var(--primary);
+        }
+
+        .upload-list {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+            max-height: 420px;
+            overflow: auto;
+            padding-right: 0.25rem;
+        }
+
+        .upload-row {
+            display: grid;
+            grid-template-columns: auto 72px 1fr auto auto auto;
+            gap: 0.75rem;
+            align-items: center;
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            padding: 0.6rem;
+            background: var(--background);
+        }
+
+        .upload-thumb {
+            width: 72px;
+            height: 72px;
+            border-radius: 12px;
+            overflow: hidden;
+            background: var(--muted);
+        }
+
+        .upload-thumb img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .upload-file-meta .name {
+            font-weight: 600;
+            font-size: 14px;
+        }
+
+        .upload-file-meta .path {
+            font-size: 11px;
+            color: var(--muted-foreground);
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .upload-tags {
+            display: flex;
+            gap: 0.4rem;
+        }
+
+        .upload-tags .tag {
+            font-size: 11px;
+            padding: 0.15rem 0.5rem;
+            border-radius: 999px;
+            background: var(--muted);
+            color: var(--muted-foreground);
+        }
+
+        .upload-tags .tag.muted {
+            background: color-mix(in oklch, var(--muted) 60%, transparent);
+        }
+
+        .upload-size {
+            font-weight: 600;
+        }
+
+        .upload-footer {
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+            margin-top: 1rem;
+            flex-wrap: wrap;
+        }
+
+        .flex-spacer {
+            flex: 1;
+        }
+
+        .btn-inline.sm {
+            padding: 0.25rem 0.5rem;
+            font-size: 11px;
+            border-radius: 8px;
+        }
+
+        .upload-progress-card {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .upload-progress-indicator {
+            display: flex;
+            flex-direction: column;
+            gap: 0.4rem;
+        }
+
+        .progress-value {
+            font-size: 32px;
+            font-weight: 700;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            border-radius: 999px;
+            background: var(--muted);
+        }
+
+        .progress-fill {
+            height: 100%;
+            border-radius: 999px;
+            background: var(--primary);
+            transition: width .2s;
+        }
+
+        .upload-progress-meta {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 0.5rem;
+            font-size: 13px;
+            color: var(--muted-foreground);
+        }
+
+        .upload-progress-actions {
+            display: flex;
+            gap: 0.6rem;
+            flex-wrap: wrap;
+        }
+
+        .upload-progress-actions .danger {
+            color: #dc2626;
+        }
+
+        .upload-detail-panels {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+            gap: 0.75rem;
+        }
+
+        .detail-panel {
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 0.75rem;
+            background: var(--background);
+        }
+
+        .detail-panel h4 {
+            margin: 0 0 0.5rem;
+            font-size: 13px;
+        }
+
+        .detail-panel ul {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            gap: 0.4rem;
+            max-height: 200px;
+            overflow: auto;
+        }
+
+        .detail-panel li {
+            display: flex;
+            flex-direction: column;
+            font-size: 12px;
+        }
+
+        .detail-panel .path {
+            font-weight: 600;
+            word-break: break-all;
+        }
+
+        .detail-panel .error {
+            color: #dc2626;
+        }
+
+        .detail-panel .hint {
+            color: var(--muted-foreground);
+            font-size: 11px;
+        }
+
+        .detail-panel .status {
+            color: var(--primary);
+            font-size: 11px;
+        }
+
+        .upload-summary-header {
+            display: flex;
+            gap: 0.8rem;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+
+        .upload-summary-header i {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background: color-mix(in oklch, var(--primary) 12%, transparent);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .upload-summary-header .title {
+            font-weight: 700;
+            font-size: 18px;
+        }
+
+        .upload-summary-header .desc {
+            font-size: 13px;
+            color: var(--muted-foreground);
+        }
+
+        .upload-summary-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+            gap: 0.75rem;
+            margin-bottom: 1rem;
+        }
+
+        .summary-pill {
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 0.75rem;
+            background: var(--background);
+            display: flex;
+            flex-direction: column;
+            gap: 0.2rem;
+            font-size: 13px;
+        }
+
+        .summary-pill strong {
+            font-size: 20px;
+        }
+
+        .upload-duplicate-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.45);
+            backdrop-filter: blur(6px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 40;
+            padding: 1rem;
+        }
+
+        .duplicate-panel {
+            background: var(--card);
+            border-radius: 18px;
+            border: 1px solid var(--border);
+            box-shadow: var(--shadow-lg);
+            padding: 1rem;
+            max-width: 720px;
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .duplicate-header h3 {
+            margin: 0;
+            font-size: 18px;
+        }
+
+        .duplicate-header p {
+            margin: 0;
+            color: var(--muted-foreground);
+        }
+
+        .duplicate-columns {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 0.75rem;
+        }
+
+        .duplicate-block {
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            padding: 0.75rem;
+            background: var(--background);
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .duplicate-block .label {
+            font-size: 12px;
+            color: var(--muted-foreground);
+        }
+
+        .duplicate-thumb {
+            width: 100%;
+            height: 160px;
+            border-radius: 12px;
+            overflow: hidden;
+            background: var(--muted);
+        }
+
+        .duplicate-thumb img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .duplicate-meta {
+            font-size: 12px;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .duplicate-meta .path {
+            word-break: break-all;
+            color: var(--muted-foreground);
+        }
+
+        .duplicate-actions {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            justify-content: space-between;
+            gap: 0.8rem;
+        }
+
+        .duplicate-actions .remember {
+            font-size: 12px;
+            color: var(--muted-foreground);
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+        }
+
+        .duplicate-actions .action-buttons {
+            display: flex;
+            gap: 0.6rem;
+        }
+
+        .project-dialog-panel {
+            max-width: 520px;
+            flex-direction: column;
+        }
+
+        .project-dialog-panel .form-field {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .project-dialog-panel .form-field label {
+            font-size: 12px;
+            color: var(--muted-foreground);
+        }
+
+        .project-dialog-panel .form-field input,
+        .project-dialog-panel .form-field textarea {
+            padding: 10px 12px;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            background: var(--surface);
+            color: var(--text);
+        }
+
+        .project-dialog-panel .form-field textarea {
+            min-height: 96px;
+            resize: vertical;
+        }
+
+        .project-dialog-panel .dialog-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 12px;
+            margin-top: 20px;
+        }
+
+        .project-dialog-panel .error-text {
+            color: #f43f5e;
+            font-size: 12px;
+            margin-top: 8px;
+        }
+
+        .material-header-stats {
+            display: flex;
+            gap: 12px;
+            padding: 0.5rem 1.6rem;
+            border-bottom: 1px solid var(--border);
+            background: color-mix(in oklch, var(--background) 96%, white 4%);
+        }
+
+        .header-stat {
+            flex: 1;
+            min-width: 140px;
+            border: 1px dashed var(--border);
+            border-radius: 12px;
+            padding: 0.5rem 0.8rem;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            font-size: 11px;
+        }
+
+        .header-stat .value {
+            font-size: 18px;
+            font-weight: 600;
+        }
+
+        .workspace-detail-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(10, 10, 10, 0.6);
+            backdrop-filter: blur(6px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 30;
+            padding: 1.5rem;
+        }
+
+        .workspace-detail-panel {
+            background: var(--card);
+            border-radius: 20px;
+            border: 1px solid var(--border);
+            box-shadow: var(--shadow-lg);
+            max-width: 1200px;
+            width: 100%;
+            display: flex;
+            gap: 24px;
+            padding: 1rem;
+            position: relative;
+            max-height: 90vh;
+            overflow: hidden;
+        }
+
+        .dedup-report-panel {
+            max-width: 640px;
+            flex-direction: column;
+        }
+
+        .detail-media {
+            flex: 1.4;
+            min-height: 320px;
+            max-height: 80vh;
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 0.5rem;
+            background: color-mix(in oklch, var(--background) 95%, white 5%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+        }
+
+        .detail-viewer {
+            width: 100%;
+            height: 100%;
+        }
+
+        .detail-viewer img {
+            width: 100%;
+            height: 100%;
+            display: block;
+            object-fit: contain;
+        }
+
+        .detail-info {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            max-height: 80vh;
+            overflow: auto;
+            padding-right: 4px;
+        }
+
+        .detail-info-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+        }
+
+        .detail-title {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+
+        .detail-meta {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            font-size: 13px;
+        }
+
+        .detail-meta-row {
+            display: flex;
+            justify-content: space-between;
+            gap: 8px;
+            border-bottom: 1px dashed var(--border);
+            padding-bottom: 4px;
+        }
+
+        .detail-meta-row span:last-child {
+            font-weight: 600;
+            text-align: right;
+        }
+
+        .detail-actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .detail-close {
+            position: absolute;
+            top: 12px;
+            right: 12px;
+            border: none;
+            background: transparent;
+            font-size: 20px;
+            cursor: pointer;
+            color: var(--muted-foreground);
+        }
+
+        .result-select {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            z-index: 2;
+        }
+
+        .select-checkbox {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .select-checkbox input {
+            appearance: none;
+            width: 18px;
+            height: 18px;
+            border: 2px solid var(--border);
+            border-radius: 4px;
+            background: rgba(255, 255, 255, 0.85);
+            cursor: pointer;
+            display: inline-flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .select-checkbox input:checked {
+            background: var(--primary);
+            border-color: var(--primary);
+        }
+
+        .select-checkbox input:checked::after {
+            content: '✓';
+            color: #fff;
+            font-size: 12px;
+            line-height: 1;
+        }
+
+        .result-card.selected {
+            box-shadow: inset 0 0 0 2px var(--primary);
+        }
+
+        .selection-bar {
+            position: fixed;
+            left: 24px;
+            right: 24px;
+            bottom: 24px;
+            background: color-mix(in oklch, var(--card) 96%, white 4%);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 0.75rem 1rem;
+            box-shadow: var(--shadow-lg);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            z-index: 25;
+        }
+
+        .selection-bar strong {
+            font-size: 16px;
+            margin: 0 4px;
+        }
+
+        .selection-actions {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .selection-actions .btn-inline {
+            background: var(--card);
+        }
+
+        .result-card.skeleton {
+            pointer-events: none;
+        }
+
+        .skeleton-thumb {
+            height: 200px;
+            background: linear-gradient(120deg, var(--muted) 0%, color-mix(in srgb, var(--muted), white 20%) 50%, var(--muted) 100%);
+            background-size: 200% 200%;
+            animation: skeleton 1.5s ease infinite;
+        }
+
+        .skeleton-lines {
+            padding: 0.8rem;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .skeleton-line {
+            height: 12px;
+            border-radius: 999px;
+            background: color-mix(in srgb, var(--muted), white 10%);
+        }
+
+        @keyframes skeleton {
+            0% {
+                background-position: 0% 50%;
+            }
+
+            50% {
+                background-position: 100% 50%;
+            }
+
+            100% {
+                background-position: 0% 50%;
+            }
         }
     </style>
 </head>
+
 <body class="material-layout workspace">
-<div id="app">
-    <header class="material-header">
-        <div class="flex items-center gap-3">
-            <div class="material-logo"></div>
-            <div>
-                <div class="text-xs text-slate-500">MaterialSearch Workspace</div>
-                <div class="text-base font-semibold">素材管理与命令面板</div>
-            </div>
-        </div>
-        <div class="flex items-center gap-2 text-sm">
-            <div class="material-chip">{{ scopeHeadline }}</div>
-            <button class="material-chip interactive" @click="cycleTheme"><i data-lucide="sun-moon"></i> {{ themeLabel }}</button>
-        </div>
-    </header>
-    <div class="material-header-stats" v-if="statusChips.length">
-        <div class="header-stat" v-for="chip in statusChips" :key="chip.label">
-            <span class="text-[11px] uppercase tracking-[0.08em] text-slate-500">{{ chip.label }}</span>
-            <span class="value">{{ chip.value }}</span>
-            <span class="text-[11px] text-slate-500">{{ chip.hint }}</span>
-        </div>
-    </div>
-    <div class="material-shell">
-        <aside class="material-sidebar">
-            <div class="material-sidebar-section-title">资源库</div>
-            <div class="material-sidebar-pills">
-                <div class="material-pill" :class="{active: sidebarLibrary==='permanent'}" @click="switchSidebar('permanent')">永久库</div>
-                <div class="material-pill" :class="{active: sidebarLibrary==='project'}" @click="switchSidebar('project')">项目库</div>
-            </div>
-            <div v-if="sidebarLibrary==='permanent'">
-                <div class="material-sidebar-section-title">当前统计</div>
-                <div class="material-list">
-                    <div v-for="group in permanentGroups" :key="group.id" class="material-list-item" :class="{active: activePermanentGroup===group.id}" @click="selectPermanentGroup(group)">
-                        <div class="flex justify-between text-xs"><span>{{ group.name }}</span><span>{{ group.countDisplay }}</span></div>
-                        <div class="text-[10px] text-slate-500" v-if="group.description">{{ group.description }}</div>
-                    </div>
+    <div id="app">
+        <header class="material-header">
+            <div class="flex items-center gap-3">
+                <div class="material-logo"></div>
+                <div>
+                    <div class="text-xs text-slate-500">MaterialSearch Workspace</div>
+                    <div class="text-base font-semibold">素材管理与命令面板</div>
                 </div>
             </div>
-            <div v-else>
-                <div class="material-sidebar-section-title">项目列表</div>
-                <div class="material-list">
-                    <div class="material-list-item" v-for="project in projects" :key="project.id" :class="{active: currentLibrary===project.id}" @click="selectProject(project)">
-                        <div class="flex justify-between text-xs"><span>{{ project.name }}</span><span class="text-[10px]" :class="project.status==='active' ? 'text-emerald-600' : 'text-slate-500'">{{ project.status==='active' ? '进行中' : '已归档' }}</span></div>
-                        <div class="text-[10px] text-slate-500">图片 {{ formatNumber(project.image_count) }} · 视频 {{ formatNumber(project.video_count) }}</div>
-                    </div>
-                    <div class="material-list-item action" @click="openProjectDialog">
-                        <div class="flex items-center justify-between text-xs">
-                            <span>+ 新建项目</span>
-                            <span class="text-[10px] text-slate-500">Workspace</span>
+            <div class="flex items-center gap-2 text-sm">
+                <div class="material-chip">{{ scopeHeadline }}</div>
+                <button class="material-chip interactive" @click="cycleTheme"><i data-lucide="sun-moon"></i> {{
+                    themeLabel }}</button>
+            </div>
+        </header>
+        <div class="material-header-stats" v-if="statusChips.length">
+            <div class="header-stat" v-for="chip in statusChips" :key="chip.label">
+                <span class="text-[11px] uppercase tracking-[0.08em] text-slate-500">{{ chip.label }}</span>
+                <span class="value">{{ chip.value }}</span>
+                <span class="text-[11px] text-slate-500">{{ chip.hint }}</span>
+            </div>
+        </div>
+        <div class="material-shell">
+            <aside class="material-sidebar">
+                <div class="material-sidebar-section-title">资源库</div>
+                <div class="material-sidebar-pills">
+                    <div class="material-pill" :class="{active: sidebarLibrary==='permanent'}"
+                        @click="switchSidebar('permanent')">永久库</div>
+                    <div class="material-pill" :class="{active: sidebarLibrary==='project'}"
+                        @click="switchSidebar('project')">项目库</div>
+                </div>
+                <div v-if="sidebarLibrary==='permanent'">
+                    <div class="material-sidebar-section-title">当前统计</div>
+                    <div class="material-list">
+                        <div v-for="group in permanentGroups" :key="group.id" class="material-list-item"
+                            :class="{active: activePermanentGroup===group.id}" @click="selectPermanentGroup(group)">
+                            <div class="flex justify-between text-xs"><span>{{ group.name }}</span><span>{{
+                                    group.countDisplay }}</span></div>
+                            <div class="text-[10px] text-slate-500" v-if="group.description">{{ group.description }}
+                            </div>
                         </div>
-                        <div class="text-[10px] text-slate-500">创建新的项目库并立即使用</div>
                     </div>
                 </div>
-            </div>
-        </aside>
-        <main class="material-main">
-            <div class="text-sm text-slate-500">当前检索范围：<span :class="currentLibrary==='permanent' ? 'text-emerald-600' : 'text-sky-600'">{{ scopeDescription }}</span></div>
-            <div class="material-tabs">
-                <div class="material-tab" :class="{active: activeTab==='search'}" @click="setActiveTab('search')"><i data-lucide="search"></i> 搜索</div>
-                <div class="material-tab" :class="{active: activeTab==='upload'}" @click="setActiveTab('upload')"><i data-lucide="upload"></i> 上传</div>
-                <div class="material-tab" :class="{active: activeTab==='stats'}" @click="setActiveTab('stats')"><i data-lucide="bar-chart-2"></i> 统计</div>
-            </div>
-            <div class="scope-stats" v-if="scopeStats.length">
-                <div class="scope-stat-pill" v-for="stat in scopeStats" :key="stat.label">
-                    <span class="text-[11px] text-slate-500">{{ stat.label }}</span>
-                    <span class="value">{{ stat.value }}</span>
+                <div v-else>
+                    <div class="material-sidebar-section-title">项目列表</div>
+                    <div class="material-list">
+                        <div class="material-list-item" v-for="project in projects" :key="project.id"
+                            :class="{active: currentLibrary===project.id}" @click="selectProject(project)">
+                            <div class="flex justify-between text-xs"><span>{{ project.name }}</span><span
+                                    class="text-[10px]"
+                                    :class="project.status==='active' ? 'text-emerald-600' : 'text-slate-500'">{{
+                                    project.status==='active' ? '进行中' : '已归档' }}</span></div>
+                            <div class="text-[10px] text-slate-500">图片 {{ formatNumber(project.image_count) }} · 视频 {{
+                                formatNumber(project.video_count) }}</div>
+                        </div>
+                        <div class="material-list-item action" @click="openProjectDialog">
+                            <div class="flex items-center justify-between text-xs">
+                                <span>+ 新建项目</span>
+                                <span class="text-[10px] text-slate-500">Workspace</span>
+                            </div>
+                            <div class="text-[10px] text-slate-500">创建新的项目库并立即使用</div>
+                        </div>
+                    </div>
                 </div>
-            </div>
+            </aside>
+            <main class="material-main">
+                <div class="text-sm text-slate-500">当前检索范围：<span
+                        :class="currentLibrary==='permanent' ? 'text-emerald-600' : 'text-sky-600'">{{ scopeDescription
+                        }}</span></div>
+                <div class="material-tabs">
+                    <div class="material-tab" :class="{active: activeTab==='search'}" @click="setActiveTab('search')"><i
+                            data-lucide="search"></i> 搜索</div>
+                    <div class="material-tab" :class="{active: activeTab==='upload'}" @click="setActiveTab('upload')"><i
+                            data-lucide="upload"></i> 上传</div>
+                    <div class="material-tab" :class="{active: activeTab==='stats'}" @click="setActiveTab('stats')"><i
+                            data-lucide="bar-chart-2"></i> 统计</div>
+                </div>
+                <div class="scope-stats" v-if="scopeStats.length">
+                    <div class="scope-stat-pill" v-for="stat in scopeStats" :key="stat.label">
+                        <span class="text-[11px] text-slate-500">{{ stat.label }}</span>
+                        <span class="value">{{ stat.value }}</span>
+                    </div>
+                </div>
 
-            <section class="material-search-panel" v-show="activeTab==='search'">
-                <div class="material-search-row">
-                    <input class="material-input-main" v-model="form.positive" placeholder="描述你想要的素材，例如：商业街 夜景 霓虹" />
-                    <select class="material-select" v-model="form.top_n">
-                        <option value="30">Top 30</option>
-                        <option value="60">Top 60</option>
-                        <option value="150">Top 150</option>
-                        <option value="1000">全部</option>
-                    </select>
-                    <button class="material-btn-primary" @click="search"><i data-lucide="search"></i> 搜索</button>
-                </div>
-                <div class="flex flex-wrap items-center gap-2 text-[11px] text-slate-500 mt-2">
-                    <div v-for="mode in searchModes" :key="mode.value" :title="mode.description || ''" :class="['material-pill-search-mode', {active: searchMode===mode.value, disabled: mode.disabled}]" @click="selectSearchMode(mode.value)">
-                        <i :data-lucide="mode.icon"></i>{{ mode.label }}
+                <section class="material-search-panel" v-show="activeTab==='search'">
+                    <div class="material-search-row">
+                        <input class="material-input-main" v-model="form.positive"
+                            placeholder="描述你想要的素材，例如：商业街 夜景 霓虹" />
+                        <select class="material-select" v-model="form.top_n">
+                            <option value="30">Top 30</option>
+                            <option value="60">Top 60</option>
+                            <option value="150">Top 150</option>
+                            <option value="1000">全部</option>
+                        </select>
+                        <button class="material-btn-primary" @click="search"><i data-lucide="search"></i> 搜索</button>
                     </div>
-                    <div class="flex items-center gap-1 cursor-pointer" @click="advancedOpen=!advancedOpen"><i data-lucide="sliders"></i> 高级筛选</div>
-                    <div class="flex items-center gap-1 cursor-pointer" @click="copyAllPaths"><i data-lucide="copy"></i> 复制全部路径</div>
-                    <div class="view-toggle"><span :class="{active: viewMode==='masonry'}" @click="setViewMode('masonry')">瀑布流</span><span :class="{active: viewMode==='grid'}" @click="setViewMode('grid')">网格</span></div>
-                    <label class="material-pill-search-mode" v-if="currentLibrary==='permanent'">
-                        <input type="checkbox" v-model="form.include_duplicates" class="hidden" />
-                        <i data-lucide="layers"></i> 包含重复
-                    </label>
-                    <div class="flex items-center gap-1">
-                        <span>缩略图 ({{ columnCount }} 列)</span>
-                        <input type="range" min="2" max="6" step="1" v-model.number="thumbnailScale" />
+                    <div class="flex flex-wrap items-center gap-2 text-[11px] text-slate-500 mt-2">
+                        <div v-for="mode in searchModes" :key="mode.value" :title="mode.description || ''"
+                            :class="['material-pill-search-mode', {active: searchMode===mode.value, disabled: mode.disabled}]"
+                            @click="selectSearchMode(mode.value)">
+                            <i :data-lucide="mode.icon"></i>{{ mode.label }}
+                        </div>
+                        <div class="flex items-center gap-1 cursor-pointer" @click="advancedOpen=!advancedOpen"><i
+                                data-lucide="sliders"></i> 高级筛选</div>
+                        <div class="flex items-center gap-1 cursor-pointer" @click="copyAllPaths"><i
+                                data-lucide="copy"></i> 复制全部路径</div>
+                        <div class="view-toggle"><span :class="{active: viewMode==='masonry'}"
+                                @click="setViewMode('masonry')">瀑布流</span><span :class="{active: viewMode==='grid'}"
+                                @click="setViewMode('grid')">网格</span></div>
+                        <label class="material-pill-search-mode" v-if="currentLibrary==='permanent'">
+                            <input type="checkbox" v-model="form.include_duplicates" class="hidden" />
+                            <i data-lucide="layers"></i> 包含重复
+                        </label>
+                        <div class="flex items-center gap-1">
+                            <span>缩略图 ({{ columnCount }} 列)</span>
+                            <input type="range" min="2" max="6" step="1" v-model.number="thumbnailScale" />
+                        </div>
+                        <div class="dedup-panel" v-if="currentLibrary==='permanent'">
+                            <div class="flex flex-wrap items-center gap-2 text-[11px] text-slate-600">
+                                <button class="btn-inline" @click="startDedupJob"
+                                    :disabled="dedup.loading || dedup.running">
+                                    <i data-lucide="sparkles"></i> {{ dedup.running ? '扫描中' : '去重扫描' }}
+                                </button>
+                                <span :class="dedup.running ? 'text-emerald-600' : 'text-slate-500'">{{ dedupStatusText
+                                    }}</span>
+                                <button class="btn-inline" @click="loadLatestDedupReport"
+                                    :disabled="dedup.loading">刷新报告</button>
+                                <button class="btn-inline" @click="openDedupReport(dedup.latestReport)"
+                                    :disabled="!dedup.latestReport">查看报告</button>
+                                <span class="text-rose-500" v-if="dedup.error">{{ dedup.error }}</span>
+                            </div>
+                        </div>
                     </div>
-                    <div class="dedup-panel" v-if="currentLibrary==='permanent'">
-                        <div class="flex flex-wrap items-center gap-2 text-[11px] text-slate-600">
-                            <button class="btn-inline" @click="startDedupJob" :disabled="dedup.loading || dedup.running">
-                                <i data-lucide="sparkles"></i> {{ dedup.running ? '扫描中' : '去重扫描' }}
+                    <div class="image-search-panel" v-if="searchMode===1">
+                        <input type="file" ref="searchImageInput" class="hidden" accept="image/*"
+                            @change="handleSearchImageChange">
+                        <div class="image-search-actions">
+                            <button class="material-btn-primary" type="button" @click="triggerSearchImagePick"
+                                :disabled="searchImage.uploading">
+                                <i data-lucide="image"></i> {{ searchImage.name ? '重新选择图片' : '选择参考图' }}
                             </button>
-                            <span :class="dedup.running ? 'text-emerald-600' : 'text-slate-500'">{{ dedupStatusText }}</span>
-                            <button class="btn-inline" @click="loadLatestDedupReport" :disabled="dedup.loading">刷新报告</button>
-                            <button class="btn-inline" @click="openDedupReport(dedup.latestReport)" :disabled="!dedup.latestReport">查看报告</button>
-                            <span class="text-rose-500" v-if="dedup.error">{{ dedup.error }}</span>
+                            <button class="btn-inline" type="button" v-if="searchImage.name" @click="clearSearchImage"
+                                :disabled="searchImage.uploading">
+                                <i data-lucide="x"></i> 清除
+                            </button>
+                            <span class="text-[11px] text-slate-500" v-if="searchImage.name">
+                                {{ searchImage.name }} · {{ formatBytes(searchImage.size) }}
+                            </span>
+                            <span class="text-[11px] text-slate-500" v-if="searchImage.uploading">上传中...</span>
+                        </div>
+                        <div class="image-search-preview" v-if="searchImage.preview">
+                            <img :src="searchImage.preview" alt="参考图片预览">
+                        </div>
+                        <div class="text-[11px] text-rose-500 mt-1" v-if="searchImage.error">{{ searchImage.error }}
+                        </div>
+                        <div class="text-[11px] text-slate-500 mt-1">提示：上传 25MB 以内的图片，点击“搜索”即可在当前库中查找相似素材。</div>
+                    </div>
+                    <div class="mt-2" v-show="advancedOpen">
+                        <div class="flex gap-2">
+                            <input class="material-input-main" style="flex:1" placeholder="限制路径" v-model="form.path" />
+                            <input class="material-input-main" style="flex:1" placeholder="排除关键字"
+                                v-model="form.negative" />
+                        </div>
+                        <div class="flex gap-2 mt-2">
+                            <div class="pill-small" @click="applyTimeFilter(30)">最近30天</div>
+                            <div class="pill-small" @click="applyTimeFilter(365)">一年内</div>
+                            <div class="pill-small" v-if="timeFilterLabel" @click="clearTimeFilter()">清除时间筛选</div>
+                            <div class="pill-small" @click="form.negative=''">清空排除词</div>
+                        </div>
+                        <div class="text-[11px] text-slate-500 mt-1" v-if="timeFilterLabel">当前时间筛选：{{ timeFilterLabel }}
                         </div>
                     </div>
-                </div>
-                <div class="image-search-panel" v-if="searchMode===1">
-                    <input type="file" ref="searchImageInput" class="hidden" accept="image/*" @change="handleSearchImageChange">
-                    <div class="image-search-actions">
-                        <button class="material-btn-primary" type="button" @click="triggerSearchImagePick" :disabled="searchImage.uploading">
-                            <i data-lucide="image"></i> {{ searchImage.name ? '重新选择图片' : '选择参考图' }}
-                        </button>
-                        <button class="btn-inline" type="button" v-if="searchImage.name" @click="clearSearchImage" :disabled="searchImage.uploading">
-                            <i data-lucide="x"></i> 清除
-                        </button>
-                        <span class="text-[11px] text-slate-500" v-if="searchImage.name">
-                            {{ searchImage.name }} · {{ formatBytes(searchImage.size) }}
-                        </span>
-                        <span class="text-[11px] text-slate-500" v-if="searchImage.uploading">上传中...</span>
-                    </div>
-                    <div class="image-search-preview" v-if="searchImage.preview">
-                        <img :src="searchImage.preview" alt="参考图片预览">
-                    </div>
-                    <div class="text-[11px] text-rose-500 mt-1" v-if="searchImage.error">{{ searchImage.error }}</div>
-                    <div class="text-[11px] text-slate-500 mt-1">提示：上传 25MB 以内的图片，点击“搜索”即可在当前库中查找相似素材。</div>
-                </div>
-                <div class="mt-2" v-show="advancedOpen">
-                    <div class="flex gap-2">
-                        <input class="material-input-main" style="flex:1" placeholder="限制路径" v-model="form.path" />
-                        <input class="material-input-main" style="flex:1" placeholder="排除关键字" v-model="form.negative" />
-                    </div>
-                    <div class="flex gap-2 mt-2">
-                        <div class="pill-small" @click="applyTimeFilter(30)">最近30天</div>
-                        <div class="pill-small" @click="applyTimeFilter(365)">一年内</div>
-                        <div class="pill-small" v-if="timeFilterLabel" @click="clearTimeFilter()">清除时间筛选</div>
-                        <div class="pill-small" @click="form.negative=''">清空排除词</div>
-                    </div>
-                    <div class="text-[11px] text-slate-500 mt-1" v-if="timeFilterLabel">当前时间筛选：{{ timeFilterLabel }}</div>
-                </div>
-            </section>
+                </section>
 
-            <section class="mt-4" v-show="activeTab==='search'">
-                <div class="flex justify-between text-xs text-slate-500 mb-2">
-                    <div>共 {{ files.length }} 条结果</div>
-                    <div v-if="isLoading">正在查询...</div>
-                </div>
-                <div class="text-xs text-rose-500 mb-2" v-if="lastSearchError">{{ lastSearchError }}</div>
-                <div class="results-masonry" :style="resultsWrapperStyle" v-if="isLoading">
-                    <article class="result-card skeleton" v-for="n in skeletonCount" :key="'skeleton-'+n">
-                        <div class="skeleton-thumb"></div>
-                        <div class="skeleton-lines">
-                            <div class="skeleton-line" style="width:60%;"></div>
-                            <div class="skeleton-line" style="width:80%;"></div>
-                            <div class="skeleton-line" style="width:40%;"></div>
-                        </div>
-                    </article>
-                </div>
-                <template v-else>
-                    <div class="results-masonry" :style="resultsWrapperStyle" v-if="viewMode==='masonry'">
-                        <article class="result-card" :class="{'selected': isSelected(item)}" v-for="item in files" :key="item.id">
-                            <div class="result-select" v-if="isProjectResult(item)">
-                                <label class="select-checkbox">
-                                    <input type="checkbox" :checked="isSelected(item)" @change.stop="toggleSelection(item)">
-                                </label>
-                            </div>
-                            <div class="result-thumb" style="position: relative;" @click="openDetail(item)">
-                                <div class="material-chip" v-if="item.type==='pdf'" style="position:absolute;top:10px;left:10px;background:rgba(0,0,0,0.55);color:#fff;">
-                                    PDF · {{ item.page_count || '多页' }}
-                                </div>
-                                <img :src="resultImage(item)" :alt="formatName(item)" loading="lazy">
-                            </div>
-                            <div class="result-meta">
-                                <span class="text-[11px] text-slate-500">{{ formatSource(item) }}</span>
-                                <span class="font-medium truncate cursor-pointer" @click="openDetail(item)">{{ formatName(item) }}</span>
-                                <span class="text-[11px]">匹配度 {{ formatScore(item.score) }}</span>
-                                <span class="text-[11px]" v-if="item.type==='pdf'">PDF · {{ item.page_count || '多页' }}</span>
-                                <span class="text-[11px] text-slate-500 truncate">{{ item.path }}</span>
-                            </div>
-                            <div class="result-actions">
-                                <button class="btn-inline" @click.stop="copyPath(item.path)"><i data-lucide="copy"></i>复制</button>
-                                <button class="btn-inline" v-if="isProjectResult(item)" @click.stop="archiveItems([item])"><i data-lucide="archive"></i>归档</button>
-                                <button class="btn-inline" v-if="isProjectResult(item)" @click.stop="deleteItems([item])"><i data-lucide="trash-2"></i>删除</button>
-                                <button class="btn-inline" @click.stop="searchSimilar(item)" :disabled="!item.id"><i data-lucide="sparkles"></i>找相似</button>
-                                <button class="btn-inline" @click.stop="openDetail(item)"><i data-lucide="maximize"></i>查看</button>
+                <section class="mt-4" v-show="activeTab==='search'">
+                    <div class="flex justify-between text-xs text-slate-500 mb-2">
+                        <div>共 {{ files.length }} 条结果</div>
+                        <div v-if="isLoading">正在查询...</div>
+                    </div>
+                    <div class="text-xs text-rose-500 mb-2" v-if="lastSearchError">{{ lastSearchError }}</div>
+                    <div class="results-masonry" :style="resultsWrapperStyle" v-if="isLoading">
+                        <article class="result-card skeleton" v-for="n in skeletonCount" :key="'skeleton-'+n">
+                            <div class="skeleton-thumb"></div>
+                            <div class="skeleton-lines">
+                                <div class="skeleton-line" style="width:60%;"></div>
+                                <div class="skeleton-line" style="width:80%;"></div>
+                                <div class="skeleton-line" style="width:40%;"></div>
                             </div>
                         </article>
                     </div>
-                    <div v-else class="grid gap-4" :style="resultsWrapperStyle">
-                        <article class="result-card" :class="{'selected': isSelected(item)}" v-for="item in files" :key="item.id">
-                            <div class="result-select" v-if="isProjectResult(item)">
-                                <label class="select-checkbox">
-                                    <input type="checkbox" :checked="isSelected(item)" @change.stop="toggleSelection(item)">
-                                </label>
-                            </div>
-                            <div class="result-thumb" style="position: relative;" @click="openDetail(item)">
-                                <div class="material-chip" v-if="item.type==='pdf'" style="position:absolute;top:10px;left:10px;background:rgba(0,0,0,0.55);color:#fff;">
-                                    PDF · {{ item.page_count || '多页' }}
+                    <template v-else>
+                        <div class="results-masonry" :style="resultsWrapperStyle" v-if="viewMode==='masonry'">
+                            <article class="result-card" :class="{'selected': isSelected(item)}" v-for="item in files"
+                                :key="item.id">
+                                <div class="result-select" v-if="isProjectResult(item)">
+                                    <label class="select-checkbox">
+                                        <input type="checkbox" :checked="isSelected(item)"
+                                            @change.stop="toggleSelection(item)">
+                                    </label>
                                 </div>
-                                <img :src="resultImage(item)" :alt="formatName(item)">
-                            </div>
-                            <div class="result-meta">
-                                <span class="text-[11px] text-slate-500">{{ formatSource(item) }}</span>
-                                <span class="font-medium truncate cursor-pointer" @click="openDetail(item)">{{ formatName(item) }}</span>
-                                <span class="text-[11px]">匹配度 {{ formatScore(item.score) }}</span>
-                                <span class="text-[11px]" v-if="item.type==='pdf'">PDF · {{ item.page_count || '多页' }}</span>
-                            </div>
-                            <div class="result-actions">
-                                <button class="btn-inline" @click.stop="copyPath(item.path)"><i data-lucide="copy"></i>复制</button>
-                                <button class="btn-inline" v-if="isProjectResult(item)" @click.stop="archiveItems([item])"><i data-lucide="archive"></i>归档</button>
-                                <button class="btn-inline" v-if="isProjectResult(item)" @click.stop="deleteItems([item])"><i data-lucide="trash-2"></i>删除</button>
-                                <button class="btn-inline" @click.stop="searchSimilar(item)" :disabled="!item.id"><i data-lucide="sparkles"></i>找相似</button>
-                                <button class="btn-inline" @click.stop="openDetail(item)"><i data-lucide="maximize"></i>查看</button>
-                            </div>
-                        </article>
-                    </div>
-                </template>
-            </section>
+                                <div class="result-thumb" style="position: relative;" @click="openDetail(item)">
+                                    <div class="material-chip" v-if="item.type==='pdf'"
+                                        style="position:absolute;top:10px;left:10px;background:rgba(0,0,0,0.55);color:#fff;">
+                                        PDF · {{ item.page_count || '多页' }}
+                                    </div>
+                                    <img :src="resultImage(item)" :alt="formatName(item)" loading="lazy">
+                                </div>
+                                <div class="result-meta">
+                                    <span class="text-[11px] text-slate-500">{{ formatSource(item) }}</span>
+                                    <span class="font-medium truncate cursor-pointer" @click="openDetail(item)">{{
+                                        formatName(item) }}</span>
+                                    <span class="text-[11px]">匹配度 {{ formatScore(item.score) }}</span>
+                                    <span class="text-[11px]" v-if="item.type==='pdf'">PDF · {{ item.page_count || '多页'
+                                        }}</span>
+                                    <span class="text-[11px] text-slate-500 truncate">{{ item.path }}</span>
+                                </div>
+                                <div class="result-actions">
+                                    <button class="btn-inline" @click.stop="copyPath(item.path)"><i
+                                            data-lucide="copy"></i>复制</button>
+                                    <button class="btn-inline" v-if="isProjectResult(item)"
+                                        @click.stop="archiveItems([item])"><i data-lucide="archive"></i>归档</button>
+                                    <button class="btn-inline" v-if="isProjectResult(item)"
+                                        @click.stop="deleteItems([item])"><i data-lucide="trash-2"></i>删除</button>
+                                    <button class="btn-inline" @click.stop="searchSimilar(item)" :disabled="!item.id"><i
+                                            data-lucide="sparkles"></i>找相似</button>
+                                    <button class="btn-inline" @click.stop="openDetail(item)"><i
+                                            data-lucide="maximize"></i>查看</button>
+                                </div>
+                            </article>
+                        </div>
+                        <div v-else class="grid gap-4" :style="resultsWrapperStyle">
+                            <article class="result-card" :class="{'selected': isSelected(item)}" v-for="item in files"
+                                :key="item.id">
+                                <div class="result-select" v-if="isProjectResult(item)">
+                                    <label class="select-checkbox">
+                                        <input type="checkbox" :checked="isSelected(item)"
+                                            @change.stop="toggleSelection(item)">
+                                    </label>
+                                </div>
+                                <div class="result-thumb" style="position: relative;" @click="openDetail(item)">
+                                    <div class="material-chip" v-if="item.type==='pdf'"
+                                        style="position:absolute;top:10px;left:10px;background:rgba(0,0,0,0.55);color:#fff;">
+                                        PDF · {{ item.page_count || '多页' }}
+                                    </div>
+                                    <img :src="resultImage(item)" :alt="formatName(item)">
+                                </div>
+                                <div class="result-meta">
+                                    <span class="text-[11px] text-slate-500">{{ formatSource(item) }}</span>
+                                    <span class="font-medium truncate cursor-pointer" @click="openDetail(item)">{{
+                                        formatName(item) }}</span>
+                                    <span class="text-[11px]">匹配度 {{ formatScore(item.score) }}</span>
+                                    <span class="text-[11px]" v-if="item.type==='pdf'">PDF · {{ item.page_count || '多页'
+                                        }}</span>
+                                </div>
+                                <div class="result-actions">
+                                    <button class="btn-inline" @click.stop="copyPath(item.path)"><i
+                                            data-lucide="copy"></i>复制</button>
+                                    <button class="btn-inline" v-if="isProjectResult(item)"
+                                        @click.stop="archiveItems([item])"><i data-lucide="archive"></i>归档</button>
+                                    <button class="btn-inline" v-if="isProjectResult(item)"
+                                        @click.stop="deleteItems([item])"><i data-lucide="trash-2"></i>删除</button>
+                                    <button class="btn-inline" @click.stop="searchSimilar(item)" :disabled="!item.id"><i
+                                            data-lucide="sparkles"></i>找相似</button>
+                                    <button class="btn-inline" @click.stop="openDetail(item)"><i
+                                            data-lucide="maximize"></i>查看</button>
+                                </div>
+                            </article>
+                        </div>
+                    </template>
+                </section>
 
-            <div class="selection-bar" v-if="selectionVisible">
-                <div class="selection-info">已选择<strong>{{ selectedCount }}</strong>项</div>
-                <div class="selection-actions">
-                    <button class="btn-inline" @click="archiveSelected" :disabled="!canArchiveSelected || actionLoading"><i data-lucide="archive"></i>归档选中</button>
-                    <button class="btn-inline" @click="deleteSelected" :disabled="!canDeleteSelected || actionLoading"><i data-lucide="trash-2"></i>删除选中</button>
-                    <button class="btn-inline" @click="clearSelection" :disabled="actionLoading"><i data-lucide="x"></i>清空</button>
+                <div class="selection-bar" v-if="selectionVisible">
+                    <div class="selection-info">已选择<strong>{{ selectedCount }}</strong>项</div>
+                    <div class="selection-actions">
+                        <button class="btn-inline" @click="archiveSelected"
+                            :disabled="!canArchiveSelected || actionLoading"><i data-lucide="archive"></i>归档选中</button>
+                        <button class="btn-inline" @click="deleteSelected"
+                            :disabled="!canDeleteSelected || actionLoading"><i data-lucide="trash-2"></i>删除选中</button>
+                        <button class="btn-inline" @click="clearSelection" :disabled="actionLoading"><i
+                                data-lucide="x"></i>清空</button>
+                    </div>
                 </div>
-            </div>
 
-            <section class="material-search-panel mt-4" v-show="activeTab==='upload'">
-                <div class="upload-stepper">
-                    <div class="upload-step" :class="{'active': uploadStep===0, 'done': uploadStep>0}">
-                        <span class="index">1</span>
-                        <div>
-                            <div class="title">收集路径</div>
-                            <div class="desc">粘贴或从历史列表选择</div>
+                <section class="material-search-panel mt-4" v-show="activeTab==='upload'">
+                    <div class="upload-stepper">
+                        <div class="upload-step" :class="{'active': uploadStep===0, 'done': uploadStep>0}">
+                            <span class="index">1</span>
+                            <div>
+                                <div class="title">收集路径</div>
+                                <div class="desc">粘贴或从历史列表选择</div>
+                            </div>
+                        </div>
+                        <div class="upload-step" :class="{'active': uploadStep===1, 'done': uploadStep>1}">
+                            <span class="index">2</span>
+                            <div>
+                                <div class="title">预览素材</div>
+                                <div class="desc">筛选文件并确认入库</div>
+                            </div>
+                        </div>
+                        <div class="upload-step" :class="{'active': uploadStep===2, 'done': uploadStep>2}">
+                            <span class="index">3</span>
+                            <div>
+                                <div class="title">处理进度</div>
+                                <div class="desc">查看索引状态与冲突</div>
+                            </div>
+                        </div>
+                        <div class="upload-step" :class="{'active': uploadStep===3}">
+                            <span class="index">4</span>
+                            <div>
+                                <div class="title">完成</div>
+                                <div class="desc">导入结果与复盘</div>
+                            </div>
                         </div>
                     </div>
-                    <div class="upload-step" :class="{'active': uploadStep===1, 'done': uploadStep>1}">
-                        <span class="index">2</span>
-                        <div>
-                            <div class="title">预览素材</div>
-                            <div class="desc">筛选文件并确认入库</div>
-                        </div>
-                    </div>
-                    <div class="upload-step" :class="{'active': uploadStep===2, 'done': uploadStep>2}">
-                        <span class="index">3</span>
-                        <div>
-                            <div class="title">处理进度</div>
-                            <div class="desc">查看索引状态与冲突</div>
-                        </div>
-                    </div>
-                    <div class="upload-step" :class="{'active': uploadStep===3}">
-                        <span class="index">4</span>
-                        <div>
-                            <div class="title">完成</div>
-                            <div class="desc">导入结果与复盘</div>
-                        </div>
-                    </div>
-                </div>
 
-                <div class="upload-card" v-if="uploadStep===0">
-                    <div class="upload-card-header">
-                        <h3>准备导入素材</h3>
-                        <p>复制系统文件或 NAS 路径，一次可粘贴多行；若来自历史列表可直接点击添加。</p>
-                    </div>
-                    <textarea class="upload-textarea" v-model="uploadPathInput" :disabled="uploadLoadingPreview"
-                              placeholder="示例：&#10;D:/Projects/A101/exports&#10;\\\\NAS01\\share\\project-reference"
-                              @paste="handleUploadPathPaste"></textarea>
-                    <div class="upload-actions">
-                        <button class="material-btn-primary" @click="previewUploadFiles" :disabled="uploadLoadingPreview">
-                            <i data-lucide="scan"></i> {{ uploadLoadingPreview ? '扫描中...' : '扫描并预览' }}
-                        </button>
-                        <button class="btn-inline" @click="clearUploadInput"><i data-lucide="eraser"></i> 清空输入</button>
-                    </div>
-                    <div class="upload-history" v-if="uploadHistory.length">
-                        <div class="upload-history-header">
-                            <span>历史路径（{{ uploadHistory.length }}）</span>
-                            <span class="tip">与经典界面共享，按照最近使用排序</span>
+                    <div class="upload-card" v-if="uploadStep===0">
+                        <div class="upload-card-header">
+                            <h3>准备导入素材</h3>
+                            <p>复制系统文件或 NAS 路径，一次可粘贴多行；若来自历史列表可直接点击添加。</p>
                         </div>
-                        <div class="upload-history-list">
-                            <button class="history-chip" v-for="item in uploadHistory" :key="item.path" @click="applyUploadHistory(item.path)">
-                                <span class="path" :title="item.path">{{ item.path }}</span>
-                                <span class="time">{{ item.timeLabel }}</span>
+                        <textarea class="upload-textarea" v-model="uploadPathInput" :disabled="uploadLoadingPreview"
+                            placeholder="示例：&#10;D:/Projects/A101/exports&#10;\\\\NAS01\\share\\project-reference"
+                            @paste="handleUploadPathPaste"></textarea>
+                        <div class="upload-actions">
+                            <button class="material-btn-primary" @click="previewUploadFiles"
+                                :disabled="uploadLoadingPreview">
+                                <i data-lucide="scan"></i> {{ uploadLoadingPreview ? '扫描中...' : '扫描并预览' }}
+                            </button>
+                            <button class="btn-inline" @click="clearUploadInput"><i data-lucide="eraser"></i>
+                                清空输入</button>
+                        </div>
+                        <div class="upload-history" v-if="uploadHistory.length">
+                            <div class="upload-history-header">
+                                <span>历史路径（{{ uploadHistory.length }}）</span>
+                                <span class="tip">与经典界面共享，按照最近使用排序</span>
+                            </div>
+                            <div class="upload-history-list">
+                                <button class="history-chip" v-for="item in uploadHistory" :key="item.path"
+                                    @click="applyUploadHistory(item.path)">
+                                    <span class="path" :title="item.path">{{ item.path }}</span>
+                                    <span class="time">{{ item.timeLabel }}</span>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="upload-empty" v-else>
+                            <p>暂无历史记录，先粘贴几条路径吧。</p>
+                        </div>
+                    </div>
+
+                    <div class="upload-card" v-else-if="uploadStep===1">
+                        <div class="upload-card-header">
+                            <h3>预览并选择素材</h3>
+                            <p>已选择 <strong>{{ uploadSelectedCount }}</strong> 项，合计 {{ formatBytes(uploadSelectedSize)
+                                }}。</p>
+                        </div>
+                        <div class="upload-toolbar">
+                            <div class="btn-group">
+                                <button class="btn-inline" @click="selectAllUploadFiles"><i
+                                        data-lucide="check-square"></i> 全选</button>
+                                <button class="btn-inline" @click="invertUploadSelection"><i
+                                        data-lucide="arrow-left-right"></i> 反选</button>
+                            </div>
+                            <div class="btn-group">
+                                <button class="pill" :class="{active: uploadFilter==='all'}"
+                                    @click="setUploadFilter('all')">全部</button>
+                                <button class="pill" :class="{active: uploadFilter==='image'}"
+                                    @click="setUploadFilter('image')">图片</button>
+                                <button class="pill" :class="{active: uploadFilter==='video'}"
+                                    @click="setUploadFilter('video')">视频</button>
+                                <button class="pill" :class="{active: uploadFilter==='pdf'}"
+                                    @click="setUploadFilter('pdf')">PDF</button>
+                            </div>
+                        </div>
+                        <div class="upload-list" v-if="filteredUploadFiles.length">
+                            <article class="upload-row" v-for="file in filteredUploadFiles" :key="file.path">
+                                <label class="select-checkbox">
+                                    <input type="checkbox" :checked="isUploadSelected(file)"
+                                        @change="toggleUploadSelection(file)">
+                                    <span></span>
+                                </label>
+                                <div class="upload-thumb">
+                                    <img :src="uploadThumbnail(file)" :alt="file.filename">
+                                </div>
+                                <div class="upload-file-meta">
+                                    <div class="name" :title="file.filename">{{ file.filename }}</div>
+                                    <div class="path" :title="file.path">{{ file.path }}</div>
+                                </div>
+                                <div class="upload-tags">
+                                    <span class="tag">{{ uploadFileTypeLabel(file) }}</span>
+                                    <span class="tag" :class="{'muted': file.is_indexed}">{{ uploadStatusBadge(file)
+                                        }}</span>
+                                </div>
+                                <div class="upload-size">{{ formatBytes(file.size) }}</div>
+                                <button class="btn-inline sm" @click.stop="copyPath(file.path)"><i
+                                        data-lucide="copy"></i>复制</button>
+                            </article>
+                        </div>
+                        <div class="upload-empty" v-else>
+                            <p>当前筛选下没有可展示的素材，可以尝试切换类型或重新扫描。</p>
+                        </div>
+                        <div class="upload-footer">
+                            <button class="btn-inline" @click="uploadStep = 0"><i data-lucide="arrow-left"></i>
+                                返回路径收集</button>
+                            <div class="flex-spacer"></div>
+                            <button class="btn-inline" @click="refreshUploadHistory"><i data-lucide="refresh-ccw"></i>
+                                刷新历史</button>
+                            <button class="material-btn-primary" @click="startUploadIndex"
+                                :disabled="!uploadSelectedCount">
+                                <i data-lucide="play"></i> 开始导入
                             </button>
                         </div>
                     </div>
-                    <div class="upload-empty" v-else>
-                        <p>暂无历史记录，先粘贴几条路径吧。</p>
-                    </div>
-                </div>
 
-                <div class="upload-card" v-else-if="uploadStep===1">
-                    <div class="upload-card-header">
-                        <h3>预览并选择素材</h3>
-                        <p>已选择 <strong>{{ uploadSelectedCount }}</strong> 项，合计 {{ formatBytes(uploadSelectedSize) }}。</p>
-                    </div>
-                    <div class="upload-toolbar">
-                        <div class="btn-group">
-                            <button class="btn-inline" @click="selectAllUploadFiles"><i data-lucide="check-square"></i> 全选</button>
-                            <button class="btn-inline" @click="invertUploadSelection"><i data-lucide="arrow-left-right"></i> 反选</button>
-                        </div>
-                        <div class="btn-group">
-                            <button class="pill" :class="{active: uploadFilter==='all'}" @click="setUploadFilter('all')">全部</button>
-                            <button class="pill" :class="{active: uploadFilter==='image'}" @click="setUploadFilter('image')">图片</button>
-                            <button class="pill" :class="{active: uploadFilter==='video'}" @click="setUploadFilter('video')">视频</button>
-                            <button class="pill" :class="{active: uploadFilter==='pdf'}" @click="setUploadFilter('pdf')">PDF</button>
-                        </div>
-                    </div>
-                    <div class="upload-list" v-if="filteredUploadFiles.length">
-                        <article class="upload-row" v-for="file in filteredUploadFiles" :key="file.path">
-                            <label class="select-checkbox">
-                                <input type="checkbox" :checked="isUploadSelected(file)" @change="toggleUploadSelection(file)">
-                                <span></span>
-                            </label>
-                            <div class="upload-thumb">
-                                <img :src="uploadThumbnail(file)" :alt="file.filename">
+                    <div class="upload-card upload-progress-card" v-else-if="uploadStep===2">
+                        <div class="upload-progress-indicator">
+                            <div class="progress-value">{{ uploadTaskProgress }}%</div>
+                            <div class="progress-bar">
+                                <div class="progress-fill" :style="{width: uploadTaskProgress + '%'}"></div>
                             </div>
-                            <div class="upload-file-meta">
-                                <div class="name" :title="file.filename">{{ file.filename }}</div>
-                                <div class="path" :title="file.path">{{ file.path }}</div>
+                        </div>
+                        <div class="upload-progress-meta">
+                            <div>当前文件：{{ uploadCurrentFile }}</div>
+                            <div>进度：{{ uploadTaskInfo.processed || 0 }}/{{ uploadTaskInfo.total || 0 }}</div>
+                            <div>剩余时间：{{ uploadTaskInfo.remain_time ? uploadTaskInfo.remain_time + ' 秒' : '计算中' }}</div>
+                        </div>
+                        <div class="upload-progress-actions">
+                            <button class="btn-inline" @click="uploadShowDetails = !uploadShowDetails">
+                                <i data-lucide="list"></i> {{ uploadShowDetails ? '收起明细' : '查看明细' }}
+                            </button>
+                            <button class="btn-inline danger" @click="cancelUploadTask" :disabled="uploadCancelling">
+                                <i data-lucide="x-circle"></i> {{ uploadCancelling ? '取消中...' : '取消任务' }}
+                            </button>
+                        </div>
+                        <div class="upload-detail-panels" v-if="uploadShowDetails">
+                            <div class="detail-panel" v-if="(uploadTaskInfo.failed || []).length">
+                                <h4>失败列表</h4>
+                                <ul>
+                                    <li v-for="item in uploadTaskInfo.failed" :key="item.path">
+                                        <span class="path" :title="item.path">{{ item.path }}</span>
+                                        <span class="error">{{ item.error }}</span>
+                                    </li>
+                                </ul>
                             </div>
-                            <div class="upload-tags">
-                                <span class="tag">{{ uploadFileTypeLabel(file) }}</span>
-                                <span class="tag" :class="{'muted': file.is_indexed}">{{ uploadStatusBadge(file) }}</span>
+                            <div class="detail-panel" v-if="(uploadTaskInfo.duplicates || []).length">
+                                <h4>重复处理</h4>
+                                <ul>
+                                    <li v-for="item in uploadTaskInfo.duplicates" :key="item.path + item.existing_path">
+                                        <span class="path">{{ item.path }}</span>
+                                        <span class="hint">→ {{ item.existing_path }}</span>
+                                        <span class="status">{{ item.action }}</span>
+                                    </li>
+                                </ul>
                             </div>
-                            <div class="upload-size">{{ formatBytes(file.size) }}</div>
-                            <button class="btn-inline sm" @click.stop="copyPath(file.path)"><i data-lucide="copy"></i>复制</button>
-                        </article>
+                            <div class="detail-panel" v-if="(uploadTaskInfo.truncated || []).length">
+                                <h4>截断的 PDF</h4>
+                                <ul>
+                                    <li v-for="item in uploadTaskInfo.truncated" :key="'trunc-run-' + item.path">
+                                        <span class="path">{{ item.path }}</span>
+                                        <span class="hint">保留 {{ item.kept_pages || '部分' }} / {{ item.page_count || '未知'
+                                            }} 页</span>
+                                    </li>
+                                </ul>
+                            </div>
+                        </div>
                     </div>
-                    <div class="upload-empty" v-else>
-                        <p>当前筛选下没有可展示的素材，可以尝试切换类型或重新扫描。</p>
-                    </div>
-                    <div class="upload-footer">
-                        <button class="btn-inline" @click="uploadStep = 0"><i data-lucide="arrow-left"></i> 返回路径收集</button>
-                        <div class="flex-spacer"></div>
-                        <button class="btn-inline" @click="refreshUploadHistory"><i data-lucide="refresh-ccw"></i> 刷新历史</button>
-                        <button class="material-btn-primary" @click="startUploadIndex" :disabled="!uploadSelectedCount">
-                            <i data-lucide="play"></i> 开始导入
-                        </button>
-                    </div>
-                </div>
 
-                <div class="upload-card upload-progress-card" v-else-if="uploadStep===2">
-                    <div class="upload-progress-indicator">
-                        <div class="progress-value">{{ uploadTaskProgress }}%</div>
-                        <div class="progress-bar">
-                            <div class="progress-fill" :style="{width: uploadTaskProgress + '%'}"></div>
+                    <div class="upload-card upload-summary-card" v-else>
+                        <div class="upload-summary-header">
+                            <i
+                                :data-lucide="(uploadTaskInfo.failed || []).length ? 'alert-triangle' : 'check-circle'"></i>
+                            <div>
+                                <div class="title">{{ (uploadTaskInfo.failed || []).length ? '导入完成（部分失败）' : '导入完成' }}
+                                </div>
+                                <div class="desc">成功 {{ uploadTaskInfo.success || 0 }} 项 · 失败 {{ (uploadTaskInfo.failed
+                                    || []).length }} 项 · 重复 {{ (uploadTaskInfo.duplicates || []).length }} 项 · 截断 {{
+                                    (uploadTaskInfo.truncated || []).length }} 项</div>
+                            </div>
+                        </div>
+                        <div class="upload-summary-grid">
+                            <div class="summary-pill">
+                                <span>成功</span>
+                                <strong>{{ uploadTaskInfo.success || 0 }}</strong>
+                            </div>
+                            <div class="summary-pill">
+                                <span>失败</span>
+                                <strong>{{ (uploadTaskInfo.failed || []).length }}</strong>
+                            </div>
+                            <div class="summary-pill">
+                                <span>重复处理</span>
+                                <strong>{{ (uploadTaskInfo.duplicates || []).length }}</strong>
+                            </div>
+                            <div class="summary-pill">
+                                <span>截断</span>
+                                <strong>{{ (uploadTaskInfo.truncated || []).length }}</strong>
+                            </div>
+                        </div>
+                        <div class="upload-detail-panels">
+                            <div class="detail-panel" v-if="(uploadTaskInfo.failed || []).length">
+                                <h4>失败列表</h4>
+                                <ul>
+                                    <li v-for="item in uploadTaskInfo.failed" :key="'failed-' + item.path">
+                                        <span class="path" :title="item.path">{{ item.path }}</span>
+                                        <span class="error">{{ item.error }}</span>
+                                    </li>
+                                </ul>
+                            </div>
+                            <div class="detail-panel" v-if="(uploadTaskInfo.duplicates || []).length">
+                                <h4>重复文件</h4>
+                                <ul>
+                                    <li v-for="item in uploadTaskInfo.duplicates"
+                                        :key="'dup-' + item.path + item.existing_path">
+                                        <span class="path">{{ item.path }}</span>
+                                        <span class="hint">→ {{ item.existing_path }}</span>
+                                        <span class="status">{{ item.action }}</span>
+                                    </li>
+                                </ul>
+                            </div>
+                            <div class="detail-panel" v-if="(uploadTaskInfo.truncated || []).length">
+                                <h4>截断的 PDF</h4>
+                                <ul>
+                                    <li v-for="item in uploadTaskInfo.truncated" :key="'trunc-' + item.path">
+                                        <span class="path">{{ item.path }}</span>
+                                        <span class="hint">保留 {{ item.kept_pages || '部分' }} / {{ item.page_count || '未知'
+                                            }} 页</span>
+                                    </li>
+                                </ul>
+                            </div>
+                        </div>
+                        <div class="upload-footer">
+                            <button class="material-btn-primary" @click="finishUploadWizard">
+                                <i data-lucide="rotate-ccw"></i> 重新导入
+                            </button>
                         </div>
                     </div>
-                    <div class="upload-progress-meta">
-                        <div>当前文件：{{ uploadCurrentFile }}</div>
-                        <div>进度：{{ uploadTaskInfo.processed || 0 }}/{{ uploadTaskInfo.total || 0 }}</div>
-                        <div>剩余时间：{{ uploadTaskInfo.remain_time ? uploadTaskInfo.remain_time + ' 秒' : '计算中' }}</div>
-                    </div>
-                    <div class="upload-progress-actions">
-                        <button class="btn-inline" @click="uploadShowDetails = !uploadShowDetails">
-                            <i data-lucide="list"></i> {{ uploadShowDetails ? '收起明细' : '查看明细' }}
-                        </button>
-                        <button class="btn-inline danger" @click="cancelUploadTask" :disabled="uploadCancelling">
-                            <i data-lucide="x-circle"></i> {{ uploadCancelling ? '取消中...' : '取消任务' }}
-                        </button>
-                    </div>
-                    <div class="upload-detail-panels" v-if="uploadShowDetails">
-                        <div class="detail-panel" v-if="(uploadTaskInfo.failed || []).length">
-                            <h4>失败列表</h4>
-                            <ul>
-                                <li v-for="item in uploadTaskInfo.failed" :key="item.path">
-                                    <span class="path" :title="item.path">{{ item.path }}</span>
-                                    <span class="error">{{ item.error }}</span>
-                                </li>
-                            </ul>
-                        </div>
-                        <div class="detail-panel" v-if="(uploadTaskInfo.duplicates || []).length">
-                            <h4>重复处理</h4>
-                            <ul>
-                                <li v-for="item in uploadTaskInfo.duplicates" :key="item.path + item.existing_path">
-                                    <span class="path">{{ item.path }}</span>
-                                    <span class="hint">→ {{ item.existing_path }}</span>
-                                    <span class="status">{{ item.action }}</span>
-                                </li>
-                            </ul>
-                        </div>
-                        <div class="detail-panel" v-if="(uploadTaskInfo.truncated || []).length">
-                            <h4>截断的 PDF</h4>
-                            <ul>
-                                <li v-for="item in uploadTaskInfo.truncated" :key="'trunc-run-' + item.path">
-                                    <span class="path">{{ item.path }}</span>
-                                    <span class="hint">保留 {{ item.kept_pages || '部分' }} / {{ item.page_count || '未知' }} 页</span>
-                                </li>
-                            </ul>
-                        </div>
-                    </div>
-                </div>
+                </section>
 
-                <div class="upload-card upload-summary-card" v-else>
-                    <div class="upload-summary-header">
-                        <i :data-lucide="(uploadTaskInfo.failed || []).length ? 'alert-triangle' : 'check-circle'"></i>
-                        <div>
-                            <div class="title">{{ (uploadTaskInfo.failed || []).length ? '导入完成（部分失败）' : '导入完成' }}</div>
-                            <div class="desc">成功 {{ uploadTaskInfo.success || 0 }} 项 · 失败 {{ (uploadTaskInfo.failed || []).length }} 项 · 重复 {{ (uploadTaskInfo.duplicates || []).length }} 项 · 截断 {{ (uploadTaskInfo.truncated || []).length }} 项</div>
-                        </div>
-                    </div>
-                    <div class="upload-summary-grid">
-                        <div class="summary-pill">
-                            <span>成功</span>
-                            <strong>{{ uploadTaskInfo.success || 0 }}</strong>
-                        </div>
-                        <div class="summary-pill">
-                            <span>失败</span>
-                            <strong>{{ (uploadTaskInfo.failed || []).length }}</strong>
-                        </div>
-                        <div class="summary-pill">
-                            <span>重复处理</span>
-                            <strong>{{ (uploadTaskInfo.duplicates || []).length }}</strong>
-                        </div>
-                        <div class="summary-pill">
-                            <span>截断</span>
-                            <strong>{{ (uploadTaskInfo.truncated || []).length }}</strong>
-                        </div>
-                    </div>
-                    <div class="upload-detail-panels">
-                        <div class="detail-panel" v-if="(uploadTaskInfo.failed || []).length">
-                            <h4>失败列表</h4>
-                            <ul>
-                                <li v-for="item in uploadTaskInfo.failed" :key="'failed-' + item.path">
-                                    <span class="path" :title="item.path">{{ item.path }}</span>
-                                    <span class="error">{{ item.error }}</span>
-                                </li>
-                            </ul>
-                        </div>
-                        <div class="detail-panel" v-if="(uploadTaskInfo.duplicates || []).length">
-                            <h4>重复文件</h4>
-                            <ul>
-                                <li v-for="item in uploadTaskInfo.duplicates" :key="'dup-' + item.path + item.existing_path">
-                                    <span class="path">{{ item.path }}</span>
-                                    <span class="hint">→ {{ item.existing_path }}</span>
-                                    <span class="status">{{ item.action }}</span>
-                                </li>
-                            </ul>
-                        </div>
-                        <div class="detail-panel" v-if="(uploadTaskInfo.truncated || []).length">
-                            <h4>截断的 PDF</h4>
-                            <ul>
-                                <li v-for="item in uploadTaskInfo.truncated" :key="'trunc-' + item.path">
-                                    <span class="path">{{ item.path }}</span>
-                                    <span class="hint">保留 {{ item.kept_pages || '部分' }} / {{ item.page_count || '未知' }} 页</span>
-                                </li>
-                            </ul>
-                        </div>
-                    </div>
-                    <div class="upload-footer">
-                        <button class="material-btn-primary" @click="finishUploadWizard">
-                            <i data-lucide="rotate-ccw"></i> 重新导入
-                        </button>
-                    </div>
-                </div>
-            </section>
-
-            <section class="material-search-panel mt-4" v-show="activeTab==='stats'">
-                <div>项目统计模块建设中，将展示当前项目素材数量、容量与索引历史。</div>
-            </section>
-        </main>
-        <div v-if="toast.visible" :class="['workspace-toast', toast.type || 'info']">
-            {{ toast.message }}
+                <section class="material-search-panel mt-4" v-show="activeTab==='stats'">
+                    <div>项目统计模块建设中，将展示当前项目素材数量、容量与索引历史。</div>
+                </section>
+            </main>
+            <div v-if="toast.visible" :class="['workspace-toast', toast.type || 'info']">
+                {{ toast.message }}
+            </div>
         </div>
-    </div>
-    <div class="workspace-detail-overlay" v-if="detailDialog.visible" @click.self="closeDetail">
-        <div class="workspace-detail-panel">
-            <button class="detail-close" @click="closeDetail">×</button>
+        <div class="workspace-detail-overlay" v-if="detailDialog.visible" @click.self="closeDetail">
+            <div class="workspace-detail-panel">
+                <button class="detail-close" @click="closeDetail">×</button>
                 <div class="detail-media">
                     <div class="detail-viewer" v-if="detailDialog.item?.type!=='pdf'">
                         <img :src="detailImageSrc" :alt="detailItemName" ref="detailImage" />
                     </div>
                     <div v-else class="w-full h-full overflow-auto space-y-2" ref="pdfPagesContainer">
                         <div class="text-[12px] text-slate-500" v-if="detailDialog.pagesLoading">加载 PDF 页面...</div>
-                        <div class="text-[12px] text-rose-500" v-if="detailDialog.item?.pages_truncated">已按上限截断，仅展示部分页面</div>
-                        <div class="grid gap-3" style="grid-template-columns: repeat(auto-fit,minmax(220px,1fr));" v-if="detailDialog.pages.length">
-                            <div class="border rounded-lg p-2 bg-white/40" v-for="page in detailDialog.pages" :key="page.id">
+                        <div class="text-[12px] text-rose-500" v-if="detailDialog.item?.pages_truncated">已按上限截断，仅展示部分页面
+                        </div>
+                        <div class="grid gap-3" style="grid-template-columns: repeat(auto-fit,minmax(220px,1fr));"
+                            v-if="detailDialog.pages.length">
+                            <div class="border rounded-lg p-2 bg-white/40" v-for="page in detailDialog.pages"
+                                :key="page.id">
                                 <div class="text-[11px] text-slate-500 mb-1">第 {{ page.page_no }} 页</div>
                                 <img :src="page.image || page.thumbnail" class="w-full rounded-md" loading="lazy" />
                             </div>
                         </div>
                     </div>
                 </div>
-            <div class="detail-info" v-if="detailDialog.item">
-                <div class="detail-info-header">
-                    <div>
-                        <div class="detail-title">{{ detailItemName }}</div>
-                        <div class="text-[12px] text-slate-500">{{ detailDialog.item.path }}</div>
+                <div class="detail-info" v-if="detailDialog.item">
+                    <div class="detail-info-header">
+                        <div>
+                            <div class="detail-title">{{ detailItemName }}</div>
+                            <div class="text-[12px] text-slate-500">{{ detailDialog.item.path }}</div>
+                        </div>
                     </div>
-                </div>
-                <div class="detail-meta">
-                    <div class="detail-meta-row" v-for="meta in detailMetadata" :key="meta.label">
-                        <span>{{ meta.label }}</span>
-                        <span>{{ meta.value }}</span>
+                    <div class="detail-meta">
+                        <div class="detail-meta-row" v-for="meta in detailMetadata" :key="meta.label">
+                            <span>{{ meta.label }}</span>
+                            <span>{{ meta.value }}</span>
+                        </div>
                     </div>
-                </div>
-                <div class="detail-actions">
-                    <button class="btn-inline" @click="copyPath(detailDialog.item.path)"><i data-lucide="copy"></i>复制路径</button>
-                    <button class="btn-inline" @click="searchSimilar(detailDialog.item)" :disabled="!(detailDialog.item && detailDialog.item.id)"><i data-lucide="sparkles"></i>找相似</button>
-                    <button class="btn-inline" @click="openDetailInNewTab"><i data-lucide="external-link"></i>新窗口查看</button>
-                    <button class="btn-inline" v-if="detailDialog.item?.type==='pdf'" @click="openOriginalFile(detailDialog.item.path)"><i data-lucide="file-text"></i>打开原文件</button>
-                    <button class="btn-inline" @click="closeDetail"><i data-lucide="x"></i>关闭</button>
-                </div>
-            </div>
-        </div>
-    </div>
-    <div class="workspace-detail-overlay" v-if="dedupReportDialog.visible" @click.self="closeDedupReport">
-        <div class="workspace-detail-panel dedup-report-panel">
-            <div class="detail-info">
-                <div class="detail-info-header">
-                    <div>
-                        <div class="detail-title">去重报告</div>
-                        <div class="text-[12px] text-slate-500">{{ formatDateTime(dedupReportDialog.meta?.completed_at || dedupReportDialog.meta?.created_at) }}</div>
-                    </div>
-                    <button class="btn-inline" @click="closeDedupReport"><i data-lucide="x"></i>关闭</button>
-                </div>
-                <div class="dedup-report-grid" v-if="dedupReportDialog.meta">
-                    <div class="dedup-report-card">
-                        <div class="text-[11px] text-slate-500">重复组</div>
-                        <div class="text-lg font-semibold">{{ dedupReportDialog.meta.duplicate_groups || 0 }}</div>
-                    </div>
-                    <div class="dedup-report-card">
-                        <div class="text-[11px] text-slate-500">重复素材</div>
-                        <div class="text-lg font-semibold">{{ dedupReportDialog.meta.duplicates_marked || 0 }}</div>
-                    </div>
-                    <div class="dedup-report-card">
-                        <div class="text-[11px] text-slate-500">预计释放</div>
-                        <div class="text-lg font-semibold">{{ formatBytes(dedupReportDialog.meta.space_saving_bytes || 0) }}</div>
-                    </div>
-                </div>
-                <div class="dedup-report-grid" v-if="dedupReportDialog.report?.stages?.length">
-                    <div class="dedup-report-card" v-for="stage in dedupReportDialog.report.stages" :key="stage.stage">
-                        <div class="font-medium">{{ dedupStageTitle(stage.stage) }}</div>
-                        <div class="text-[11px] text-slate-400">{{ dedupStageDescription(stage.stage) }}</div>
-                        <div class="text-[12px] text-slate-500 mt-1">组 {{ stage.groups || 0 }} · 重复 {{ stage.duplicates || 0 }}</div>
+                    <div class="detail-actions">
+                        <button class="btn-inline" @click="copyPath(detailDialog.item.path)"><i
+                                data-lucide="copy"></i>复制路径</button>
+                        <button class="btn-inline" @click="searchSimilar(detailDialog.item)"
+                            :disabled="!(detailDialog.item && detailDialog.item.id)"><i
+                                data-lucide="sparkles"></i>找相似</button>
+                        <button class="btn-inline" @click="openDetailInNewTab"><i
+                                data-lucide="external-link"></i>新窗口查看</button>
+                        <button class="btn-inline" v-if="detailDialog.item?.type==='pdf'"
+                            @click="openOriginalFile(detailDialog.item.path)"><i
+                                data-lucide="file-text"></i>打开原文件</button>
+                        <button class="btn-inline" @click="closeDetail"><i data-lucide="x"></i>关闭</button>
                     </div>
                 </div>
             </div>
         </div>
-    </div>
-    <div class="workspace-detail-overlay" v-if="projectDialog.visible" @click.self="closeProjectDialog">
-        <div class="workspace-detail-panel project-dialog-panel">
-            <div class="detail-info">
-                <div class="detail-info-header">
-                    <div>
-                        <div class="detail-title">创建新项目</div>
-                        <div class="text-[12px] text-slate-500">项目会作为独立库参与搜索与上传</div>
+        <div class="workspace-detail-overlay" v-if="dedupReportDialog.visible" @click.self="closeDedupReport">
+            <div class="workspace-detail-panel dedup-report-panel">
+                <div class="detail-info">
+                    <div class="detail-info-header">
+                        <div>
+                            <div class="detail-title">去重报告</div>
+                            <div class="text-[12px] text-slate-500">{{
+                                formatDateTime(dedupReportDialog.meta?.completed_at ||
+                                dedupReportDialog.meta?.created_at) }}</div>
+                        </div>
+                        <button class="btn-inline" @click="closeDedupReport"><i data-lucide="x"></i>关闭</button>
                     </div>
-                    <button class="btn-inline" @click="closeProjectDialog" :disabled="projectDialog.loading"><i data-lucide="x"></i>关闭</button>
+                    <div class="dedup-report-grid" v-if="dedupReportDialog.meta">
+                        <div class="dedup-report-card">
+                            <div class="text-[11px] text-slate-500">重复组</div>
+                            <div class="text-lg font-semibold">{{ dedupReportDialog.meta.duplicate_groups || 0 }}</div>
+                        </div>
+                        <div class="dedup-report-card">
+                            <div class="text-[11px] text-slate-500">重复素材</div>
+                            <div class="text-lg font-semibold">{{ dedupReportDialog.meta.duplicates_marked || 0 }}</div>
+                        </div>
+                        <div class="dedup-report-card">
+                            <div class="text-[11px] text-slate-500">预计释放</div>
+                            <div class="text-lg font-semibold">{{ formatBytes(dedupReportDialog.meta.space_saving_bytes
+                                || 0) }}</div>
+                        </div>
+                    </div>
+                    <div class="dedup-report-grid" v-if="dedupReportDialog.report?.stages?.length">
+                        <div class="dedup-report-card" v-for="stage in dedupReportDialog.report.stages"
+                            :key="stage.stage">
+                            <div class="font-medium">{{ dedupStageTitle(stage.stage) }}</div>
+                            <div class="text-[11px] text-slate-400">{{ dedupStageDescription(stage.stage) }}</div>
+                            <div class="text-[12px] text-slate-500 mt-1">组 {{ stage.groups || 0 }} · 重复 {{
+                                stage.duplicates || 0 }}</div>
+                        </div>
+                    </div>
                 </div>
-                <div class="form-field">
-                    <label>项目名称 *</label>
-                    <input type="text" v-model="projectDialog.form.name" placeholder="例如：万科三期样板间" :disabled="projectDialog.loading">
+            </div>
+        </div>
+        <div class="workspace-detail-overlay" v-if="projectDialog.visible" @click.self="closeProjectDialog">
+            <div class="workspace-detail-panel project-dialog-panel">
+                <div class="detail-info">
+                    <div class="detail-info-header">
+                        <div>
+                            <div class="detail-title">创建新项目</div>
+                            <div class="text-[12px] text-slate-500">项目会作为独立库参与搜索与上传</div>
+                        </div>
+                        <button class="btn-inline" @click="closeProjectDialog" :disabled="projectDialog.loading"><i
+                                data-lucide="x"></i>关闭</button>
+                    </div>
+                    <div class="form-field">
+                        <label>项目名称 *</label>
+                        <input type="text" v-model="projectDialog.form.name" placeholder="例如：万科三期样板间"
+                            :disabled="projectDialog.loading">
+                    </div>
+                    <div class="form-field">
+                        <label>客户/业主</label>
+                        <input type="text" v-model="projectDialog.form.client_name" placeholder="可选"
+                            :disabled="projectDialog.loading">
+                    </div>
+                    <div class="form-field">
+                        <label>项目描述</label>
+                        <textarea v-model="projectDialog.form.description" placeholder="补充背景、交付要求等"
+                            :disabled="projectDialog.loading"></textarea>
+                    </div>
+                    <div class="error-text" v-if="projectDialog.error">{{ projectDialog.error }}</div>
+                    <div class="dialog-actions">
+                        <button class="btn-inline" @click="closeProjectDialog"
+                            :disabled="projectDialog.loading">取消</button>
+                        <button class="material-btn-primary" @click="submitProject" :disabled="projectDialog.loading">
+                            <i data-lucide="plus"></i> {{ projectDialog.loading ? '创建中...' : '创建项目' }}
+                        </button>
+                    </div>
                 </div>
-                <div class="form-field">
-                    <label>客户/业主</label>
-                    <input type="text" v-model="projectDialog.form.client_name" placeholder="可选" :disabled="projectDialog.loading">
+            </div>
+        </div>
+        <div class="upload-duplicate-overlay" v-if="uploadDuplicateDialog.visible"
+            @click.self="closeUploadDuplicateDialog">
+            <div class="duplicate-panel">
+                <div class="duplicate-header">
+                    <h3>检测到重复文件</h3>
+                    <p>请选择跳过或覆盖已有素材，避免误删。</p>
                 </div>
-                <div class="form-field">
-                    <label>项目描述</label>
-                    <textarea v-model="projectDialog.form.description" placeholder="补充背景、交付要求等" :disabled="projectDialog.loading"></textarea>
+                <div class="duplicate-columns" v-if="uploadDuplicateDialog.payload">
+                    <div class="duplicate-block">
+                        <span class="label">待导入</span>
+                        <div class="duplicate-thumb">
+                            <img :src="duplicateNewFile ? duplicateNewFile.thumbnail : ''" alt="new file">
+                        </div>
+                        <div class="duplicate-meta">
+                            <div>{{ duplicateNewFile ? duplicateNewFile.filename : '' }}</div>
+                            <div>{{ duplicateNewFile ? formatBytes(duplicateNewFile.size) : '--' }}</div>
+                            <div class="path" :title="duplicateNewFile ? duplicateNewFile.path : ''">{{ duplicateNewFile
+                                ? duplicateNewFile.path : '' }}</div>
+                        </div>
+                    </div>
+                    <div class="duplicate-block">
+                        <span class="label">已有素材</span>
+                        <div class="duplicate-thumb">
+                            <img :src="duplicateExistingFile ? duplicateExistingFile.thumbnail : ''"
+                                alt="existing file">
+                        </div>
+                        <div class="duplicate-meta">
+                            <div>{{ duplicateExistingFile ? duplicateExistingFile.filename : '' }}</div>
+                            <div>{{ duplicateExistingFile ? formatBytes(duplicateExistingFile.size) : '--' }}</div>
+                            <div class="path" :title="duplicateExistingFile ? duplicateExistingFile.path : ''">{{
+                                duplicateExistingFile ? duplicateExistingFile.path : '' }}</div>
+                        </div>
+                    </div>
                 </div>
-                <div class="error-text" v-if="projectDialog.error">{{ projectDialog.error }}</div>
-                <div class="dialog-actions">
-                    <button class="btn-inline" @click="closeProjectDialog" :disabled="projectDialog.loading">取消</button>
-                    <button class="material-btn-primary" @click="submitProject" :disabled="projectDialog.loading">
-                        <i data-lucide="plus"></i> {{ projectDialog.loading ? '创建中...' : '创建项目' }}
-                    </button>
+                <div class="duplicate-actions">
+                    <label class="remember">
+                        <input type="checkbox" v-model="uploadDuplicateDialog.remember"> 对剩余重复项执行相同操作
+                    </label>
+                    <div class="action-buttons">
+                        <button class="btn-inline" @click="submitUploadDuplicateDecision('skip')"
+                            :disabled="uploadDuplicateDialog.loading">
+                            <i data-lucide="corner-down-right"></i> 跳过
+                        </button>
+                        <button class="btn-inline danger" @click="submitUploadDuplicateDecision('overwrite')"
+                            :disabled="uploadDuplicateDialog.loading">
+                            <i data-lucide="shield"></i> 覆盖
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
-    <div class="upload-duplicate-overlay" v-if="uploadDuplicateDialog.visible" @click.self="closeUploadDuplicateDialog">
-        <div class="duplicate-panel">
-            <div class="duplicate-header">
-                <h3>检测到重复文件</h3>
-                <p>请选择跳过或覆盖已有素材，避免误删。</p>
-            </div>
-            <div class="duplicate-columns" v-if="uploadDuplicateDialog.payload">
-                <div class="duplicate-block">
-                    <span class="label">待导入</span>
-                    <div class="duplicate-thumb">
-                        <img :src="duplicateNewFile ? duplicateNewFile.thumbnail : ''" alt="new file">
-                    </div>
-                    <div class="duplicate-meta">
-                        <div>{{ duplicateNewFile ? duplicateNewFile.filename : '' }}</div>
-                        <div>{{ duplicateNewFile ? formatBytes(duplicateNewFile.size) : '--' }}</div>
-                        <div class="path" :title="duplicateNewFile ? duplicateNewFile.path : ''">{{ duplicateNewFile ? duplicateNewFile.path : '' }}</div>
-                    </div>
-                </div>
-                <div class="duplicate-block">
-                    <span class="label">已有素材</span>
-                    <div class="duplicate-thumb">
-                        <img :src="duplicateExistingFile ? duplicateExistingFile.thumbnail : ''" alt="existing file">
-                    </div>
-                    <div class="duplicate-meta">
-                        <div>{{ duplicateExistingFile ? duplicateExistingFile.filename : '' }}</div>
-                        <div>{{ duplicateExistingFile ? formatBytes(duplicateExistingFile.size) : '--' }}</div>
-                        <div class="path" :title="duplicateExistingFile ? duplicateExistingFile.path : ''">{{ duplicateExistingFile ? duplicateExistingFile.path : '' }}</div>
-                    </div>
-                </div>
-            </div>
-            <div class="duplicate-actions">
-                <label class="remember">
-                    <input type="checkbox" v-model="uploadDuplicateDialog.remember"> 对剩余重复项执行相同操作
-                </label>
-                <div class="action-buttons">
-                    <button class="btn-inline" @click="submitUploadDuplicateDecision('skip')" :disabled="uploadDuplicateDialog.loading">
-                        <i data-lucide="corner-down-right"></i> 跳过
-                    </button>
-                    <button class="btn-inline danger" @click="submitUploadDuplicateDecision('overwrite')" :disabled="uploadDuplicateDialog.loading">
-                        <i data-lucide="shield"></i> 覆盖
-                    </button>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
-<script src="static/assets/workspace.js"></script>
+    <script src="static/assets/workspace.js"></script>
+    <script src="static/assets/tauri-integration.js"></script>
 </body>
+
 </html>

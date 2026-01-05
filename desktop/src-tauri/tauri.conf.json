@@ -1,0 +1,47 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "MaterialSearch",
+  "version": "1.0.0",
+  "identifier": "com.sa-architects.materialsearch",
+  "build": {
+    "beforeDevCommand": "",
+    "devUrl": "http://192.168.1.12:58888/workspace",
+    "beforeBuildCommand": ""
+  },
+  "app": {
+    "withGlobalTauri": true,
+    "windows": [
+      {
+        "url": "http://192.168.1.12:58888/workspace",
+        "title": "MaterialSearch Workspace",
+        "width": 1500,
+        "height": 950,
+        "minWidth": 900,
+        "minHeight": 650,
+        "center": true,
+        "resizable": true,
+        "fullscreen": false,
+        "decorations": true
+      }
+    ],
+    "security": {
+      "csp": null
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": [
+      "msi",
+      "nsis"
+    ],
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns",
+      "icons/icon.ico"
+    ],
+    "shortDescription": "SA Architects AI 素材工作站",
+    "longDescription": "MaterialSearch Workspace - 建筑设计事务所的 AI 素材管理与搜索工作站。"
+  }
+}

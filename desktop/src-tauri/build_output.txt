@@ -1,0 +1,2 @@
+    Checking materialsearch v1.0.0 (D:\AI\materialsearch\desktop\src-tauri)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.43s
