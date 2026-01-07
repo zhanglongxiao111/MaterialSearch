@@ -1,0 +1,230 @@
+# image-storage 规范
+
+## Purpose
+待定 - 通过归档变更 add-project-database-architecture 创建。归档后更新目的。
+## Requirements
+### Requirement: 图片宽高比计算
+系统 SHALL 自动计算并存储图片的宽高比信息，用于 AI 自动排版。
+
+#### Scenario: 计算精确宽高比
+- **WHEN** 系统扫描图片时
+- **THEN** 计算 `aspect_ratio = width / height`
+- **AND** 对于 `.3dm` 等容器格式，使用提取出的预览图尺寸进行计算
+- **AND** 精确到小数点后 3 位（如 1.778）
+- **AND** 存储到 `aspect_ratio` 字段
+
+#### Scenario: 识别标准宽高比
+- **WHEN** 计算出精确宽高比后
+- **THEN** 系统匹配标准比例（容差 ±5%）
+- **AND** 识别常见比例：
+  - 1:1（正方形）
+  - 4:3（传统横向）
+  - 16:9（宽屏横向）
+  - 21:9（超宽屏）
+  - 3:4（传统竖向）
+  - 9:16（宽屏竖向）
+  - √2:1（A4 横向）
+  - 1:√2（A4 竖向）
+- **AND** 存储到 `aspect_ratio_standard` 字段
+- **AND** 非标准比例存储为计算值（如"1.85:1"）
+
+#### Scenario: 按宽高比筛选图片
+- **WHEN** 用户查询特定宽高比的图片
+- **THEN** 系统可按 `aspect_ratio_standard` 精确匹配（如"16:9"）
+- **OR** 按 `aspect_ratio` 范围查询（如 1.7 ~ 1.8 之间）
+
+### Requirement: 扩展元数据存储
+系统 SHALL 为每张图片存储丰富的元数据，支持多维度筛选和管理。
+
+#### Scenario: 文件属性记录
+- **WHEN** 系统扫描图片时
+- **THEN** 记录以下文件属性：
+  - `width`：图片宽度（像素）
+  - `height`：图片高度（像素）
+  - `file_size`：文件大小（字节）
+  - `file_format`：文件格式（jpg/png/heic）
+  - `modify_time`：文件修改时间
+  - `checksum`：SHA1 哈希值
+
+#### Scenario: 分类和标签
+- **WHEN** 用户为图片添加分类信息
+- **THEN** 系统存储以下字段：
+  - `category`：主分类（如"现代风格"）
+  - `sub_category`：子分类（如"客厅"）
+  - `tags`：标签数组（JSON 格式，如 `["极简","木饰面"]`）
+  - `building_type`：建筑类型（住宅/商业/办公）
+  - `design_style`：设计风格（现代/简约/工业）
+
+#### Scenario: 来源信息追溯
+- **WHEN** 图片从项目归档到永久库
+- **THEN** 系统记录：
+  - `source_type='project_archive'`（来源类型）
+  - `source_project='proj_2025_万科_01'`（来源项目 ID）
+  - `source_notes`：来源备注（可选）
+
+#### Scenario: 质量评级
+- **WHEN** 用户为图片评分或标记为精选
+- **THEN** 系统存储：
+  - `quality_score`：质量评分（0-5 星）
+  - `is_featured`：是否精选（布尔值）
+  - `last_accessed`：最后访问时间（点击查看时更新）
+
+---
+
+### Requirement: 软删除机制
+系统 SHALL 使用软删除而非物理删除图片记录，保留向量数据便于恢复。
+
+#### Scenario: 软删除图片
+- **WHEN** 用户删除图片
+- **THEN** 系统设置 `is_deleted=1`
+- **AND** 记录 `deleted_time` 为当前时间
+- **AND** 图片不再出现在默认搜索结果中
+- **AND** 数据库记录和向量特征保留
+
+#### Scenario: 恢复已删除图片
+- **WHEN** 用户请求恢复已删除的图片
+- **THEN** 系统设置 `is_deleted=0`
+- **AND** 清除 `deleted_time`
+- **AND** 图片重新出现在搜索结果中
+
+#### Scenario: 物理清理
+- **WHEN** 管理员执行物理清理操作
+- **THEN** 系统删除 `is_deleted=1` 且删除超过 30 天的记录
+- **AND** 需要管理员权限确认
+
+---
+
+### Requirement: 去重预留字段
+系统 SHALL 利用既有重复字段在任务完成后写入主图/副本标记。
+#### Scenario: 批量任务写入重复标记
+- **GIVEN** 手动去重任务完成任意阶段（checksum / phash / clip）
+- **WHEN** 识别出同组图片
+- **THEN** 系统 SHALL 立即更新对应记录的 `is_duplicate`, `duplicate_group`, `duplicate_type`, `duplicate_confidence`
+- **AND** 为被选定的主图写入 `master_image_id=NULL`
+- **AND** 其余图片 `master_image_id` 指向主图 ID
+
+#### Scenario: 分辨率优先确定主图
+- **GIVEN** 同一 `duplicate_group` 包含多张图片
+- **WHEN** 需要选择主图
+- **THEN** 以 `width * height` 最大者为主图
+- **AND** 分辨率相同时选 `modify_time` 最新者
+- **AND** 把该选择记录到去重报告中
+
+### Requirement: AI 增强预留字段
+系统 SHALL 预留 AI 描述相关字段，为后续 AI Agent 功能提供支持。
+
+#### Scenario: AI 描述生成
+- **WHEN** 后续实现 AI 描述功能
+- **THEN** 系统可使用以下字段：
+  - `ai_description`：AI 生成的图片描述（文本）
+  - `ai_description_vector`：描述的向量化（BLOB）
+
+#### Scenario: 增强检索
+- **WHEN** 用户搜索时
+- **THEN** 系统可同时匹配：
+  - 图片向量（`features`）
+  - 描述向量（`ai_description_vector`）
+- **AND** 提升检索准确性
+
+---
+
+### Requirement: 数据库索引优化
+系统 SHALL 为高频查询字段创建索引，提升检索性能。
+
+#### Scenario: 单列索引
+- **WHEN** 系统初始化数据库时
+- **THEN** 为以下字段创建索引：
+  - `path`（文件路径查询）
+  - `checksum`（去重检测）
+  - `phash`（感知哈希检测）
+  - `category`（分类筛选）
+  - `aspect_ratio`（宽高比筛选）
+  - `aspect_ratio_standard`（标准比例筛选）
+  - `upload_time`（时间范围查询）
+  - `is_deleted`（排除已删除）
+
+#### Scenario: 复合索引
+- **WHEN** 系统初始化数据库时
+- **THEN** 为常见组合查询创建复合索引：
+  - `(category, design_style)`：按分类和风格筛选
+  - `(aspect_ratio_standard, category)`：按比例和分类筛选
+  - `(is_featured, category, is_deleted)`：精选图片筛选
+
+#### Scenario: 索引维护
+- **WHEN** 数据库记录增加或删除
+- **THEN** 索引自动更新
+- **AND** 定期执行 `ANALYZE` 更新统计信息
+- **AND** 保持索引性能
+
+---
+
+### Requirement: WAL 模式启用
+系统 SHALL 为所有数据库启用 WAL（Write-Ahead Logging）模式，提升并发性能。
+
+#### Scenario: 数据库初始化时启用 WAL
+- **WHEN** 系统创建新数据库（永久库或项目库）
+- **THEN** 执行 `PRAGMA journal_mode=WAL`
+- **AND** 验证 WAL 模式已启用
+
+#### Scenario: WAL 模式的好处
+- **WHEN** 多用户同时访问数据库
+- **THEN** 读操作不会被写操作阻塞
+- **AND** 多个读操作可以并发执行
+- **AND** 性能提升约 20-30%
+
+#### Scenario: WAL 文件管理
+- **WHEN** 数据库使用 WAL 模式
+- **THEN** 系统生成 `.db-wal` 和 `.db-shm` 文件
+- **AND** 备份时自动包含这些文件
+- **AND** SQLite 自动执行 checkpoint（合并 WAL 到主文件）
+
+---
+
+### Requirement: 手动去重任务
+系统 SHALL 仅在手动触发时对永久库执行多阶段去重扫描。
+
+#### Scenario: 创建任务
+- **WHEN** 管理员调用 `POST /api/dedup/jobs` 且 `library_type='permanent'`
+- **THEN** 创建一条待处理任务，状态为 `pending`
+- **AND** 返回任务 ID、预计时长提示
+- **AND** 若目标为项目库则返回 400（项目库允许重复）
+
+#### Scenario: 阶段式扫描
+- **GIVEN** 任务进入运行状态
+- **WHEN** 依次执行阶段
+  1. checksum 完全相同
+  2. phash 感知重复（Hamming 距离 <= 5）
+  3. clip_embedding 相似度 >= 0.95
+- **THEN** 每阶段结束写入进度（已扫描数量、命中组数）
+- **AND** 在缺少 GPU/模型时允许跳过阶段并记录 `notes`
+
+#### Scenario: 报告生成
+- **WHEN** 任务结束
+- **THEN** 生成统计：扫描素材总数、重复组数量、各类型命中、预计可释放空间
+- **AND** 持久化在 `dedup_jobs` 表，供 API/前端查询
+- **AND** 按最新标记更新 `images` 表字段
+
+### Requirement: 去重报告查询
+系统 SHALL 提供最近一次任务结果，供前端展示。
+
+#### Scenario: 查询最新报告
+- **WHEN** 调用 `GET /api/dedup/jobs/latest`
+- **THEN** 返回最近一次成功的任务摘要（时间、各阶段命中、space_saving_estimate）
+- **AND** 若尚未运行过任务，返回 404 + 说明文本
+
+#### Scenario: 任务状态跟踪
+- **WHEN** 调用 `GET /api/dedup/jobs/<id>`
+- **THEN** 返回 `status`, `phase`, `progress`, `duplicates_found`
+- **AND** 若任务失败，包含错误信息与可重试提示
+
+### Requirement: 复杂格式预览图提取
+系统 SHALL 能够从非标准图片格式的容器文件中提取预览图像。
+
+#### Scenario: Rhino 预览图提取
+- **GIVEN** 一个有效的 Rhino (.3dm) 文件
+- **WHEN** 系统处理该文件时
+- **THEN** 尝试读取文件头部的二进制数据
+- **AND** 识别并提取内嵌的 BMP 或 PNG 格式预览图
+- **AND** 如果提取成功，使用该预览图进行后续的特征计算和缩略图生成
+- **AND** 如果提取失败，记录错误并使用默认占位符
+

@@ -1,0 +1,801 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <title>MaterialSearch Workspace - Masonry View Prototype</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Space+Grotesk:wght@400;500;600&display=swap" rel="stylesheet" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="materialsearch_theme_2.css" />
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+  <style>
+    body { overflow: hidden !important; }
+
+    .material-layout {
+      display:flex !important;
+      flex-direction:column !important;
+      min-height:100vh !important;
+      background:
+        radial-gradient(circle at top left, rgba(148,163,253,0.10), transparent),
+        radial-gradient(circle at top right, rgba(45,212,191,0.04), transparent),
+        var(--background) !important;
+      color:var(--foreground) !important;
+      transition:background-color 0.25s ease, color 0.25s ease !important;
+    }
+
+    .material-header{
+      display:flex !important;
+      align-items:center !important;
+      justify-content:space-between !important;
+      padding:0.9rem 1.6rem !important;
+      border-bottom:1px solid var(--border) !important;
+      background:color-mix(in oklch, var(--background) 92%, white 8%) !important;
+      box-shadow:var(--shadow-xs) !important;
+      backdrop-filter:blur(16px) !important;
+    }
+    .material-logo{
+      width:24px !important;height:24px !important;border-radius:8px !important;
+      background:radial-gradient(circle at 30% 0%, var(--accent), transparent),
+                 radial-gradient(circle at 80% 80%, var(--primary), transparent) !important;
+    }
+    .material-header-title{display:flex !important;flex-direction:column !important;}
+    .material-header-title span.label{
+      font-size:11px !important;letter-spacing:0.08em !important;text-transform:uppercase !important;color:var(--muted-foreground) !important;
+    }
+    .material-header-title h1{font-size:20px !important;font-weight:500 !important;color:var(--foreground) !important;margin:0 !important;}
+
+    .material-chip{
+      padding:0.18rem 0.75rem !important;
+      border-radius:999px !important;
+      border:1px solid var(--border) !important;
+      font-size:10px !important;
+      color:var(--muted-foreground) !important;
+      display:inline-flex !important;
+      align-items:center !important;
+      gap:0.25rem !important;
+      cursor:default !important;
+      transition:all 0.18s ease !important;
+    }
+    .material-chip.interactive{cursor:pointer !important;}
+    .material-chip.interactive:hover{box-shadow:var(--shadow-2xs) !important;background:var(--muted) !important;}
+
+    .material-btn-primary{
+      padding:0.38rem 0.95rem !important;
+      border-radius:999px !important;
+      border:none !important;
+      background:var(--primary) !important;
+      color:var(--primary-foreground) !important;
+      font-size:12px !important;
+      display:inline-flex !important;
+      align-items:center !important;
+      gap:0.35rem !important;
+      cursor:pointer !important;
+      box-shadow:var(--shadow-sm) !important;
+      transition:background-color 0.18s ease,color 0.18s ease,box-shadow 0.18s ease,transform 0.1s ease !important;
+    }
+    .material-btn-primary:hover{box-shadow:var(--shadow-md) !important;transform:translateY(-1px) !important;}
+    .material-btn-primary:active{transform:translateY(1px) scale(0.97) !important;box-shadow:var(--shadow-2xs) !important;}
+
+    .material-btn-ghost{
+      padding:0.34rem 0.9rem !important;
+      border-radius:999px !important;
+      border:1px solid var(--border) !important;
+      background:transparent !important;
+      color:var(--muted-foreground) !important;
+      font-size:12px !important;
+      display:inline-flex !important;
+      align-items:center !important;
+      gap:0.35rem !important;
+      cursor:pointer !important;
+      box-shadow:var(--shadow-2xs) !important;
+      transition:background-color 0.18s ease,color 0.18s ease,box-shadow 0.18s ease,border-color 0.18s ease,transform 0.1s ease !important;
+    }
+    .material-btn-ghost:hover{
+      background:var(--muted) !important;
+      border-color:var(--accent) !important;
+      color:var(--foreground) !important;
+      box-shadow:var(--shadow-sm) !important;
+      transform:translateY(-1px) !important;
+    }
+    .material-btn-ghost:active{transform:translateY(1px) scale(0.97) !important;box-shadow:var(--shadow-2xs) !important;}
+
+    .material-shell{display:flex !important;flex:1 !important;overflow:hidden !important;}
+
+    .material-sidebar{
+      width:260px !important;
+      padding:1rem 1rem 1rem 1.3rem !important;
+      border-right:1px solid var(--sidebar-border) !important;
+      background:color-mix(in oklch, var(--sidebar) 96%, white 4%) !important;
+      display:flex !important;
+      flex-direction:column !important;
+      gap:1rem !important;
+    }
+
+    .material-sidebar-section-title{
+      font-size:11px !important;letter-spacing:0.14em !important;text-transform:uppercase !important;color:var(--muted-foreground) !important;margin-bottom:0.1rem !important;
+    }
+
+    .material-sidebar-pills{display:flex !important;gap:0.35rem !important;}
+    .material-pill{
+      flex:1 !important;padding:0.25rem 0.55rem !important;border-radius:999px !important;
+      font-size:11px !important;background:var(--muted) !important;color:var(--muted-foreground) !important;
+      border:1px solid transparent !important;text-align:center !important;cursor:pointer !important;
+      transition:all 0.18s ease !important;
+    }
+    .material-pill:hover{background:var(--card) !important;box-shadow:var(--shadow-2xs) !important;}
+    .material-pill.active{background:var(--accent) !important;color:var(--accent-foreground) !important;border-color:var(--accent) !important;box-shadow:var(--shadow-sm) !important;}
+
+    .material-list{
+      display:flex !important;flex-direction:column !important;gap:0.3rem !important;
+      max-height:40vh !important;overflow-y:auto !important;
+    }
+    .material-list-item{
+      padding:0.35rem 0.55rem !important;border-radius:0.45rem !important;
+      border:1px solid transparent !important;cursor:pointer !important;
+      display:flex !important;flex-direction:column !important;gap:0.1rem !important;
+      color:var(--muted-foreground) !important;transition:all 0.18s ease !important;
+    }
+    .material-list-item:hover{background:var(--muted) !important;box-shadow:var(--shadow-2xs) !important;}
+    .material-list-item.active{background:var(--secondary) !important;border-color:var(--sidebar-ring) !important;color:var(--secondary-foreground) !important;box-shadow:var(--shadow-sm) !important;}
+
+    .material-main{flex:1 !important;padding:1rem 1.4rem 1.2rem !important;display:flex !important;flex-direction:column !important;gap:0.6rem !important;overflow:hidden !important;}
+    .material-scope-text{font-size:12px !important;color:var(--muted-foreground) !important;}
+
+    .material-tabs{display:inline-flex !important;align-items:center !important;background:var(--muted) !important;padding:0.18rem !important;border-radius:999px !important;gap:0.18rem !important;box-shadow:var(--shadow-2xs) !important;}
+    .material-tab{
+      padding:0.24rem 0.88rem !important;border-radius:999px !important;font-size:11px !important;
+      color:var(--muted-foreground) !important;cursor:pointer !important;display:flex !important;align-items:center !important;gap:0.25rem !important;
+      transition:all 0.18s ease !important;white-space:nowrap !important;
+    }
+    .material-tab:hover{color:var(--foreground) !important;}
+    .material-tab.active{background:var(--primary) !important;color:var(--primary-foreground) !important;box-shadow:var(--shadow-sm) !important;}
+
+    .material-search-panel{
+      padding:0.7rem 0.9rem !important;border-radius:0.7rem !important;background:var(--card) !important;border:1px solid var(--border) !important;
+      box-shadow:var(--shadow-2xs) !important;display:flex !important;flex-direction:column !important;gap:0.5rem !important;
+    }
+
+    .material-search-row{display:flex !important;gap:0.5rem !important;align-items:center !important;}
+    .material-input-main{
+      flex:1 !important;padding:0.5rem 0.7rem !important;border-radius:0.5rem !important;border:1px solid var(--border) !important;
+      background:var(--input) !important;color:var(--foreground) !important;font-size:13px !important;transition:all 0.18s ease !important;
+    }
+    .material-input-main:focus-visible{outline:none !important;border-color:var(--accent) !important;box-shadow:0 0 0 1px color-mix(in oklch, var(--accent) 40%, transparent) !important;}
+
+    .material-select{
+      padding:0.4rem 0.6rem !important;border-radius:0.5rem !important;border:1px solid var(--border) !important;
+      background:var(--input) !important;color:var(--muted-foreground) !important;font-size:11px !important;transition:all 0.18s ease !important;
+    }
+
+    .material-pill-search-mode{
+      display:inline-flex !important;align-items:center !important;gap:0.2rem !important;
+      padding:0.16rem 0.55rem !important;border-radius:999px !important;font-size:9px !important;
+      border:1px solid var(--border) !important;color:var(--muted-foreground) !important;cursor:pointer !important;transition:all 0.18s ease !important;
+    }
+    .material-pill-search-mode.active{background:var(--accent) !important;color:var(--accent-foreground) !important;border-color:var(--accent) !important;box-shadow:var(--shadow-sm) !important;}
+
+    .pill-small{display:inline-flex !important;align-items:center !important;padding:0.14rem 0.5rem !important;border-radius:999px !important;font-size:9px !important;border:1px solid var(--border) !important;color:var(--muted-foreground) !important;}
+
+    .material-section{flex:1 !important;margin-top:0.25rem !important;overflow-y:auto !important;display:none;opacity:0;transform:translateY(6px);transition:opacity 0.22s ease,transform 0.22s ease;}
+    .material-section.active{display:block !important;opacity:1 !important;transform:translateY(0) !important;}
+
+    .view-toggle{
+      display:inline-flex !important;align-items:center !important;gap:0.18rem !important;
+      padding:0.14rem 0.5rem !important;border-radius:999px !important;border:1px solid var(--border) !important;
+      font-size:9px !important;color:var(--muted-foreground) !important;cursor:pointer !important;
+      transition:all 0.18s ease !important;
+    }
+    .view-toggle span.active{
+      background:var(--primary) !important;color:var(--primary-foreground) !important;border-radius:999px !important;padding:0.08rem 0.4rem !important;
+      box-shadow:var(--shadow-sm) !important;
+    }
+
+    .results-masonry{
+      column-count:4;
+      column-gap:0.6rem;
+    }
+    .result-card{
+      break-inside:avoid;
+      margin-bottom:0.6rem;
+      background:var(--card) !important;
+      border-radius:0.65rem !important;
+      border:1px solid var(--border) !important;
+      box-shadow:var(--shadow-2xs) !important;
+      padding:0.3rem !important;
+      display:flex !important;
+      flex-direction:column !important;
+      gap:0.18rem !important;
+      transition:all 0.18s ease !important;
+      cursor:default !important;
+    }
+    .result-card:hover{transform:translateY(-2px) !important;box-shadow:var(--shadow-md) !important;border-color:var(--accent) !important;}
+
+    .result-thumb{
+      width:100% !important;
+      border-radius:0.5rem !important;
+      overflow:hidden !important;
+      background:var(--muted) !important;
+    }
+    .result-thumb img, .result-thumb video{
+      width:100% !important;
+      height:auto !important;
+      display:block !important;
+    }
+
+    .result-meta{display:flex !important;flex-wrap:wrap !important;gap:0.2rem !important;align-items:center !important;font-size:8px !important;color:var(--muted-foreground) !important;}
+    .result-actions{display:flex !important;flex-wrap:wrap !important;gap:0.2rem !important;margin-top:0.1rem !important;}
+
+    .result-pill{
+      padding:0.12rem 0.4rem !important;border-radius:999px !important;font-size:8px !important;
+      background:var(--muted) !important;color:var(--muted-foreground) !important;
+    }
+    .result-pill-primary{background:rgba(16,185,129,0.12) !important;color:#047857 !important;}
+    .result-pill-tag{background:rgba(148,163,253,0.16) !important;color:#4f46e5 !important;}
+
+    .btn-inline{
+      padding:0.18rem 0.5rem !important;border-radius:999px !important;border:1px solid var(--border) !important;
+      background:transparent !important;color:var(--muted-foreground) !important;font-size:8px !important;
+      display:inline-flex !important;align-items:center !important;gap:0.16rem !important;cursor:pointer !important;
+      transition:all 0.16s ease !important;
+    }
+    .btn-inline:hover{background:var(--muted) !important;color:var(--foreground) !important;box-shadow:var(--shadow-2xs) !important;border-color:var(--accent) !important;}
+
+    /* 缩略图宽度缩放滑块 */
+    .scale-control-wrapper{
+      display:inline-flex !important;
+      align-items:center !important;
+      gap:0.35rem !important;
+      padding:0.14rem 0.6rem !important;
+      border-radius:999px !important;
+      border:1px solid var(--border) !important;
+      font-size:9px !important;
+      color:var(--muted-foreground) !important;
+      backdrop-filter:blur(10px) !important;
+    }
+    .scale-range{
+      appearance:none;
+      width:90px;
+      height:3px;
+      border-radius:999px;
+      background:var(--muted);
+      outline:none;
+      cursor:pointer;
+    }
+    .scale-range::-webkit-slider-thumb{
+      appearance:none;
+      width:12px;height:12px;
+      border-radius:999px;
+      background:var(--primary);
+      box-shadow:0 0 0 2px var(--card);
+    }
+
+    @media (max-width:1440px){.results-masonry{column-count:3;}}
+    @media (max-width:1024px){.material-sidebar{display:none !important;}.material-main{padding:0.8rem 0.9rem 1rem !important;}.results-masonry{column-count:2;}}
+    @media (max-width:768px){.results-masonry{column-count:1;}}
+  </style>
+</head>
+<body class="material-layout">
+<header class="material-header">
+  <div class="flex items-center gap-3">
+    <div class="material-logo"></div>
+    <div class="material-header-title">
+      <span class="label">MaterialSearch Workspace</span>
+      <h1>素材搜索与项目素材管理中心</h1>
+    </div>
+    <div class="material-chip" id="scope-label">当前命中范围：永久库 · 全部分类</div>
+  </div>
+  <div class="flex items-center gap-2">
+    <div class="material-chip" id="current-context-label">永久库 · 全部分类</div>
+    <button class="material-btn-ghost" id="open-upload-btn">
+      <i data-lucide="upload-cloud" class="w-3.5 h-3.5"></i> 批量上载素材
+    </button>
+    <button class="material-btn-ghost" id="scan-btn">
+      <i data-lucide="scan-line" class="w-3.5 h-3.5"></i> 更新索引
+    </button>
+    <div class="material-chip interactive" id="theme-toggle">
+      <i data-lucide="sun-moon" class="w-3 h-3"></i>
+      <span id="theme-label">系统主题自动</span>
+    </div>
+  </div>
+</header>
+
+<div class="material-shell">
+  <aside class="material-sidebar">
+    <div>
+      <div class="material-sidebar-section-title">库类型</div>
+      <div class="material-sidebar-pills">
+        <div class="material-pill active" data-lib="permanent">永久库</div>
+        <div class="material-pill" data-lib="project">项目库</div>
+      </div>
+    </div>
+    <div id="permanent-groups">
+      <div class="material-sidebar-section-title">永久库分类</div>
+      <div class="material-list" id="perm-group-list">
+        <div class="material-list-item active" data-group="all">
+          <div class="flex justify-between text-[11px]"><span>全部分类</span><span class="text-[9px] text-slate-500">12,430</span></div>
+        </div>
+        <div class="material-list-item" data-group="cg">
+          <div class="flex justify-between text-[11px]"><span>效果图</span><span class="text-[9px] text-slate-500">3,210</span></div>
+          <div class="text-[9px] text-slate-500">渲染、空间、产品展示</div>
+        </div>
+        <div class="material-list-item" data-group="ai">
+          <div class="flex justify-between text-[11px]"><span>AI 生成</span><span class="text-[9px] text-slate-500">1,520</span></div>
+          <div class="text-[9px] text-slate-500">Midjourney / SD / DALL·E</div>
+        </div>
+        <div class="material-list-item" data-group="ref">
+          <div class="flex justify-between text-[11px]"><span>参考照片</span><span class="text-[9px] text-slate-500">4,380</span></div>
+          <div class="text-[9px] text-slate-500">实拍氛围 / 场景参考</div>
+        </div>
+        <div class="material-list-item" data-group="tex">
+          <div class="flex justify-between text-[11px]"><span>材质贴图</span><span class="text-[9px] text-slate-500">1,860</span></div>
+          <div class="text-[9px] text-slate-500">PBR / 纹理 / Pattern</div>
+        </div>
+      </div>
+    </div>
+    <div id="project-groups" style="display:none;">
+      <div class="material-sidebar-section-title">项目列表</div>
+      <div class="material-list" id="project-list">
+        <div class="material-list-item active" data-project="brand2025">
+          <div class="flex justify-between text-[11px]"><span>Brand Launch 2025</span><span class="text-[9px] text-emerald-700">进行中</span></div>
+          <div class="text-[9px] text-slate-500">Acme Studio · 3,240 素材</div>
+        </div>
+        <div class="material-list-item" data-project="summer">
+          <div class="flex justify-between text-[11px]"><span>Summer Campaign</span><span class="text-[9px] text-slate-500">已完成</span></div>
+          <div class="text-[9px] text-slate-500">Ocean Film · 1,860 素材</div>
+        </div>
+        <div class="material-list-item" data-project="internal">
+          <div class="flex justify-between text-[11px]"><span>Internal Library</span><span class="text-[9px] text-emerald-700">进行中</span></div>
+          <div class="text-[9px] text-slate-500">内部资产 · 920 素材</div>
+        </div>
+        <div class="material-list-item" id="create-project">
+          <span class="text-[11px] text-sky-700">+ 新建项目</span>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <main class="material-main">
+    <div class="flex items-center justify-between gap-4">
+      <div class="material-scope-text" id="scope-desc">
+        当前命中范围：<span class="text-emerald-700">永久库 · 全部分类</span> · 默认瀑布视图展示真实比例
+      </div>
+      <div class="flex items-center gap-2">
+        <div class="material-tabs" id="main-tabs">
+          <div class="material-tab active" data-tab="search"><i data-lucide="search" class="w-3.5 h-3.5"></i> 搜索与结果</div>
+          <div class="material-tab" data-tab="upload"><i data-lucide="upload" class="w-3.5 h-3.5"></i> 批量上传</div>
+          <div class="material-tab" data-tab="stats"><i data-lucide="bar-chart-2" class="w-3.5 h-3.5"></i> 项目统计 / 历史</div>
+        </div>
+      </div>
+    </div>
+
+    <section class="material-search-panel" id="search-panel">
+      <div class="material-search-row">
+        <input class="material-input-main" id="search-input" placeholder="描述你要找的画面，例如：工业风 办公室 夜景 灯带 雾气" />
+        <select class="material-select" id="topn-select">
+          <option>Top 30</option>
+          <option>Top 60</option>
+          <option>Top 150</option>
+          <option>全部结果</option>
+        </select>
+        <button class="material-btn-primary" id="search-btn">
+          <i data-lucide="search" class="w-3.5 h-3.5"></i> 搜索
+        </button>
+      </div>
+      <div class="flex flex-wrap items-center gap-2 text-[10px] text-slate-500 mt-1">
+        <div class="material-pill-search-mode active" data-mode="text"><i data-lucide="type" class="w-3 h-3"></i> 文本</div>
+        <div class="material-pill-search-mode" data-mode="image"><i data-lucide="image" class="w-3 h-3"></i> 图像</div>
+        <div class="material-pill-search-mode" data-mode="video"><i data-lucide="film" class="w-3 h-3"></i> 视频</div>
+        <div class="material-pill-search-mode" data-mode="hybrid"><i data-lucide="sparkles" class="w-3 h-3"></i> 多模态</div>
+        <div class="flex items-center gap-1 cursor-pointer" id="advanced-toggle">
+          <i data-lucide="sliders-horizontal" class="w-3 h-3"></i> 高级筛选
+        </div>
+        <div class="flex items-center gap-1">
+          <i data-lucide="copy" class="w-3 h-3"></i> 一键复制全部路径
+        </div>
+        <div class="view-toggle" id="view-toggle">
+          <span class="active" data-view="masonry">瀑布</span>
+          <span data-view="grid">网格</span>
+        </div>
+        <div class="scale-control-wrapper">
+          <span>缩略图宽度</span>
+          <input id="scale-range" class="scale-range" type="range" min="70" max="150" value="100" />
+        </div>
+      </div>
+      <div id="advanced-panel" class="mt-2 hidden text-[10px] text-slate-500 space-y-2">
+        <div class="flex gap-2">
+          <input class="flex-1 material-input-main" placeholder="限定路径，例如 Z:/project/shot/" />
+          <input class="flex-1 material-input-main" placeholder="排除关键词（负向提示）" />
+        </div>
+        <div class="flex gap-2 items-center">
+          <span class="pill-small">时间范围：最近 30 天</span>
+          <span class="pill-small">正向权重：中</span>
+          <span class="pill-small">负向权重：低</span>
+        </div>
+      </div>
+    </section>
+
+    <section id="results-section" class="material-section active">
+      <div class="flex items-center justify-between mb-2 text-[10px] text-slate-500">
+        <div>示例结果：瀑布视图展示真实比例 · 切换网格可对比 · 拖动缩略图宽度滑块感受密度</div>
+      </div>
+      <div id="results-wrapper" class="results-masonry" data-base-columns="4">
+        <!-- 多种比例 & 库类型示例 -->
+        <!-- 永久库：横图 -->
+        <article class="result-card" data-lib="permanent">
+          <div class="result-thumb">
+            <img src="https://images.pexels.com/photos/325185/pexels-photo-325185.jpeg?auto=compress&cs=tinysrgb&w=800" alt="city" />
+          </div>
+          <div class="result-meta">
+            <span class="result-pill result-pill-primary">永久库 · 参考照片</span>
+            <span class="result-pill">匹配度 94.2%</span>
+            <span class="truncate">/permanent/ref/city/night_001.jpg</span>
+          </div>
+          <div class="result-actions">
+            <button class="btn-inline"><i data-lucide="copy" class="w-3 h-3"></i>复制路径</button>
+          </div>
+        </article>
+        <!-- 永久库：竖图 -->
+        <article class="result-card" data-lib="permanent">
+          <div class="result-thumb">
+            <img src="https://images.pexels.com/photos/1770809/pexels-photo-1770809.jpeg?auto=compress&cs=tinysrgb&w=600" alt="vertical" />
+          </div>
+          <div class="result-meta">
+            <span class="result-pill result-pill-primary">永久库 · 效果图</span>
+            <span class="result-pill">匹配度 88.6%</span>
+            <span class="truncate">/permanent/cg/interior/loft_012.png</span>
+          </div>
+          <div class="result-actions">
+            <button class="btn-inline"><i data-lucide="copy" class="w-3 h-3"></i>复制路径</button>
+          </div>
+        </article>
+        <!-- 永久库：纹理类 -->
+        <article class="result-card" data-lib="permanent">
+          <div class="result-thumb">
+            <img src="https://images.pexels.com/photos/129733/pexels-photo-129733.jpeg?auto=compress&cs=tinysrgb&w=800" alt="texture" />
+          </div>
+          <div class="result-meta">
+            <span class="result-pill result-pill-primary">永久库 · 材质贴图</span>
+            <span class="result-pill">匹配度 86.3%</span>
+            <span class="truncate">/permanent/tex/concrete_wall_04.jpg</span>
+          </div>
+          <div class="result-actions">
+            <button class="btn-inline"><i data-lucide="copy" class="w-3 h-3"></i>复制路径</button>
+          </div>
+        </article>
+        <!-- 项目库：横图 -->
+        <article class="result-card" data-lib="project">
+          <div class="result-thumb">
+            <img src="https://images.pexels.com/photos/240040/pexels-photo-240040.jpeg?auto=compress&cs=tinysrgb&w=1200" alt="pool" />
+          </div>
+          <div class="result-meta">
+            <span class="result-pill result-pill-tag">项目库 · Summer Campaign</span>
+            <span class="result-pill">匹配度 89.4%</span>
+            <span class="truncate">D:/summer/shot_pool_008.jpg</span>
+          </div>
+          <div class="result-actions">
+            <button class="btn-inline" data-action="archive"><i data-lucide="archive" class="w-3 h-3"></i>归档到永久库</button>
+            <button class="btn-inline" data-action="remove"><i data-lucide="trash-2" class="w-3 h-3"></i>删除索引</button>
+          </div>
+        </article>
+        <!-- 项目库：剪辑帧竖图 -->
+        <article class="result-card" data-lib="project">
+          <div class="result-thumb">
+            <img src="https://images.pexels.com/photos/6898859/pexels-photo-6898859.jpeg?auto=compress&cs=tinysrgb&w=800" alt="edit frame" />
+          </div>
+          <div class="result-meta">
+            <span class="result-pill result-pill-tag">项目库 · Brand Launch 2025</span>
+            <span class="result-pill">匹配度 92.1%</span>
+            <span class="truncate">Z:/brand_launch/frame_1023.png</span>
+          </div>
+          <div class="result-actions">
+            <button class="btn-inline" data-action="archive"><i data-lucide="archive" class="w-3 h-3"></i>归档到永久库</button>
+            <button class="btn-inline" data-action="remove"><i data-lucide="trash-2" class="w-3 h-3"></i>删除索引</button>
+          </div>
+        </article>
+        <!-- 永久库：AI 生成 -->
+        <article class="result-card" data-lib="permanent">
+          <div class="result-thumb">
+            <img src="https://images.pexels.com/photos/18085813/pexels-photo-18085813/free-photo-of-ai-generated-futuristic-city.jpeg?auto=compress&cs=tinysrgb&w=800" alt="ai city" />
+          </div>
+          <div class="result-meta">
+            <span class="result-pill result-pill-primary">永久库 · AI 生成</span>
+            <span class="result-pill">匹配度 90.5%</span>
+            <span class="truncate">/permanent/ai/future_city_07.png</span>
+          </div>
+          <div class="result-actions">
+            <button class="btn-inline"><i data-lucide="copy" class="w-3 h-3"></i>复制路径</button>
+          </div>
+        </article>
+        <!-- 永久库：参考横图 -->
+        <article class="result-card" data-lib="permanent">
+          <div class="result-thumb">
+            <img src="https://images.pexels.com/photos/325185/pexels-photo-325185.jpeg?auto=compress&cs=tinysrgb&w=1200" alt="city2" />
+          </div>
+          <div class="result-meta">
+            <span class="result-pill result-pill-primary">永久库 · 参考照片</span>
+            <span class="result-pill">匹配度 87.7%</span>
+            <span class="truncate">/permanent/ref/city/night_014.jpg</span>
+          </div>
+          <div class="result-actions">
+            <button class="btn-inline"><i data-lucide="copy" class="w-3 h-3"></i>复制路径</button>
+          </div>
+        </article>
+        <!-- 骨架若干 -->
+        <article class="result-card opacity-80">
+          <div class="result-thumb bg-slate-100 animate-pulse" style="height:180px"></div>
+          <div class="result-meta mt-1">
+            <span class="w-10 h-3 bg-slate-200 rounded-full"></span>
+            <span class="w-14 h-3 bg-slate-200 rounded-full"></span>
+          </div>
+        </article>
+        <article class="result-card opacity-80">
+          <div class="result-thumb bg-slate-100 animate-pulse" style="height:260px"></div>
+        </article>
+      </div>
+    </section>
+
+    <section id="upload-section" class="material-section">
+      <div class="material-search-panel text-[10px] text-slate-600">
+        <div class="flex items-center gap-2 mb-2">
+          <div class="pill-small">批量上传 · 绑定当前库 / 项目</div>
+          <div class="pill-small">注意：仅写入索引，不复制原始文件</div>
+        </div>
+        <div>// TODO 后端实现：根据当前库类型和项目 ID 创建批量索引任务。</div>
+      </div>
+    </section>
+
+    <section id="stats-section" class="material-section">
+      <div class="material-search-panel text-[10px] text-slate-600">
+        <div class="mb-2">项目与永久库使用统计（示意）。</div>
+        <div>// TODO 后端实现：读取各库命中次数、最近索引任务、失败列表等。</div>
+      </div>
+    </section>
+  </main>
+</div>
+
+<script>
+  lucide.createIcons();
+
+  // 主题切换
+  (function(){
+    const root=document.documentElement;
+    const chip=document.getElementById('theme-toggle');
+    const label=document.getElementById('theme-label');
+    const KEY='materialsearch-theme';
+    function apply(mode){
+      if(mode==='light'){root.dataset.theme='light';root.style.colorScheme='light';label.textContent='浅色模式';}
+      else if(mode==='dark'){root.dataset.theme='dark';root.style.colorScheme='dark';label.textContent='深色模式';}
+      else{root.dataset.theme='auto';root.style.colorScheme='';label.textContent='系统主题自动';}
+    }
+    function next(cur){return cur==='auto'?'light':cur==='light'?'dark':'auto';}
+    let cur=localStorage.getItem(KEY)||'auto';
+    apply(cur);
+    chip.addEventListener('click',()=>{cur=next(cur);localStorage.setItem(KEY,cur);apply(cur);});
+  })();
+
+  // Tab 切换
+  (function(){
+    const tabs=document.querySelectorAll('#main-tabs .material-tab');
+    const searchPanel=document.getElementById('search-panel');
+    const sections={
+      search:document.getElementById('results-section'),
+      upload:document.getElementById('upload-section'),
+      stats:document.getElementById('stats-section')
+    };
+    function setActive(key){
+      tabs.forEach(t=>t.classList.toggle('active',t.dataset.tab===key));
+      Object.values(sections).forEach(s=>s.classList.remove('active'));
+      if(key==='search'){
+        searchPanel.style.display='flex';
+        sections.search.classList.add('active');
+      }else{
+        searchPanel.style.display='none';
+        sections[key].classList.add('active');
+      }
+    }
+    tabs.forEach(t=>t.addEventListener('click',()=>setActive(t.dataset.tab)));
+    document.getElementById('open-upload-btn').addEventListener('click',()=>setActive('upload'));
+    setActive('search');
+  })();
+
+  // 高级筛选开关
+  (function(){
+    const toggle=document.getElementById('advanced-toggle');
+    const panel=document.getElementById('advanced-panel');
+    if(!toggle) return;
+    let open=false;
+    toggle.addEventListener('click',()=>{open=!open;panel.classList.toggle('hidden',!open);});
+  })();
+
+  // 搜索模式 pill
+  (function(){
+    const modes=document.querySelectorAll('.material-pill-search-mode');
+    modes.forEach(m=>m.addEventListener('click',()=>{
+      modes.forEach(x=>x.classList.remove('active'));
+      m.classList.add('active');
+    }));
+  })();
+
+  // 库类型 + 分类 / 项目切换（仅文案示意）
+  (function(){
+    const libPills=document.querySelectorAll('.material-pill[data-lib]');
+    const permGroups=document.getElementById('permanent-groups');
+    const projGroups=document.getElementById('project-groups');
+    const scopeLabel=document.getElementById('scope-label');
+    const scopeDesc=document.getElementById('scope-desc');
+    const ctxLabel=document.getElementById('current-context-label');
+
+    function updatePermanent(groupLabel){
+      scopeLabel.textContent='当前命中范围：永久库 · '+groupLabel;
+      scopeDesc.innerHTML='当前命中范围：<span class="text-emerald-700">永久库 · '+groupLabel+'</span> · 默认瀑布视图展示真实比例';
+      ctxLabel.textContent='永久库 · '+groupLabel;
+    }
+    function updateProject(projectLabel){
+      scopeLabel.textContent='当前命中范围：项目库 · '+projectLabel;
+      scopeDesc.innerHTML='当前命中范围：<span class="text-sky-700">项目库 · '+projectLabel+'</span> · 搜索仅作用于该项目素材';
+      ctxLabel.textContent='项目库 · '+projectLabel;
+    }
+
+    libPills.forEach(p=>{
+      p.addEventListener('click',()=>{
+        libPills.forEach(x=>x.classList.remove('active'));
+        p.classList.add('active');
+        const lib=p.dataset.lib;
+        if(lib==='permanent'){
+          permGroups.style.display='block';
+          projGroups.style.display='none';
+          const active=document.querySelector('#perm-group-list .material-list-item.active span');
+          updatePermanent(active?active.textContent:'全部分类');
+        }else{
+          permGroups.style.display='none';
+          projGroups.style.display='block';
+          const active=document.querySelector('#project-list .material-list-item.active span');
+          updateProject(active?active.textContent:'当前项目');
+        }
+      });
+    });
+
+    document.querySelectorAll('#perm-group-list .material-list-item').forEach(item=>{
+      item.addEventListener('click',()=>{
+        document.querySelectorAll('#perm-group-list .material-list-item').forEach(i=>i.classList.remove('active'));
+        item.classList.add('active');
+        const label=item.querySelector('span').textContent;
+        updatePermanent(label);
+        // TODO 后端：根据永久库分类过滤搜索结果
+      });
+    });
+
+    document.querySelectorAll('#project-list .material-list-item[data-project]').forEach(item=>{
+      item.addEventListener('click',()=>{
+        document.querySelectorAll('#project-list .material-list-item').forEach(i=>i.classList.remove('active'));
+        item.classList.add('active');
+        const label=item.querySelector('span').textContent;
+        updateProject(label);
+        // TODO 后端：根据项目 ID 过滤搜索结果
+      });
+    });
+  })();
+
+  // 视图切换：瀑布 / 网格
+  (function(){
+    const toggle=document.getElementById('view-toggle');
+    const spans=toggle.querySelectorAll('span');
+    const wrapper=document.getElementById('results-wrapper');
+
+    spans.forEach(s=>{
+      s.addEventListener('click',()=>{
+        spans.forEach(x=>x.classList.remove('active'));
+        s.classList.add('active');
+        const view=s.dataset.view;
+        if(view==='grid'){
+          wrapper.classList.remove('results-masonry');
+          wrapper.style.display='grid';
+          wrapper.style.gridTemplateColumns='repeat(auto-fill,minmax(220px,1fr))';
+        }else{
+          wrapper.style.display='block';
+          wrapper.style.gridTemplateColumns='';
+          wrapper.classList.add('results-masonry');
+        }
+      });
+    });
+  })();
+
+  // 缩略图宽度缩放：通过控制 column-count 和 grid 列，模拟视图密度调节
+  (function(){
+    const range=document.getElementById('scale-range');
+    const wrapper=document.getElementById('results-wrapper');
+    const baseColumns=parseInt(wrapper.getAttribute('data-base-columns')||'4',10);
+
+    function applyScale(){
+      const v=parseInt(range.value,10); // 70 - 150
+      const factor=v/100; // 0.7 - 1.5
+      const masonryCols=Math.max(1,Math.round(baseColumns*factor));
+      if(wrapper.classList.contains('results-masonry')){
+        wrapper.style.columnCount=String(masonryCols);
+      }else{
+        const minWidth=Math.max(160,Math.round(220/factor));
+        wrapper.style.gridTemplateColumns='repeat(auto-fill,minmax('+minWidth+'px,1fr))';
+      }
+    }
+
+    range.addEventListener('input',applyScale);
+    applyScale();
+  })();
+
+  // 图片点击放大预览 + 字段信息
+  (function(){
+    const modal=document.createElement('div');
+    modal.id='preview-modal';
+    Object.assign(modal.style,{
+      position:'fixed',inset:'0',background:'rgba(0,0,0,0.75)',display:'none',
+      alignItems:'center',justifyContent:'center',zIndex:'60'
+    });
+    modal.innerHTML=`
+      <div id="preview-backdrop" style="position:absolute;inset:0;"></div>
+      <div style="position:relative;max-width:92vw;max-height:92vh;display:flex;gap:18px;align-items:flex-start;">
+        <div style="flex:3;max-height:92vh;overflow:hidden;border-radius:16px;background:#020817;display:flex;align-items:center;justify-content:center;">
+          <img id="preview-image" src="" alt="preview" style="max-width:100%;max-height:92vh;object-fit:contain;" />
+        </div>
+        <div style="flex:2;padding:10px 12px;border-radius:16px;background:rgba(9,9,11,0.98);color:#e5e7eb;font-size:10px;display:flex;flex-direction:column;gap:6px;min-width:220px;max-height:92vh;overflow:auto;">
+          <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;">
+            <div style="font-size:11px;font-weight:600;">素材详情</div>
+            <button id="preview-close" style="border:none;background:transparent;color:#9ca3af;cursor:pointer;font-size:11px;">关闭 ✕</button>
+          </div>
+          <div id="preview-meta" style="display:flex;flex-direction:column;gap:4px;"></div>
+          <div style="margin-top:4px;opacity:0.7;">// TODO 后端：使用 file_id / path 拉取完整字段（库类型、项目ID、创建/修改时间、标签、作者等），并提供编辑保存接口。</div>
+        </div>
+      </div>`;
+    document.body.appendChild(modal);
+    const imgEl=modal.querySelector('#preview-image');
+    const metaEl=modal.querySelector('#preview-meta');
+    const closeBtn=modal.querySelector('#preview-close');
+    const backdrop=modal.querySelector('#preview-backdrop');
+
+    function bind(){
+      document.querySelectorAll('#results-section .result-thumb img').forEach(img=>{
+        img.style.cursor='zoom-in';
+        img.onclick=()=>{
+          const card=img.closest('.result-card');
+          const pathEl=card.querySelector('.result-meta .truncate');
+          const pills=card.querySelectorAll('.result-meta .result-pill');
+          const lib=pills[0]?.innerText||'';
+          const score=pills[1]?.innerText||'';
+          imgEl.src=img.src;
+          metaEl.innerHTML=`
+            <div><span style="opacity:.6;">路径 Path：</span><span>${pathEl?pathEl.textContent:'未知路径'}</span></div>
+            <div><span style="opacity:.6;">所属库 Library：</span><span>${lib||'N/A'}</span></div>
+            <div><span style="opacity:.6;">匹配度 Score：</span><span>${score||'N/A'}</span></div>
+            <div><span style="opacity:.6;">文件ID File ID：</span><span>// TODO from backend</span></div>
+            <div><span style="opacity:.6;">标签 Tags：</span><span>// TODO 可编辑并写回后端</span></div>`;
+          modal.style.display='flex';
+        };
+      });
+    }
+    bind();
+
+    function close(){modal.style.display='none';}
+    closeBtn.onclick=close;
+    backdrop.onclick=close;
+    document.addEventListener('keydown',e=>{if(e.key==='Escape') close();});
+  })();
+
+  // 项目库操作按钮示意
+  (function(){
+    document.getElementById('results-wrapper').addEventListener('click',e=>{
+      const btn=e.target.closest('button[data-action]');
+      if(!btn) return;
+      const card=btn.closest('.result-card');
+      const action=btn.dataset.action;
+      if(action==='remove'){
+        // TODO 后端：根据 file_id/path 删除项目库的索引记录（不删物理文件）
+        card.style.opacity='0.35';
+      }
+      if(action==='archive'){
+        // TODO 后端：弹出分类选择 -> 调用归档 API -> 复制索引到永久库
+        btn.textContent='已请求归档';
+      }
+    });
+  })();
+</script>
+</body>
+</html>

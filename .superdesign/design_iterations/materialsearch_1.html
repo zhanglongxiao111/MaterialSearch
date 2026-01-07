@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <title>MaterialSearch Workspace - Redesign Preview</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Space+Grotesk:wght@400;500;600&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="materialsearch_theme_1.css" />
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+  <style>
+    body { overflow: hidden !important; }
+  </style>
+</head>
+<body class="material-layout">
+  <!-- 顶部导航 -->
+  <header class="material-header">
+    <div class="material-header-left">
+      <div class="material-logo"></div>
+      <div class="material-header-title">
+        <span class="label">MaterialSearch Workspace</span>
+        <h1>素材搜索与项目素材管理中心</h1>
+      </div>
+      <div class="material-chip">当前命中范围：仅 永久素材库</div>
+    </div>
+    <div class="material-header-right">
+      <button class="material-btn-ghost">
+        <span id="current-library-label">永久素材库</span>
+      </button>
+      <button class="material-btn-ghost">
+        <i data-lucide="folder-open" style="width:14px;height:14px"></i>
+        项目管理
+      </button>
+      <button class="material-btn-primary">
+        <i data-lucide="upload-cloud" style="width:14px;height:14px"></i>
+        批量上载素材
+      </button>
+      <button class="material-btn-ghost">
+        <i data-lucide="scan-line" style="width:14px;height:14px"></i>
+        更新索引
+      </button>
+      <div class="material-chip">CN / EN</div>
+      <div class="material-chip">User</div>
+    </div>
+  </header>
+
+  <div class="material-shell">
+    <!-- 左侧栏：模式 / 项目 / 扫描状态示意 -->
+    <aside class="material-sidebar">
+      <div>
+        <div class="material-sidebar-section-title">搜索模式 / 库类型</div>
+        <div class="material-sidebar-pills">
+          <div class="material-pill active">永久库</div>
+          <div class="material-pill">项目库</div>
+        </div>
+      </div>
+
+      <div>
+        <div class="material-sidebar-section-title">项目列表</div>
+        <div class="material-project-list">
+          <div class="material-project-item active">
+            <div class="flex justify-between text-[11px]">
+              <span>Brand Launch 2025</span>
+              <span class="text-[9px] text-emerald-400">进行中</span>
+            </div>
+            <div class="text-[9px] text-zinc-400">客户端：Acme Studio · 3240 素材</div>
+          </div>
+          <div class="material-project-item">
+            <div class="flex justify-between text-[11px]">
+              <span>Summer Campaign</span>
+              <span class="text-[9px] text-zinc-500">已完成</span>
+            </div>
+            <div class="text-[9px] text-zinc-400">客户端：Ocean Film · 1860 素材</div>
+          </div>
+          <div class="material-project-item">
+            <div class="flex justify-between text-[11px]">
+              <span>Internal Library</span>
+              <span class="text-[9px] text-emerald-400">进行中</span>
+            </div>
+            <div class="text-[9px] text-zinc-400">内部资产 · 920 素材</div>
+          </div>
+          <div class="material-project-item">
+            <span class="text-[11px] text-fuchsia-300">+ 新建项目</span>
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <div class="material-sidebar-section-title">索引 / 扫描状态</div>
+        <div class="material-scan-card">
+          <div class="flex items-center justify-between">
+            <span>永久库最近扫描</span>
+            <span class="text-[9px] text-emerald-400">完成</span>
+          </div>
+          <div class="mt-1 h-[4px] w-full bg-zinc-800 rounded-full overflow-hidden">
+            <div class="h-full bg-emerald-400" style="width:100%"></div>
+          </div>
+          <div class="mt-1 text-[9px] text-zinc-400">共 12,430 素材，视频帧 86,210</div>
+        </div>
+        <div class="material-scan-card" style="margin-top:0.5rem;">
+          <div class="flex items-center justify-between">
+            <span>Brand Launch 2025</span>
+            <span class="text-[9px] text-amber-300">索引中 · 72%</span>
+          </div>
+          <div class="mt-1 h-[4px] w-full bg-zinc-800 rounded-full overflow-hidden">
+            <div class="h-full bg-amber-300" style="width:72%"></div>
+          </div>
+          <div class="mt-1 text-[9px] text-zinc-400">预计剩余 06:12 · 处理中 184/256</div>
+        </div>
+      </div>
+    </aside>
+
+    <!-- 主工作区 -->
+    <main class="material-main">
+      <div class="flex items-center justify-between gap-4">
+        <div class="material-scope-text">
+          当前命中范围：<span class="text-emerald-400">永久素材库</span> · 支持 文本、图像、视频、多模态 搜索
+        </div>
+        <div class="material-tabs">
+          <div class="material-tab active">搜索与结果</div>
+          <div class="material-tab">批量上传</div>
+          <div class="material-tab">项目统计 / 历史</div>
+        </div>
+      </div>
+
+      <!-- 搜索面板示意（Tab: 搜索与结果） -->
+      <section class="material-search-panel">
+        <div class="material-search-row">
+          <input class="material-input-main" placeholder="描述你要找的画面，如：夜景 城市 高楼 航拍 霓虹灯 雨后反光" />
+          <select class="material-select">
+            <option>Top 12</option>
+            <option>Top 30</option>
+            <option>Top 150</option>
+            <option>Top 600</option>
+            <option>全部结果</option>
+          </select>
+          <button class="material-btn-primary">
+            <i data-lucide="search" style="width:14px;height:14px"></i>
+            搜索
+          </button>
+        </div>
+        <div class="flex items-center gap-3 text-[10px] text-zinc-400">
+          <div class="flex items-center gap-1 cursor-pointer">
+            <i data-lucide="settings-2" style="width:12px;height:12px"></i>
+            高级筛选（路径 / 时间范围 / 正负权重）
+          </div>
+          <div class="flex items-center gap-1">
+            <i data-lucide="loader-2" class="animate-spin" style="width:11px;height:11px"></i>
+            实时命中自：永久库
+          </div>
+          <div class="flex items-center gap-1">
+            <i data-lucide="copy" style="width:11px;height:11px"></i>
+            一键复制全部结果路径
+          </div>
+        </div>
+      </section>
+
+      <!-- 结果区示意 -->
+      <section class="material-results">
+        <!-- 卡片示例1 -->
+        <article class="material-result-card">
+          <div class="material-result-thumb">
+            <img src="https://images.pexels.com/photos/313782/pexels-photo-313782.jpeg?auto=compress&cs=tinysrgb&w=800" alt="city night" class="w-full h-full object-cover" />
+          </div>
+          <div class="material-result-meta">
+            <span class="px-1.5 py-0.5 rounded-full bg-fuchsia-500/15 text-[8px] text-fuchsia-300">永久库</span>
+            <span class="px-1.5 py-0.5 rounded-full bg-emerald-500/15 text-[8px] text-emerald-300">匹配度 96.4%</span>
+            <span class="text-[8px] text-zinc-400 truncate">/library/city/night/neon_001.jpg</span>
+          </div>
+          <div class="material-result-actions">
+            <button class="material-btn-ghost !px-2 !py-1 text-[9px]">
+              <i data-lucide="image" style="width:11px;height:11px"></i>
+              以图搜图
+            </button>
+            <button class="material-btn-ghost !px-2 !py-1 text-[9px]">
+              <i data-lucide="film" style="width:11px;height:11px"></i>
+              搜索相关视频
+            </button>
+            <button class="material-btn-ghost !px-2 !py-1 text-[9px]">
+              <i data-lucide="copy" style="width:11px;height:11px"></i>
+              复制路径
+            </button>
+          </div>
+        </article>
+
+        <!-- 卡片示例2 -->
+        <article class="material-result-card">
+          <div class="material-result-thumb">
+            <img src="https://images.pexels.com/photos/8541033/pexels-photo-8541033.jpeg?auto=compress&cs=tinysrgb&w=800" alt="editor" class="w-full h-full object-cover" />
+          </div>
+          <div class="material-result-meta">
+            <span class="px-1.5 py-0.5 rounded-full bg-emerald-500/15 text-[8px] text-emerald-300">项目库 · Brand Launch 2025</span>
+            <span class="px-1.5 py-0.5 rounded-full bg-emerald-400/20 text-[8px] text-emerald-300">匹配度 91.2%</span>
+            <span class="text-[8px] text-zinc-400 truncate">Z:/brand_launch/shot_023_a001.mov</span>
+          </div>
+          <div class="material-result-actions">
+            <button class="material-btn-ghost !px-2 !py-1 text-[9px]">
+              <i data-lucide="scissors" style="width:11px;height:11px"></i>
+              导出片段
+            </button>
+            <button class="material-btn-ghost !px-2 !py-1 text-[9px]">
+              <i data-lucide="copy" style="width:11px;height:11px"></i>
+              复制路径
+            </button>
+          </div>
+        </article>
+
+        <!-- 骨架 / 更多示意卡片 -->
+        <article class="material-result-card opacity-70">
+          <div class="material-result-thumb bg-zinc-900/80 animate-pulse"></div>
+          <div class="material-result-meta mt-1">
+            <span class="w-10 h-3 bg-zinc-800 rounded-full"></span>
+            <span class="w-14 h-3 bg-zinc-800 rounded-full"></span>
+          </div>
+          <div class="mt-1 h-3 bg-zinc-900 rounded"></div>
+        </article>
+        <article class="material-result-card opacity-70 hidden xl:flex">
+          <div class="material-result-thumb bg-zinc-900/80 animate-pulse"></div>
+        </article>
+      </section>
+    </main>
+  </div>
+
+  <script>
+    lucide.createIcons();
+  </script>
+</body>
+</html>

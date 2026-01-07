@@ -1,0 +1,359 @@
+:root {
+  --background: oklch(0.13 0.03 260);
+  --foreground: oklch(0.97 0.01 260);
+  --card: oklch(0.16 0.02 260);
+  --card-foreground: oklch(0.97 0.01 260);
+  --popover: oklch(0.16 0.02 260);
+  --popover-foreground: oklch(0.97 0.01 260);
+  --primary: oklch(0.72 0.19 310); /* 紫红偏霓虹 */
+  --primary-foreground: oklch(0.11 0.02 260);
+  --secondary: oklch(0.24 0.04 260);
+  --secondary-foreground: oklch(0.97 0.01 260);
+  --muted: oklch(0.20 0.02 260);
+  --muted-foreground: oklch(0.74 0.02 260);
+  --accent: oklch(0.78 0.14 165); /* 清亮青绿色强调 */
+  --accent-foreground: oklch(0.10 0.02 260);
+  --destructive: oklch(0.58 0.23 27);
+  --destructive-foreground: oklch(0.99 0.02 95);
+  --border: oklch(0.22 0.03 260);
+  --input: oklch(0.19 0.02 260);
+  --ring: oklch(0.78 0.14 165);
+  --chart-1: oklch(0.72 0.19 310);
+  --chart-2: oklch(0.78 0.14 165);
+  --chart-3: oklch(0.85 0.18 50);
+  --chart-4: oklch(0.76 0.16 210);
+  --chart-5: oklch(0.70 0.20 345);
+  --sidebar: oklch(0.10 0.03 260);
+  --sidebar-foreground: oklch(0.92 0.01 260);
+  --sidebar-primary: oklch(0.78 0.14 165);
+  --sidebar-primary-foreground: oklch(0.08 0.02 260);
+  --sidebar-accent: oklch(0.24 0.04 260);
+  --sidebar-accent-foreground: oklch(0.96 0.01 260);
+  --sidebar-border: oklch(0.24 0.03 260);
+  --sidebar-ring: oklch(0.78 0.14 165);
+  --font-sans: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'SF Pro Text', -system-ui, sans-serif;
+  --font-serif: 'Playfair Display', 'Source Serif Pro', serif;
+  --font-mono: 'JetBrains Mono', 'Space Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;
+  --radius: 0.6rem;
+  --spacing: 0.25rem;
+  --shadow-2xs: 0 1px 2px rgba(0,0,0,0.35);
+  --shadow-xs: 0 2px 4px rgba(0,0,0,0.35);
+  --shadow-sm: 0 4px 10px rgba(0,0,0,0.40);
+  --shadow: 0 8px 24px rgba(0,0,0,0.45);
+  --shadow-md: 0 12px 30px rgba(0,0,0,0.50);
+  --shadow-lg: 0 18px 40px rgba(0,0,0,0.55);
+  --shadow-xl: 0 24px 60px rgba(0,0,0,0.60);
+  --shadow-2xl: 0 32px 80px rgba(0,0,0,0.65);
+}
+
+body {
+  font-family: var(--font-sans) !important;
+  background-color: var(--background) !important;
+  color: var(--foreground) !important;
+  margin: 0 !important;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: 'Space Grotesk', var(--font-sans) !important;
+  color: var(--foreground) !important;
+  margin: 0 !important;
+}
+
+.material-layout {
+  display: flex !important;
+  flex-direction: column !important;
+  min-height: 100vh !important;
+  background: radial-gradient(circle at top left, rgba(120,120,255,0.06), transparent),
+              radial-gradient(circle at top right, rgba(0,255,200,0.05), transparent),
+              var(--background) !important;
+  color: var(--foreground) !important;
+}
+
+.material-header {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  padding: 0.9rem 1.6rem !important;
+  border-bottom: 1px solid var(--border) !important;
+  background: linear-gradient(to bottom, oklch(0.10 0.03 260), oklch(0.12 0.03 260)) !important;
+  box-shadow: var(--shadow-xs) !important;
+}
+
+.material-header-left {
+  display: flex !important;
+  align-items: center !important;
+  gap: 0.9rem !important;
+}
+
+.material-logo {
+  width: 24px !important;
+  height: 24px !important;
+  border-radius: 8px !important;
+  background: radial-gradient(circle at 30% 0%, var(--accent), transparent),
+              radial-gradient(circle at 80% 80%, var(--primary), transparent) !important;
+}
+
+.material-header-title {
+  display: flex !important;
+  flex-direction: column !important;
+}
+
+.material-header-title span.label {
+  font-size: 11px !important;
+  letter-spacing: 0.06em !important;
+  text-transform: uppercase !important;
+  color: var(--muted-foreground) !important;
+}
+
+.material-header-title h1 {
+  font-size: 20px !important;
+  font-weight: 500 !important;
+}
+
+.material-header-right {
+  display: flex !important;
+  align-items: center !important;
+  gap: 0.6rem !important;
+}
+
+.material-chip {
+  padding: 0.12rem 0.6rem !important;
+  border-radius: 999px !important;
+  border: 1px solid var(--border) !important;
+  font-size: 10px !important;
+  color: var(--muted-foreground) !important;
+}
+
+.material-btn-primary {
+  padding: 0.34rem 0.9rem !important;
+  border-radius: 999px !important;
+  border: none !important;
+  background: var(--primary) !important;
+  color: var(--primary-foreground) !important;
+  font-size: 12px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 0.35rem !important;
+  cursor: pointer !important;
+  box-shadow: var(--shadow-sm) !important;
+}
+
+.material-btn-ghost {
+  padding: 0.32rem 0.85rem !important;
+  border-radius: 999px !important;
+  border: 1px solid var(--border) !important;
+  background: transparent !important;
+  color: var(--muted-foreground) !important;
+  font-size: 12px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 0.35rem !important;
+  cursor: pointer !important;
+}
+
+.material-shell {
+  display: flex !important;
+  flex: 1 !important;
+  overflow: hidden !important;
+}
+
+.material-sidebar {
+  width: 260px !important;
+  padding: 1rem 1rem 1rem 1.3rem !important;
+  border-right: 1px solid var(--border) !important;
+  background: radial-gradient(circle at 0 0, rgba(120,120,255,0.12), transparent),
+              var(--sidebar) !important;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 1rem !important;
+}
+
+.material-sidebar-section-title {
+  font-size: 11px !important;
+  letter-spacing: 0.14em !important;
+  text-transform: uppercase !important;
+  color: var(--muted-foreground) !important;
+  margin-bottom: 0.1rem !important;
+}
+
+.material-sidebar-pills {
+  display: flex !important;
+  gap: 0.35rem !important;
+}
+
+.material-pill {
+  flex: 1 !important;
+  padding: 0.25rem 0.55rem !important;
+  border-radius: 999px !important;
+  font-size: 11px !important;
+  background: var(--muted) !important;
+  color: var(--muted-foreground) !important;
+  border: 1px solid transparent !important;
+}
+
+.material-pill.active {
+  background: var(--sidebar-primary) !important;
+  color: var(--sidebar-primary-foreground) !important;
+  border-color: var(--sidebar-ring) !important;
+}
+
+.material-project-list {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 0.3rem !important;
+  max-height: 40vh !important;
+  overflow-y: auto !important;
+}
+
+.material-project-item {
+  padding: 0.35rem 0.55rem !important;
+  border-radius: 0.45rem !important;
+  background: transparent !important;
+  cursor: pointer !important;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 0.1rem !important;
+  border: 1px solid transparent !important;
+  color: var(--muted-foreground) !important;
+}
+
+.material-project-item.active {
+  background: var(--secondary) !important;
+  border-color: var(--sidebar-ring) !important;
+  color: var(--secondary-foreground) !important;
+}
+
+.material-scan-card {
+  margin-top: 0.2rem !important;
+  padding: 0.5rem 0.6rem !important;
+  border-radius: 0.5rem !important;
+  background: var(--muted) !important;
+  color: var(--muted-foreground) !important;
+  font-size: 11px !important;
+  box-shadow: var(--shadow-2xs) !important;
+}
+
+.material-main {
+  flex: 1 !important;
+  padding: 1rem 1.4rem 1.2rem !important;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 0.6rem !important;
+  overflow: hidden !important;
+}
+
+.material-scope-text {
+  font-size: 12px !important;
+  color: var(--muted-foreground) !important;
+}
+
+.material-tabs {
+  display: inline-flex !important;
+  align-items: center !important;
+  background: var(--muted) !important;
+  padding: 0.18rem !important;
+  border-radius: 999px !important;
+  gap: 0.2rem !important;
+}
+
+.material-tab {
+  padding: 0.24rem 0.78rem !important;
+  border-radius: 999px !important;
+  font-size: 11px !important;
+  color: var(--muted-foreground) !important;
+  cursor: pointer !important;
+}
+
+.material-tab.active {
+  background: var(--primary) !important;
+  color: var(--primary-foreground) !important;
+}
+
+.material-search-panel {
+  margin-top: 0.4rem !important;
+  padding: 0.7rem 0.9rem !important;
+  border-radius: 0.7rem !important;
+  background: var(--card) !important;
+  border: 1px solid var(--border) !important;
+  box-shadow: var(--shadow-2xs) !important;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 0.6rem !important;
+}
+
+.material-search-row {
+  display: flex !important;
+  gap: 0.5rem !important;
+}
+
+.material-input-main {
+  flex: 1 !important;
+  padding: 0.5rem 0.7rem !important;
+  border-radius: 0.5rem !important;
+  border: 1px solid var(--border) !important;
+  background: var(--input) !important;
+  color: var(--foreground) !important;
+  font-size: 13px !important;
+}
+
+.material-select,
+.material-input-sub {
+  padding: 0.4rem 0.6rem !important;
+  border-radius: 0.5rem !important;
+  border: 1px solid var(--border) !important;
+  background: var(--input) !important;
+  color: var(--muted-foreground) !important;
+  font-size: 11px !important;
+}
+
+.material-results {
+  flex: 1 !important;
+  margin-top: 0.2rem !important;
+  display: grid !important;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)) !important;
+  gap: 0.6rem !important;
+  overflow-y: auto !important;
+}
+
+.material-result-card {
+  background: var(--card) !important;
+  border-radius: 0.65rem !important;
+  border: 1px solid var(--border) !important;
+  padding: 0.4rem !important;
+  box-shadow: var(--shadow-2xs) !important;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 0.25rem !important;
+}
+
+.material-result-thumb {
+  width: 100% !important;
+  height: 130px !important;
+  border-radius: 0.45rem !important;
+  background: radial-gradient(circle at center, rgba(255,255,255,0.08), transparent) !important;
+  overflow: hidden !important;
+}
+
+.material-result-meta {
+  display: flex !important;
+  flex-wrap: wrap !important;
+  gap: 0.2rem !important;
+  align-items: center !important;
+  font-size: 9px !important;
+}
+
+.material-result-actions {
+  margin-top: 0.1rem !important;
+  display: flex !important;
+  gap: 0.3rem !important;
+}
+
+/* 响应式 */
+@media (max-width: 1024px) {
+  .material-sidebar {
+    display: none !important;
+  }
+  .material-main {
+    padding: 0.8rem 0.9rem 1rem !important;
+  }
+}

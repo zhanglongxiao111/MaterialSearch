@@ -1,4 +1,6 @@
+import base64
 import logging
+import os
 import time
 from functools import lru_cache
 
@@ -11,6 +13,9 @@ from database import (
     get_video_paths,
     get_frame_times_features_by_path,
     get_pexels_video_features,
+    get_session_by_target,
+    get_db_manager,
+    get_pdf_page_features,
 )
 from models import DatabaseSession, DatabaseSessionPexelsVideo
 from process_assets import match_batch, process_image, process_text
@@ -29,6 +34,28 @@ def clean_cache():
     search_pexels_video_by_text.cache_clear()
 
 
+def _get_source_label(library_type, project_id=None):
+    """
+    获取搜索结果来源标签
+    :param library_type: string, 库类型 'permanent' / 'project'
+    :param project_id: string, 项目ID
+    :return: string, 来源标签
+    """
+    if library_type == "permanent":
+        return "永久库"
+    elif library_type == "project" and project_id:
+        try:
+            from project_manager import get_project_manager
+            pm = get_project_manager()
+            project = pm.get_project(project_id)
+            if project:
+                return f"项目: {project['name']}"
+            return f"项目: {project_id}"
+        except Exception:
+            return f"项目: {project_id}"
+    return "未知"
+
+
 def search_image_by_feature(
         positive_feature=None,
         negative_feature=None,
@@ -37,6 +64,8 @@ def search_image_by_feature(
         filter_path="",
         start_time=None,
         end_time=None,
+        session=None,
+        exclude_duplicates=False,
 ):
     """
     通过特征搜索图片
@@ -47,24 +76,109 @@ def search_image_by_feature(
     :param filter_path: string, 图片路径
     :param start_time: int, 时间范围筛选开始时间戳，单位秒，用于匹配modify_time
     :param end_time: int, 时间范围筛选结束时间戳，单位秒，用于匹配modify_time
+    :param session: Session, 可选的数据库会话对象，用于指定搜索的数据库
     :return: list[dict], 搜索结果列表
     """
     t0 = time.time()
-    with DatabaseSession() as session:
-        ids, paths, features = get_image_id_path_features_filter_by_path_time(session, filter_path, start_time, end_time)
-    if len(ids) == 0:  # 没有素材，直接返回空
+
+    # 如果提供了 session，使用它；否则创建新的 DatabaseSession
+    if session is not None:
+        ids, paths, features = get_image_id_path_features_filter_by_path_time(
+            session, filter_path, start_time, end_time, exclude_duplicates=exclude_duplicates)
+        pdf_entries = get_pdf_page_features(session, filter_path, start_time, end_time, only_primary=True)
+    else:
+        with DatabaseSession() as default_session:
+            ids, paths, features = get_image_id_path_features_filter_by_path_time(
+                default_session, filter_path, start_time, end_time, exclude_duplicates=exclude_duplicates)
+            pdf_entries = get_pdf_page_features(default_session, filter_path, start_time, end_time, only_primary=True)
+
+    combined_bytes = []
+    meta = []
+
+    for id, path, feature_bytes in zip(ids, paths, features):
+        if not feature_bytes:
+            continue
+        combined_bytes.append(feature_bytes)
+        meta.append({
+            "type": "image",
+            "id": int(id) if id is not None else None,
+            "path": path
+        })
+
+    for entry in pdf_entries or []:
+        feat = entry.get("features")
+        if not feat:
+            continue
+        combined_bytes.append(feat)
+        meta.append({
+            "type": "pdf",
+            "id": entry.get("id"),
+            "path": entry.get("source_path"),
+            "page_no": entry.get("page_no"),
+            "page_count": entry.get("page_count"),
+            "pages_truncated": entry.get("pages_truncated"),
+            "thumbnail_path": entry.get("thumbnail_path"),
+            "width": entry.get("width"),
+            "height": entry.get("height"),
+            "file_size": entry.get("file_size"),
+        })
+
+    if len(combined_bytes) == 0:  # 没有素材，直接返回空
         return []
-    features = np.frombuffer(b"".join(features), dtype=np.float32).reshape(len(features), -1)
-    scores = match_batch(positive_feature, negative_feature, features, positive_threshold, negative_threshold)
+    features_np = np.frombuffer(b"".join(combined_bytes), dtype=np.float32).reshape(len(combined_bytes), -1)
+    scores = match_batch(positive_feature, negative_feature, features_np, positive_threshold, negative_threshold)
     return_list = []
-    for id, path, score in zip(ids, paths, scores):
+
+    # 确定目标库用于URL生成
+    if session is not None:
+        # 尝试确定 session 的目标
+        if hasattr(session.bind, 'url'):
+            url_str = str(session.bind.url)
+            if 'permanent.db' in url_str:
+                url_target = 'permanent'
+            elif 'proj_' in url_str:
+                # 提取项目ID
+                import re
+                match = re.search(r'proj_[^_]+_[^_]+_\d+\.db', url_str)
+                url_target = match.group(0).replace('.db', '') if match else 'permanent'
+            else:
+                url_target = 'permanent'
+        else:
+            url_target = 'permanent'
+    else:
+        url_target = 'permanent'
+
+    for item, score in zip(meta, scores):
         if not score:
             continue
-        return_list.append({
-            "url": "api/get_image/%d" % id,
-            "path": path,
-            "score": float(score),
-        })
+        if item.get("type") == "pdf":
+            page_id = item.get("id")
+            return_list.append({
+                "id": page_id,
+                "url": f"api/pdf/page/{page_id}?target={url_target}",
+                "thumbnail": f"api/pdf/page/{page_id}?target={url_target}&size=512",
+                "path": item.get("path"),
+                "doc_path": item.get("path"),
+                "page_no": item.get("page_no"),
+                "page_count": item.get("page_count"),
+                "pages_truncated": item.get("pages_truncated"),
+                "type": "pdf",
+                "filename": os.path.basename(item.get("path") or "") if item.get("path") else "",
+                "width": item.get("width"),
+                "height": item.get("height"),
+                "size": item.get("file_size"),
+                "score": float(score),
+            })
+        else:
+            img_id = item.get("id")
+            path = item.get("path")
+            return_list.append({
+                "id": img_id,
+                "url": f"api/get_image/{img_id}?target={url_target}",
+                "path": path,
+                "type": "image",
+                "score": float(score),
+            })
     return_list = sorted(return_list, key=lambda x: x["score"], reverse=True)
     logger.info("查询使用时间：%.2f" % (time.time() - t0))
     return return_list
@@ -79,6 +193,9 @@ def search_image_by_text_path_time(
         filter_path="",
         start_time=None,
         end_time=None,
+        library_type="permanent",
+        project_id=None,
+        include_duplicates=False,
 ):
     """
     使用文字搜图片
@@ -89,15 +206,58 @@ def search_image_by_text_path_time(
     :param filter_path: string, 图片路径
     :param start_time: int, 时间范围筛选开始时间戳，单位秒，用于匹配modify_time
     :param end_time: int, 时间范围筛选结束时间戳，单位秒，用于匹配modify_time
+    :param library_type: string, 库类型 'permanent' / 'project'
+    :param project_id: string, 项目ID (library_type='project' 时必填)
     :return: list[dict], 搜索结果列表
     """
     positive_feature = process_text(positive_prompt)
     negative_feature = process_text(negative_prompt)
-    return search_image_by_feature(positive_feature, negative_feature, positive_threshold, negative_threshold, filter_path, start_time, end_time)
+
+    # 根据库类型获取session
+    if library_type == "permanent":
+        target = "permanent"
+    elif library_type == "project":
+        if not project_id:
+            raise ValueError("library_type='project' 时必须提供 project_id")
+        target = project_id
+    else:
+        raise ValueError(f"不支持的 library_type: {library_type}")
+
+    try:
+        session = get_session_by_target(target)
+    except (ValueError, FileNotFoundError):
+        # 如果获取失败，回退到默认session
+        session = DatabaseSession()
+
+    # 执行搜索
+    with session:
+        results = search_image_by_feature(
+            positive_feature, negative_feature,
+            positive_threshold, negative_threshold,
+            filter_path, start_time, end_time,
+            session=session,
+            exclude_duplicates=(library_type == "permanent" and not include_duplicates)
+        )
+
+    # 添加来源标注
+    source_label = _get_source_label(library_type, project_id)
+    for result in results:
+        result['source'] = source_label
+
+    return results
 
 
 @lru_cache(maxsize=CACHE_SIZE)
-def search_image_by_image(img_id_or_path, threshold=IMAGE_THRESHOLD, filter_path="", start_time=None, end_time=None):
+def search_image_by_image(
+        img_id_or_path,
+        threshold=IMAGE_THRESHOLD,
+        filter_path="",
+        start_time=None,
+        end_time=None,
+        library_type="permanent",
+        project_id=None,
+        include_duplicates=False,
+):
     """
     使用图片搜图片
     :param img_id_or_path: int/string, 图片ID 或 图片路径
@@ -105,11 +265,28 @@ def search_image_by_image(img_id_or_path, threshold=IMAGE_THRESHOLD, filter_path
     :param filter_path: string, 图片路径
     :param start_time: int, 时间范围筛选开始时间戳，单位秒，用于匹配modify_time
     :param end_time: int, 时间范围筛选结束时间戳，单位秒，用于匹配modify_time
+    :param library_type: string, 库类型 'permanent' / 'project'
+    :param project_id: string, 项目ID (library_type='project' 时必填)
     :return: list[dict], 搜索结果列表
     """
+    # 根据库类型获取session
+    if library_type == "permanent":
+        target = "permanent"
+    elif library_type == "project":
+        if not project_id:
+            raise ValueError("library_type='project' 时必须提供 project_id")
+        target = project_id
+    else:
+        raise ValueError(f"不支持的 library_type: {library_type}")
+
+    try:
+        session = get_session_by_target(target)
+    except (ValueError, FileNotFoundError):
+        session = DatabaseSession()
+
     try:  # 前端点击以图搜图，通过图片id来搜图 注意：如果后面id改成str的话，需要修改这部分
         img_id = int(img_id_or_path)
-        with DatabaseSession() as session:
+        with session:
             features = get_image_features_by_id(session, img_id)
         if not features:
             return []
@@ -117,7 +294,21 @@ def search_image_by_image(img_id_or_path, threshold=IMAGE_THRESHOLD, filter_path
     except ValueError:  # 传入路径，通过上传的图片来搜图
         img_path = img_id_or_path
         features = process_image(img_path)
-    return search_image_by_feature(features, None, threshold, None, filter_path, start_time, end_time)
+
+    # 执行搜索
+    with session:
+        results = search_image_by_feature(
+            features, None, threshold, None, filter_path, start_time, end_time,
+            session=session,
+            exclude_duplicates=(library_type == "permanent" and not include_duplicates)
+        )
+
+    # 添加来源标注
+    source_label = _get_source_label(library_type, project_id)
+    for result in results:
+        result['source'] = source_label
+
+    return results
 
 
 def get_index_pairs(scores):
@@ -167,6 +358,7 @@ def search_video_by_feature(
         filter_path="",
         modify_time_start=None,
         modify_time_end=None,
+        session=None,
 ):
     """
     通过特征搜索视频
@@ -177,27 +369,43 @@ def search_video_by_feature(
     :param filter_path: string, 视频路径
     :param modify_time_start: int, 时间范围筛选开始时间戳，单位秒，用于匹配modify_time
     :param modify_time_end: int, 时间范围筛选结束时间戳，单位秒，用于匹配modify_time
+    :param session: Session, 可选的数据库会话对象，用于指定搜索的数据库
     :return: list[dict], 搜索结果列表
     """
     t0 = time.time()
+
+    # 如果提供了 session，使用它；否则创建新的 DatabaseSession
+    if session is not None:
+        video_paths = get_video_paths(session, filter_path, modify_time_start, modify_time_end)
+    else:
+        with DatabaseSession() as default_session:
+            video_paths = get_video_paths(default_session, filter_path, modify_time_start, modify_time_end)
+
     return_list = []
-    with DatabaseSession() as session:
-        for path in get_video_paths(session, filter_path, modify_time_start, modify_time_end):  # 逐个视频比对
+    session_use = session if session is not None else DatabaseSession()
+
+    for path in video_paths:  # 逐个视频比对
+        if session is not None:
             frame_times, features = get_frame_times_features_by_path(session, path)
-            features = np.frombuffer(b"".join(features), dtype=np.float32).reshape(len(features), -1)
-            scores = match_batch(positive_feature, negative_feature, features, positive_threshold, negative_threshold)
-            index_pairs = get_index_pairs(scores)
-            for start_index, end_index in index_pairs:
-                score = max(scores[start_index: end_index + 1])
-                start_time, end_time = get_video_range(start_index, end_index, scores, frame_times)
-                return_list.append({
-                    "url": "api/get_video/%s" % base64.urlsafe_b64encode(path.encode()).decode()
-                           + "#t=%.1f,%.1f" % (start_time, end_time),
-                    "path": path,
-                    "score": float(score),
-                    "start_time": start_time,
-                    "end_time": end_time,
-                })
+        else:
+            with session_use as s:
+                frame_times, features = get_frame_times_features_by_path(s, path)
+
+        features = np.frombuffer(b"".join(features), dtype=np.float32).reshape(len(features), -1)
+        scores = match_batch(positive_feature, negative_feature, features, positive_threshold, negative_threshold)
+        index_pairs = get_index_pairs(scores)
+        for start_index, end_index in index_pairs:
+            score = max(scores[start_index: end_index + 1])
+            start_time, end_time = get_video_range(start_index, end_index, scores, frame_times)
+            return_list.append({
+                "url": "api/get_video/%s" % base64.urlsafe_b64encode(path.encode()).decode()
+                       + "#t=%.1f,%.1f" % (start_time, end_time),
+                "path": path,
+                "score": float(score),
+                "start_time": start_time,
+                "end_time": end_time,
+            })
+
     logger.info("查询使用时间：%.2f" % (time.time() - t0))
     return_list = sorted(return_list, key=lambda x: x["score"], reverse=True)
     return return_list
@@ -212,6 +420,8 @@ def search_video_by_text_path_time(
         filter_path="",
         start_time=None,
         end_time=None,
+        library_type="permanent",
+        project_id=None,
 ):
     """
     使用文字搜视频
@@ -222,15 +432,49 @@ def search_video_by_text_path_time(
     :param filter_path: string, 视频路径
     :param start_time: int, 时间范围筛选开始时间戳，单位秒，用于匹配modify_time
     :param end_time: int, 时间范围筛选结束时间戳，单位秒，用于匹配modify_time
+    :param library_type: string, 库类型 'permanent' / 'project'
+    :param project_id: string, 项目ID (library_type='project' 时必填)
     :return: list[dict], 搜索结果列表
     """
     positive_feature = process_text(positive_prompt)
     negative_feature = process_text(negative_prompt)
-    return search_video_by_feature(positive_feature, negative_feature, positive_threshold, negative_threshold, filter_path, start_time, end_time)
+
+    # 根据库类型获取session
+    if library_type == "permanent":
+        target = "permanent"
+    elif library_type == "project":
+        if not project_id:
+            raise ValueError("library_type='project' 时必须提供 project_id")
+        target = project_id
+    else:
+        raise ValueError(f"不支持的 library_type: {library_type}")
+
+    try:
+        session = get_session_by_target(target)
+    except (ValueError, FileNotFoundError):
+        session = DatabaseSession()
+
+    with session:
+        results = search_video_by_feature(positive_feature, negative_feature, positive_threshold, negative_threshold, filter_path, start_time, end_time, session=session)
+
+    # 添加来源标注
+    source_label = _get_source_label(library_type, project_id)
+    for result in results:
+        result['source'] = source_label
+
+    return results
 
 
 @lru_cache(maxsize=CACHE_SIZE)
-def search_video_by_image(img_id_or_path, threshold=IMAGE_THRESHOLD, filter_path="", start_time=None, end_time=None):
+def search_video_by_image(
+        img_id_or_path,
+        threshold=IMAGE_THRESHOLD,
+        filter_path="",
+        start_time=None,
+        end_time=None,
+        library_type="permanent",
+        project_id=None,
+):
     """
     使用图片搜视频
     :param img_id_or_path: int/string, 图片ID 或 图片路径
@@ -238,12 +482,29 @@ def search_video_by_image(img_id_or_path, threshold=IMAGE_THRESHOLD, filter_path
     :param filter_path: string, 视频路径
     :param start_time: int, 时间范围筛选开始时间戳，单位秒，用于匹配modify_time
     :param end_time: int, 时间范围筛选结束时间戳，单位秒，用于匹配modify_time
+    :param library_type: string, 库类型 'permanent' / 'project'
+    :param project_id: string, 项目ID (library_type='project' 时必填)
     :return: list[dict], 搜索结果列表
     """
+    # 根据库类型获取session
+    if library_type == "permanent":
+        target = "permanent"
+    elif library_type == "project":
+        if not project_id:
+            raise ValueError("library_type='project' 时必须提供 project_id")
+        target = project_id
+    else:
+        raise ValueError(f"不支持的 library_type: {library_type}")
+
+    try:
+        session = get_session_by_target(target)
+    except (ValueError, FileNotFoundError):
+        session = DatabaseSession()
+
     features = b""
     try:
         img_id = int(img_id_or_path)
-        with DatabaseSession() as session:
+        with session:
             features = get_image_features_by_id(session, img_id)
         if not features:
             return []
@@ -251,7 +512,16 @@ def search_video_by_image(img_id_or_path, threshold=IMAGE_THRESHOLD, filter_path
     except ValueError:
         img_path = img_id_or_path
         features = process_image(img_path)
-    return search_video_by_feature(features, None, threshold, None, filter_path, start_time, end_time)
+
+    with session:
+        results = search_video_by_feature(features, None, threshold, None, filter_path, start_time, end_time, session=session)
+
+    # 添加来源标注
+    source_label = _get_source_label(library_type, project_id)
+    for result in results:
+        result['source'] = source_label
+
+    return results
 
 
 def search_pexels_video_by_feature(positive_feature, positive_threshold=POSITIVE_THRESHOLD):

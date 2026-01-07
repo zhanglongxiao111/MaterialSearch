@@ -1,0 +1,50 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git clone:*)",
+      "Bash(git init:*)",
+      "Bash(git remote add:*)",
+      "Bash(git fetch:*)",
+      "Bash(git checkout:*)",
+      "Bash(git push:*)",
+      "Bash(openspec list:*)",
+      "Bash(openspec validate:*)",
+      "Bash(openspec show:*)",
+      "Bash(git add:*)",
+      "Bash(git commit -m \"$(cat <<''EOF''\n添加 OpenSpec 项目数据库架构提案和项目文档\n\n- 添加 OpenSpec 双数据库架构提案（add-project-database-architecture）\n  - proposal.md: 提案说明和影响分析\n  - design.md: 技术设计和架构决策\n  - tasks.md: 142 个详细实施任务\n  - specs/: 项目管理、图片存储、搜索功能规范\n\n- 添加项目文档\n  - openspec/project.md: 项目技术栈和约定\n  - AGENTS.md: OpenSpec 工作流说明\n  - CLAUDE.md: 项目级 AI 助手指令\n  - docs/临时沟通/: 需求讨论文档\n\n- 添加 OpenSpec 命令提示词\n  - .github/prompts/: proposal、apply、archive 提示词\n\n- 更新 .gitignore\n  - 排除 .claude/ 和 .augment/ 本地配置目录\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>\nEOF\n)\")",
+      "Bash(git commit -m \"$(cat <<''EOF''\n添加 OpenSpec 工作流配置文件\n\n- .claude/commands/openspec/: Claude Code 的 OpenSpec 命令\n  - proposal.md: 创建提案命令\n  - apply.md: 实施提案命令\n  - archive.md: 归档提案命令\n- .claude/settings.local.json: Claude Code 本地设置\n\n- .augment/commands/: Augment 的 OpenSpec 命令\n  - openspec-proposal.md\n  - openspec-apply.md\n  - openspec-archive.md\n\n- 恢复 .gitignore: 移除对配置目录的排除\n\n这些配置确保团队成员克隆后可以直接使用 OpenSpec 工作流。\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>\nEOF\n)\")",
+      "Bash(git commit:*)",
+      "Bash(git pull:*)",
+      "Bash(pip install:*)",
+      "Bash(python main.py:*)",
+      "Bash(python -c:*)",
+      "Bash(python:*)",
+      "Bash(curl:*)",
+      "Bash(sqlite3:*)",
+      "Bash(python3 -c:*)",
+      "Bash(netstat:*)",
+      "Bash(taskkill:*)",
+      "WebFetch(domain:code.claude.com)",
+      "Bash(findstr:*)",
+      "mcp__chrome-devtools__new_page",
+      "mcp__chrome-devtools__take_screenshot",
+      "mcp__chrome-devtools__take_snapshot",
+      "mcp__chrome-devtools__list_console_messages",
+      "mcp__chrome-devtools__get_console_message",
+      "mcp__chrome-devtools__list_network_requests",
+      "mcp__chrome-devtools__click",
+      "mcp__chrome-devtools__wait_for",
+      "mcp__chrome-devtools__evaluate_script",
+      "Bash(openspec archive add-project-database-architecture:*)",
+      "Bash(sed:*)",
+      "Bash(openspec archive integrate-library-selection:*)",
+      "Bash(mkdir:*)"
+    ],
+    "deny": [],
+    "ask": []
+  },
+  "enableAllProjectMcpServers": true,
+  "enabledMcpjsonServers": [
+    "chrome-devtools"
+  ]
+}

@@ -3,7 +3,7 @@
 FROM python:3.12
 WORKDIR /MaterialSearch/
 ENV HF_HOME=/MaterialSearch/transformers/
-RUN apt update && apt install -y ffmpeg && apt clean
+RUN apt update && apt install -y ffmpeg poppler-utils && apt clean
 COPY requirements.txt ./
 RUN pip install --no-cache-dir -r requirements.txt
 RUN python -c 'from transformers import AutoModelForZeroShotImageClassification, AutoProcessor; AutoModelForZeroShotImageClassification.from_pretrained("OFA-Sys/chinese-clip-vit-base-patch16"); AutoProcessor.from_pretrained("OFA-Sys/chinese-clip-vit-base-patch16");'

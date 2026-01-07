@@ -39,6 +39,34 @@ If you encounter any issues with the version dependencies in `requirements.txt` 
 
 To use the "Download Video Segments" feature, you need to install `ffmpeg`. If you are using Windows, you can run `install_ffmpeg.bat` to install.
 
+To use the "PDF Indexing" feature, you need to install `poppler`:
+- **Windows**: Download from [poppler-windows](https://github.com/oschwartz10612/poppler-windows/releases) and add the `bin` directory to your system PATH
+- **Linux**: `apt install poppler-utils` or `yum install poppler-utils`
+- **macOS**: `brew install poppler`
+
+### Desktop App (Windows)
+
+A native Windows desktop application is available, featuring:
+- **One-click launch**: No need to manually start the server
+- **Native drag & drop**: Drag materials directly into design software (InDesign, Photoshop, etc.)
+- **System tray**: Minimize to tray, quick access
+
+**Build from source:**
+
+1. Install [Rust](https://rustup.rs/) and [Node.js](https://nodejs.org/)
+2. Install Tauri CLI: `cargo install tauri-cli`
+3. Build the Python backend (requires PyInstaller):
+   ```powershell
+   cd MaterialSearch
+   .\desktop\build_sidecar.ps1
+   ```
+4. Build the desktop app:
+   ```powershell
+   cd desktop/src-tauri
+   cargo tauri build
+   ```
+5. Find the installer in `desktop/src-tauri/target/release/bundle/`
+
 ### Deployment via Docker
 
 Supports `amd64` architectures. It includes the default models (`OFA-Sys/chinese-clip-vit-base-patch16`) and supports GPU acceleration.

@@ -11,6 +11,7 @@ from tqdm import trange
 from transformers import AutoModelForZeroShotImageClassification, AutoProcessor
 
 from config import *
+from utils_image import extract_rhino_preview
 
 logger = logging.getLogger(__name__)
 
@@ -57,7 +58,13 @@ def get_image_data(path: str, ignore_small_images: bool = True):
     :return: <class 'numpy.nparray'>, 图片数据，如果出错返回 None
     """
     try:
-        image = Image.open(path)
+        if path.lower().endswith('.3dm'):
+            image = extract_rhino_preview(path)
+            if image is None:
+                return None
+        else:
+            image = Image.open(path)
+
         if ignore_small_images:
             width, height = image.size
             if width < IMAGE_MIN_WIDTH or height < IMAGE_MIN_HEIGHT:
@@ -249,4 +256,183 @@ def match_batch(
     scores = np.where(positive_scores < positive_threshold / 100, 0, positive_scores)
     if negative_feature is not None:
         scores = np.where(negative_scores > negative_threshold / 100, 0, scores)
-    return scores.squeeze(-1)
+    # 确保返回 1D 分数向量（即便只有一条记录也能被 zip 正常迭代）
+    return np.asarray(scores).reshape(-1)
+
+
+# ==================== PDF 处理 ====================
+
+def get_pdf_page_count(file_path: str):
+    """
+    获取 PDF 页数，无法获取时返回 None。
+    :param file_path: PDF 文件路径
+    :return: int or None
+    """
+    try:
+        from pdf2image import pdfinfo_from_path
+    except ImportError:
+        return None
+    try:
+        kwargs = {}
+        if PDF_POPPLER_PATH:
+            kwargs["poppler_path"] = PDF_POPPLER_PATH
+        info = pdfinfo_from_path(file_path, **kwargs)
+        pages = info.get("Pages") or info.get("pages")
+        return int(pages) if pages is not None else None
+    except Exception as exc:
+        logger.warning(f"读取 PDF 页数失败 {file_path}: {exc}")
+        return None
+
+
+def render_pdf_pages(file_path: str, first_page: int, last_page: int, timeout: int = None):
+    """
+    渲染 PDF 指定页码，返回 PIL Image 列表。
+    :param file_path: PDF 文件路径
+    :param first_page: 起始页（从 1 开始）
+    :param last_page: 结束页
+    :param timeout: 超时时间（秒），None 表示不限制
+    :return: list[PIL.Image] 或 None（失败时）
+    :raises: RuntimeError（缺少依赖）, TimeoutError（超时）
+    """
+    try:
+        from pdf2image import convert_from_path
+    except ImportError:
+        raise RuntimeError("缺少 pdf2image 依赖")
+
+    from concurrent.futures import ThreadPoolExecutor, TimeoutError as FuturesTimeoutError
+
+    def _convert():
+        kwargs = {"first_page": first_page, "last_page": last_page, "dpi": 300}
+        if PDF_POPPLER_PATH:
+            kwargs["poppler_path"] = PDF_POPPLER_PATH
+        return convert_from_path(file_path, **kwargs)
+
+    if timeout:
+        with ThreadPoolExecutor(max_workers=1) as executor:
+            future = executor.submit(_convert)
+            try:
+                return future.result(timeout=timeout)
+            except FuturesTimeoutError:
+                raise TimeoutError(f"PDF 渲染超时（{timeout}s）")
+    else:
+        return _convert()
+
+
+def resize_pdf_image(img, target_width: int):
+    """
+    将 PDF 页面缩放到指定宽度（等比）。
+    :param img: PIL.Image
+    :param target_width: 目标宽度
+    :return: PIL.Image
+    """
+    if target_width and img.width != target_width:
+        ratio = target_width / float(img.width)
+        new_height = max(1, int(img.height * ratio))
+        img = img.resize((target_width, new_height), Image.Resampling.LANCZOS)
+    return img
+
+
+def save_pdf_page_image(img, file_path: str, page_no: int, mtime: float, cache_dir: str) -> str:
+    """
+    将渲染后的页面写入缓存目录并返回路径。
+    :param img: PIL.Image
+    :param file_path: 原始 PDF 路径
+    :param page_no: 页码
+    :param mtime: 文件修改时间戳
+    :param cache_dir: 缓存目录
+    :return: 保存的文件路径
+    """
+    import hashlib
+    import os
+    os.makedirs(cache_dir, exist_ok=True)
+    key_src = f"{file_path}_{mtime}_{page_no}".encode("utf-8", "ignore")
+    cache_key = hashlib.sha1(key_src).hexdigest()
+    output_path = os.path.join(cache_dir, f"{cache_key}_p{page_no}.jpg")
+    img.save(output_path, 'JPEG', quality=90)
+    return output_path
+
+
+def process_pdf_pages(file_path: str, max_pages: int = None, render_width: int = None,
+                      timeout: int = None, cache_dir: str = None):
+    """
+    处理 PDF 文件，渲染页面并提取特征。
+    
+    :param file_path: PDF 文件路径
+    :param max_pages: 最大处理页数，默认使用 PDF_MAX_PAGES
+    :param render_width: 渲染宽度，默认使用 PDF_RENDER_WIDTH
+    :param timeout: 渲染超时时间，默认使用 PDF_RENDER_TIMEOUT
+    :param cache_dir: 缓存目录，默认使用 TEMP_PATH/pdf_pages
+    :return: generator，每次 yield 一个字典：
+             {
+                 'page_no': int,
+                 'page_count': int,
+                 'is_primary': bool,
+                 'pages_truncated': bool,
+                 'width': int,
+                 'height': int,
+                 'thumbnail_path': str,
+                 'feature': np.ndarray or None,
+                 'error': str or None
+             }
+    :raises: RuntimeError（依赖缺失）, TimeoutError（渲染超时）
+    """
+    import os
+    
+    # 使用默认配置
+    if max_pages is None:
+        max_pages = PDF_MAX_PAGES
+    if render_width is None:
+        render_width = PDF_RENDER_WIDTH
+    if timeout is None:
+        timeout = PDF_RENDER_TIMEOUT
+    if cache_dir is None:
+        cache_dir = os.path.join(TEMP_PATH, 'pdf_pages')
+
+    # 获取页数
+    page_count = get_pdf_page_count(file_path)
+    last_page = min(page_count or max_pages, max_pages)
+    
+    # 渲染页面
+    images = render_pdf_pages(file_path, 1, last_page, timeout)
+    if not images:
+        return
+
+    pages_truncated = bool(page_count and page_count > max_pages)
+    total_pages = page_count or len(images)
+    mtime = os.path.getmtime(file_path)
+
+    for idx, img in enumerate(images, start=1):
+        result = {
+            'page_no': idx,
+            'page_count': total_pages,
+            'is_primary': (idx == 1),
+            'pages_truncated': pages_truncated,
+            'width': None,
+            'height': None,
+            'thumbnail_path': None,
+            'feature': None,
+            'error': None
+        }
+        
+        try:
+            img_rgb = img.convert('RGB')
+            img_resized = resize_pdf_image(img_rgb, render_width)
+            result['width'] = img_resized.width
+            result['height'] = img_resized.height
+
+            # 保存缩略图
+            thumb_path = save_pdf_page_image(img_resized, file_path, idx, mtime, cache_dir)
+            result['thumbnail_path'] = thumb_path
+
+            # 提取特征
+            feature = process_image(thumb_path, ignore_small_images=False)
+            if feature is None:
+                result['error'] = '特征提取失败'
+                logger.warning(f"PDF 页面特征提取失败: {file_path}#p{idx}")
+            else:
+                result['feature'] = feature
+        except Exception as exc:
+            result['error'] = str(exc)
+            logger.error(f"处理 PDF 页面失败 {file_path}#p{idx}: {exc}")
+
+        yield result

@@ -1,0 +1,962 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <title>MaterialSearch Workspace - Interactive Prototype</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Space+Grotesk:wght@400;500;600&display=swap" rel="stylesheet" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="materialsearch_theme_2.css" />
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+  <style>
+    body { overflow: hidden !important; }
+
+    .material-layout {
+      display: flex !important;
+      flex-direction: column !important;
+      min-height: 100vh !important;
+      background:
+        radial-gradient(circle at top left, rgba(148,163,253,0.10), transparent),
+        radial-gradient(circle at top right, rgba(45,212,191,0.06), transparent),
+        var(--background) !important;
+      color: var(--foreground) !important;
+      transition: background-color 0.25s ease, color 0.25s ease !important;
+    }
+
+    .material-header {
+      display: flex !important;
+      align-items: center !important;
+      justify-content: space-between !important;
+      padding: 0.9rem 1.6rem !important;
+      border-bottom: 1px solid var(--border) !important;
+      background: color-mix(in oklch, var(--background) 92%, white 8%) !important;
+      box-shadow: var(--shadow-xs) !important;
+      backdrop-filter: blur(16px) !important;
+    }
+
+    .material-logo {
+      width: 24px !important;
+      height: 24px !important;
+      border-radius: 8px !important;
+      background: radial-gradient(circle at 30% 0%, var(--accent), transparent),
+                  radial-gradient(circle at 80% 80%, var(--primary), transparent) !important;
+      box-shadow: 0 0 0 1px rgba(15,23,42,0.04);
+    }
+
+    .material-header-title { display:flex !important; flex-direction:column !important; }
+    .material-header-title span.label {
+      font-size: 11px !important;
+      letter-spacing: 0.08em !important;
+      text-transform: uppercase !important;
+      color: var(--muted-foreground) !important;
+    }
+    .material-header-title h1 {
+      font-size: 20px !important;
+      font-weight: 500 !important;
+      color: var(--foreground) !important;
+    }
+
+    .material-chip {
+      padding: 0.18rem 0.75rem !important;
+      border-radius: 999px !important;
+      border: 1px solid var(--border) !important;
+      font-size: 10px !important;
+      color: var(--muted-foreground) !important;
+      display: inline-flex !important;
+      align-items: center !important;
+      gap: 0.25rem !important;
+      cursor: default !important;
+      transition: all 0.18s ease !important;
+    }
+
+    .material-chip.interactive {
+      cursor: pointer !important;
+    }
+    .material-chip.interactive:hover {
+      box-shadow: var(--shadow-2xs) !important;
+      background-color: var(--muted) !important;
+    }
+
+    .material-btn-primary {
+      padding: 0.38rem 0.95rem !important;
+      border-radius: 999px !important;
+      border: none !important;
+      background: var(--primary) !important;
+      color: var(--primary-foreground) !important;
+      font-size: 12px !important;
+      display: inline-flex !important;
+      align-items: center !important;
+      gap: 0.35rem !important;
+      cursor: pointer !important;
+      box-shadow: var(--shadow-sm) !important;
+      transition: background-color 0.18s ease, color 0.18s ease, box-shadow 0.18s ease, transform 0.1s ease !important;
+    }
+    .material-btn-primary:hover {
+      box-shadow: var(--shadow-md) !important;
+      transform: translateY(-1px) !important;
+    }
+    .material-btn-primary:active {
+      transform: translateY(1px) scale(0.97) !important;
+      box-shadow: var(--shadow-2xs) !important;
+    }
+
+    .material-btn-ghost {
+      padding: 0.34rem 0.9rem !important;
+      border-radius: 999px !important;
+      border: 1px solid var(--border) !important;
+      background: transparent !important;
+      color: var(--muted-foreground) !important;
+      font-size: 12px !important;
+      display: inline-flex !important;
+      align-items: center !important;
+      gap: 0.35rem !important;
+      cursor: pointer !important;
+      box-shadow: var(--shadow-2xs) !important;
+      transition: background-color 0.18s ease, color 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease, transform 0.1s ease !important;
+    }
+    .material-btn-ghost:hover {
+      background: var(--muted) !important;
+      border-color: var(--accent) !important;
+      color: var(--foreground) !important;
+      box-shadow: var(--shadow-sm) !important;
+      transform: translateY(-1px) !important;
+    }
+    .material-btn-ghost:active {
+      transform: translateY(1px) scale(0.97) !important;
+      box-shadow: var(--shadow-2xs) !important;
+    }
+
+    .material-shell { display:flex !important; flex:1 !important; overflow:hidden !important; }
+
+    .material-sidebar {
+      width: 260px !important;
+      padding: 1rem 1rem 1rem 1.3rem !important;
+      border-right: 1px solid var(--sidebar-border) !important;
+      background: color-mix(in oklch, var(--sidebar) 96%, white 4%) !important;
+      display: flex !important;
+      flex-direction: column !important;
+      gap: 1rem !important;
+      transition: background-color 0.25s ease, border-color 0.25s ease !important;
+    }
+
+    .material-sidebar-section-title {
+      font-size: 11px !important;
+      letter-spacing: 0.14em !important;
+      text-transform: uppercase !important;
+      color: var(--muted-foreground) !important;
+      margin-bottom: 0.1rem !important;
+    }
+
+    .material-sidebar-pills { display:flex !important; gap:0.35rem !important; }
+    .material-pill {
+      flex: 1 !important;
+      padding: 0.25rem 0.55rem !important;
+      border-radius: 999px !important;
+      font-size: 11px !important;
+      background: var(--muted) !important;
+      color: var(--muted-foreground) !important;
+      border: 1px solid transparent !important;
+      text-align: center !important;
+      cursor: pointer !important;
+      transition: all 0.18s ease !important;
+    }
+    .material-pill:hover {
+      box-shadow: var(--shadow-2xs) !important;
+      background-color: var(--card) !important;
+    }
+    .material-pill.active {
+      background: var(--accent) !important;
+      color: var(--accent-foreground) !important;
+      border-color: var(--accent) !important;
+      box-shadow: var(--shadow-sm) !important;
+    }
+
+    .material-project-list {
+      display:flex !important;
+      flex-direction:column !important;
+      gap:0.3rem !important;
+      max-height:40vh !important;
+      overflow-y:auto !important;
+    }
+    .material-project-item {
+      padding:0.35rem 0.55rem !important;
+      border-radius:0.45rem !important;
+      cursor:pointer !important;
+      display:flex !important;
+      flex-direction:column !important;
+      gap:0.1rem !important;
+      border:1px solid transparent !important;
+      color:var(--muted-foreground) !important;
+      transition: all 0.18s ease !important;
+    }
+    .material-project-item:hover {
+      background: var(--muted) !important;
+      box-shadow: var(--shadow-2xs) !important;
+    }
+    .material-project-item.active {
+      background: var(--secondary) !important;
+      border-color: var(--sidebar-ring) !important;
+      color: var(--secondary-foreground) !important;
+      box-shadow: var(--shadow-sm) !important;
+    }
+
+    .material-scan-card {
+      margin-top:0.2rem !important;
+      padding:0.5rem 0.6rem !important;
+      border-radius:0.5rem !important;
+      background:var(--muted) !important;
+      color:var(--muted-foreground) !important;
+      font-size:11px !important;
+      box-shadow:var(--shadow-2xs) !important;
+      display:flex !important;
+      flex-direction:column !important;
+      gap:0.15rem !important;
+      transition: all 0.18s ease !important;
+    }
+
+    .material-main {
+      flex:1 !important;
+      padding:1rem 1.4rem 1.2rem !important;
+      display:flex !important;
+      flex-direction:column !important;
+      gap:0.6rem !important;
+      overflow:hidden !important;
+    }
+    .material-scope-text {
+      font-size:12px !important;
+      color:var(--muted-foreground) !important;
+    }
+
+    .material-tabs {
+      display:inline-flex !important;
+      align-items:center !important;
+      background:var(--muted) !important;
+      padding:0.18rem !important;
+      border-radius:999px !important;
+      gap:0.18rem !important;
+      box-shadow:var(--shadow-2xs) !important;
+    }
+    .material-tab {
+      padding:0.24rem 0.88rem !important;
+      border-radius:999px !important;
+      font-size:11px !important;
+      color:var(--muted-foreground) !important;
+      cursor:pointer !important;
+      white-space:nowrap !important;
+      transition: all 0.18s ease !important;
+      display:flex !important;
+      align-items:center !important;
+      gap:0.25rem !important;
+    }
+    .material-tab:hover {
+      color: var(--foreground) !important;
+    }
+    .material-tab.active {
+      background:var(--primary) !important;
+      color:var(--primary-foreground) !important;
+      box-shadow:var(--shadow-sm) !important;
+    }
+
+    .material-search-panel {
+      margin-top:0.2rem !important;
+      padding:0.7rem 0.9rem !important;
+      border-radius:0.7rem !important;
+      background:var(--card) !important;
+      border:1px solid var(--border) !important;
+      box-shadow:var(--shadow-2xs) !important;
+      display:flex !important;
+      flex-direction:column !important;
+      gap:0.6rem !important;
+    }
+
+    .material-search-row { display:flex !important; gap:0.5rem !important; align-items:center !important; }
+    .material-input-main {
+      flex:1 !important;
+      padding:0.5rem 0.7rem !important;
+      border-radius:0.5rem !important;
+      border:1px solid var(--border) !important;
+      background:var(--input) !important;
+      color:var(--foreground) !important;
+      font-size:13px !important;
+      transition: all 0.18s ease !important;
+    }
+    .material-input-main:focus-visible {
+      outline:none !important;
+      border-color:var(--accent) !important;
+      box-shadow:0 0 0 1px color-mix(in oklch, var(--accent) 40%, transparent) !important;
+    }
+
+    .material-select {
+      padding:0.4rem 0.6rem !important;
+      border-radius:0.5rem !important;
+      border:1px solid var(--border) !important;
+      background:var(--input) !important;
+      color:var(--muted-foreground) !important;
+      font-size:11px !important;
+      transition: all 0.18s ease !important;
+    }
+    .material-select:focus-visible {
+      outline:none !important;
+      border-color:var(--accent) !important;
+      box-shadow:0 0 0 1px color-mix(in oklch, var(--accent) 35%, transparent) !important;
+    }
+
+    .material-pill-search-mode {
+      display:inline-flex !important;
+      align-items:center !important;
+      gap:0.2rem !important;
+      padding:0.16rem 0.55rem !important;
+      border-radius:999px !important;
+      font-size:9px !important;
+      border:1px solid var(--border) !important;
+      color:var(--muted-foreground) !important;
+      cursor:pointer !important;
+      transition:all 0.18s ease !important;
+    }
+    .material-pill-search-mode.active {
+      background:var(--accent) !important;
+      color:var(--accent-foreground) !important;
+      border-color:var(--accent) !important;
+      box-shadow:var(--shadow-sm) !important;
+    }
+
+    .material-results,
+    .material-upload,
+    .material-stats {
+      flex:1 !important;
+      margin-top:0.25rem !important;
+      overflow-y:auto !important;
+      display:none;
+      opacity:0;
+      transform:translateY(6px);
+      transition:opacity 0.22s ease, transform 0.22s ease;
+    }
+    .material-section-active {
+      display:block !important;
+      opacity:1 !important;
+      transform:translateY(0) !important;
+    }
+
+    .material-results-grid {
+      display:grid !important;
+      grid-template-columns:repeat(auto-fill, minmax(220px, 1fr)) !important;
+      gap:0.6rem !important;
+    }
+
+    .material-result-card {
+      background:var(--card) !important;
+      border-radius:0.65rem !important;
+      border:1px solid var(--border) !important;
+      padding:0.4rem !important;
+      box-shadow:var(--shadow-2xs) !important;
+      display:flex !important;
+      flex-direction:column !important;
+      gap:0.25rem !important;
+      transition: all 0.18s ease !important;
+      cursor:default !important;
+    }
+    .material-result-card:hover {
+      transform:translateY(-2px) !important;
+      box-shadow:var(--shadow-md) !important;
+      border-color:var(--accent) !important;
+    }
+
+    .material-result-thumb {
+      width:100% !important;
+      height:130px !important;
+      border-radius:0.45rem !important;
+      background:var(--muted) !important;
+      overflow:hidden !important;
+    }
+    .material-result-meta {
+      display:flex !important;
+      flex-wrap:wrap !important;
+      gap:0.2rem !important;
+      align-items:center !important;
+      font-size:9px !important;
+    }
+    .material-result-actions {
+      margin-top:0.1rem !important;
+      display:flex !important;
+      gap:0.3rem !important;
+      flex-wrap:wrap !important;
+    }
+
+    /* 批量上传步骤条 */
+    .stepper {
+      display:flex !important;
+      align-items:center !important;
+      gap:0.75rem !important;
+      font-size:10px !important;
+      color:var(--muted-foreground) !important;
+      margin-bottom:0.5rem !important;
+    }
+    .step-dot {
+      width:16px !important;
+      height:16px !important;
+      border-radius:999px !important;
+      border:1px solid var(--border) !important;
+      display:flex !important;
+      align-items:center !important;
+      justify-content:center !important;
+      font-size:9px !important;
+      background:var(--card) !important;
+      transition:all 0.18s ease !important;
+    }
+    .step-dot.active {
+      background:var(--accent) !important;
+      color:var(--accent-foreground) !important;
+      border-color:var(--accent) !important;
+      box-shadow:var(--shadow-sm) !important;
+    }
+    .step-dot.done {
+      background:var(--primary) !important;
+      color:var(--primary-foreground) !important;
+      border-color:var(--primary) !important;
+    }
+
+    .pill-small {
+      display:inline-flex !important;
+      align-items:center !important;
+      padding:0.14rem 0.5rem !important;
+      border-radius:999px !important;
+      font-size:9px !important;
+      border:1px solid var(--border) !important;
+      color:var(--muted-foreground) !important;
+    }
+
+    @media (max-width: 1024px) {
+      .material-sidebar { display:none !important; }
+      .material-main { padding:0.8rem 0.9rem 1rem !important; }
+    }
+  </style>
+</head>
+<body class="material-layout">
+<header class="material-header">
+  <div class="flex items-center gap-3">
+    <div class="material-logo"></div>
+    <div class="material-header-title">
+      <span class="label">MaterialSearch Workspace</span>
+      <h1>素材搜索与项目素材管理中心</h1>
+    </div>
+    <div class="material-chip" id="scope-label">当前命中范围：永久素材库</div>
+  </div>
+  <div class="material-header-right flex items-center gap-2">
+    <button class="material-btn-ghost" id="library-toggle">
+      <i data-lucide="database" class="w-3.5 h-3.5"></i>
+      <span id="library-label">永久库</span>
+    </button>
+    <button class="material-btn-ghost" id="project-manager-btn">
+      <i data-lucide="folder-open" class="w-3.5 h-3.5"></i>
+      项目管理
+    </button>
+    <button class="material-btn-primary" id="open-upload-btn">
+      <i data-lucide="upload-cloud" class="w-3.5 h-3.5"></i>
+      批量上载素材
+    </button>
+    <button class="material-btn-ghost" id="scan-btn">
+      <i data-lucide="scan-line" class="w-3.5 h-3.5"></i>
+      更新索引
+    </button>
+    <div class="material-chip interactive" id="theme-toggle">
+      <i data-lucide="sun-moon" class="w-3 h-3"></i>
+      <span id="theme-label">系统主题自动</span>
+    </div>
+  </div>
+</header>
+
+<div class="material-shell">
+  <!-- 左侧栏 -->
+  <aside class="material-sidebar">
+    <div>
+      <div class="material-sidebar-section-title">搜索模式 / 库类型</div>
+      <div class="material-sidebar-pills">
+        <div class="material-pill active" data-scope="permanent">永久库</div>
+        <div class="material-pill" data-scope="project">项目库</div>
+      </div>
+    </div>
+
+    <div>
+      <div class="material-sidebar-section-title">项目列表</div>
+      <div class="material-project-list" id="project-list">
+        <div class="material-project-item active" data-project="brand2025">
+          <div class="flex justify-between text-[11px]">
+            <span>Brand Launch 2025</span>
+            <span class="text-[9px] text-emerald-700">进行中</span>
+          </div>
+          <div class="text-[9px] text-slate-500">Acme Studio · 3240 素材</div>
+        </div>
+        <div class="material-project-item" data-project="summer">
+          <div class="flex justify-between text-[11px]">
+            <span>Summer Campaign</span>
+            <span class="text-[9px] text-slate-500">已完成</span>
+          </div>
+          <div class="text-[9px] text-slate-500">Ocean Film · 1860 素材</div>
+        </div>
+        <div class="material-project-item" data-project="internal">
+          <div class="flex justify-between text-[11px]">
+            <span>Internal Library</span>
+            <span class="text-[9px] text-emerald-700">进行中</span>
+          </div>
+          <div class="text-[9px] text-slate-500">内部资产 · 920 素材</div>
+        </div>
+        <div class="material-project-item" id="create-project">
+          <span class="text-[11px] text-sky-700">+ 新建项目</span>
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <div class="material-sidebar-section-title">索引 / 扫描状态</div>
+      <div class="material-scan-card" id="scan-card-permanent">
+        <div class="flex items-center justify-between">
+          <span>永久库最近扫描</span>
+          <span class="text-[9px] text-emerald-700">完成</span>
+        </div>
+        <div class="mt-1 h-[4px] w-full bg-slate-200 rounded-full overflow-hidden">
+          <div class="h-full bg-emerald-500" style="width:100%"></div>
+        </div>
+        <div class="text-[9px] text-slate-500">12,430 素材 · 视频帧 86,210</div>
+      </div>
+      <div class="material-scan-card mt-2" id="scan-card-project">
+        <div class="flex items-center justify-between">
+          <span>Brand Launch 2025</span>
+          <span class="text-[9px] text-amber-500">索引就绪</span>
+        </div>
+        <div class="mt-1 h-[4px] w-full bg-slate-200 rounded-full overflow-hidden">
+          <div class="h-full bg-emerald-500" style="width:100%"></div>
+        </div>
+        <div class="text-[9px] text-slate-500">上次更新：3 分钟前</div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- 主工作区 -->
+  <main class="material-main">
+    <div class="flex items-center justify-between gap-4">
+      <div class="material-scope-text" id="scope-desc">
+        当前命中范围：<span class="text-emerald-700">永久素材库</span> · 文本 / 图像 / 视频 / 多模态 搜索
+      </div>
+      <div class="material-tabs" id="main-tabs">
+        <div class="material-tab active" data-tab="search">
+          <i data-lucide="search" class="w-3.5 h-3.5"></i> 搜索与结果
+        </div>
+        <div class="material-tab" data-tab="upload">
+          <i data-lucide="upload" class="w-3.5 h-3.5"></i> 批量上传
+        </div>
+        <div class="material-tab" data-tab="stats">
+          <i data-lucide="bar-chart-2" class="w-3.5 h-3.5"></i> 项目统计 / 历史
+        </div>
+      </div>
+    </div>
+
+    <!-- 搜索与结果 -->
+    <section class="material-search-panel" id="search-panel">
+      <div class="material-search-row">
+        <input class="material-input-main" id="search-input" placeholder="描述你要找的画面：夜景 城市 高楼 航拍 霓虹灯 雨后反光" />
+        <select class="material-select" id="topn-select">
+          <option>Top 12</option>
+          <option>Top 30</option>
+          <option>Top 150</option>
+          <option>Top 600</option>
+          <option>全部结果</option>
+        </select>
+        <button class="material-btn-primary" id="search-btn">
+          <i data-lucide="search" class="w-3.5 h-3.5"></i>
+          搜索
+        </button>
+      </div>
+      <div class="flex flex-wrap items-center gap-2 text-[10px] text-slate-500 mt-1">
+        <div class="material-pill-search-mode active" data-mode="text">
+          <i data-lucide="type" class="w-3 h-3"></i> 文本
+        </div>
+        <div class="material-pill-search-mode" data-mode="image">
+          <i data-lucide="image" class="w-3 h-3"></i> 图像
+        </div>
+        <div class="material-pill-search-mode" data-mode="video">
+          <i data-lucide="film" class="w-3 h-3"></i> 视频
+        </div>
+        <div class="material-pill-search-mode" data-mode="hybrid">
+          <i data-lucide="sparkles" class="w-3 h-3"></i> 多模态
+        </div>
+        <div class="flex items-center gap-1 cursor-pointer" id="advanced-toggle">
+          <i data-lucide="sliders-horizontal" class="w-3 h-3"></i>
+          高级筛选
+        </div>
+        <div class="flex items-center gap-1">
+          <i data-lucide="copy" class="w-3 h-3"></i>
+          一键复制全部路径
+        </div>
+      </div>
+      <div id="advanced-panel" class="mt-2 hidden text-[10px] text-slate-500 space-y-2">
+        <div class="flex gap-2">
+          <input class="flex-1 material-input-main" placeholder="限定路径，例如 Z:/project/shot/" />
+          <input class="flex-1 material-input-main" placeholder="排除关键词（负向提示）" />
+        </div>
+        <div class="flex gap-2 items-center">
+          <span class="pill-small">时间范围：最近 30 天</span>
+          <span class="pill-small">正向权重：中</span>
+          <span class="pill-small">负向权重：低</span>
+        </div>
+      </div>
+    </section>
+
+    <section id="search-results" class="material-results material-section-active">
+      <div class="flex items-center justify-between mb-2 text-[10px] text-slate-500">
+        <div>示例结果：共 24 条匹配，按相关度排序</div>
+        <div class="flex gap-1 items-center">
+          <span class="pill-small">视图：卡片</span>
+          <span class="pill-small">排序：相关度</span>
+        </div>
+      </div>
+      <div class="material-results-grid">
+        <article class="material-result-card">
+          <div class="material-result-thumb">
+            <img src="https://images.pexels.com/photos/313782/pexels-photo-313782.jpeg?auto=compress&cs=tinysrgb&w=800" class="w-full h-full object-cover" alt="night city" />
+          </div>
+          <div class="material-result-meta">
+            <span class="px-1.5 py-0.5 rounded-full bg-emerald-500/10 text-[8px] text-emerald-700">永久库</span>
+            <span class="px-1.5 py-0.5 rounded-full bg-emerald-500/10 text-[8px] text-emerald-700">匹配度 96.4%</span>
+            <span class="text-[8px] text-slate-500 truncate">/library/city/night/neon_001.jpg</span>
+          </div>
+          <div class="material-result-actions">
+            <button class="material-btn-ghost !px-2 !py-1 text-[9px]">
+              <i data-lucide="image" class="w-3 h-3"></i> 以图搜图
+            </button>
+            <button class="material-btn-ghost !px-2 !py-1 text-[9px]">
+              <i data-lucide="film" class="w-3 h-3"></i> 搜索相关视频
+            </button>
+            <button class="material-btn-ghost !px-2 !py-1 text-[9px]">
+              <i data-lucide="copy" class="w-3 h-3"></i> 复制路径
+            </button>
+          </div>
+        </article>
+
+        <article class="material-result-card">
+          <div class="material-result-thumb">
+            <img src="https://images.pexels.com/photos/8541033/pexels-photo-8541033.jpeg?auto=compress&cs=tinysrgb&w=800" class="w-full h-full object-cover" alt="edit" />
+          </div>
+          <div class="material-result-meta">
+            <span class="px-1.5 py-0.5 rounded-full bg-sky-500/10 text-[8px] text-sky-700">项目库 · Brand Launch 2025</span>
+            <span class="px-1.5 py-0.5 rounded-full bg-emerald-500/10 text-[8px] text-emerald-700">匹配度 91.2%</span>
+            <span class="text-[8px] text-slate-500 truncate">Z:/brand_launch/shot_023_a001.mov</span>
+          </div>
+          <div class="material-result-actions">
+            <button class="material-btn-ghost !px-2 !py-1 text-[9px]">
+              <i data-lucide="scissors" class="w-3 h-3"></i> 导出片段
+            </button>
+            <button class="material-btn-ghost !px-2 !py-1 text-[9px]">
+              <i data-lucide="copy" class="w-3 h-3"></i> 复制路径
+            </button>
+          </div>
+        </article>
+
+        <article class="material-result-card opacity-80">
+          <div class="material-result-thumb bg-slate-100 animate-pulse"></div>
+          <div class="material-result-meta mt-1">
+            <span class="w-10 h-3 bg-slate-200 rounded-full"></span>
+            <span class="w-14 h-3 bg-slate-200 rounded-full"></span>
+          </div>
+          <div class="mt-1 h-3 bg-slate-100 rounded"></div>
+        </article>
+      </div>
+    </section>
+
+    <!-- 批量上传流程 -->
+    <section id="upload-section" class="material-upload">
+      <div class="material-search-panel">
+        <div class="stepper" id="upload-stepper">
+          <div class="flex items-center gap-1">
+            <div class="step-dot active" data-step="0">1</div>
+            <span>输入路径</span>
+          </div>
+          <div class="h-px flex-1 bg-slate-200"></div>
+          <div class="flex items-center gap-1">
+            <div class="step-dot" data-step="1">2</div>
+            <span>预览文件</span>
+          </div>
+          <div class="h-px flex-1 bg-slate-200"></div>
+          <div class="flex items-center gap-1">
+            <div class="step-dot" data-step="2">3</div>
+            <span>索引中</span>
+          </div>
+          <div class="h-px flex-1 bg-slate-200"></div>
+          <div class="flex items-center gap-1">
+            <div class="step-dot" data-step="3">4</div>
+            <span>完成</span>
+          </div>
+        </div>
+
+        <!-- Step 0 -->
+        <div class="space-y-2" data-upload-step="0">
+          <div class="text-[11px] text-slate-500">
+            在资源管理器中复制文件/文件夹路径，粘贴到下方（支持多行，示例：Z:/project/output/）。
+          </div>
+          <textarea class="material-input-main" style="min-height:90px; resize:vertical;" placeholder="粘贴素材所在路径，每行一个..." id="path-input"></textarea>
+          <div class="flex gap-2 items-center justify-between">
+            <div class="flex gap-1 text-[10px] text-slate-500">
+              <span class="pill-small">最近使用：Z:/brand_launch/final/</span>
+              <span class="pill-small">\\NAS01\\share\\素材池</span>
+            </div>
+            <button class="material-btn-primary" id="preview-btn">
+              <i data-lucide="view" class="w-3.5 h-3.5"></i>
+              预览文件
+            </button>
+          </div>
+        </div>
+
+        <!-- Step 1 -->
+        <div class="space-y-2 hidden" data-upload-step="1">
+          <div class="flex items-center justify-between text-[10px] text-slate-500">
+            <div>检测到 128 个文件，可按类型筛选：</div>
+            <div class="flex gap-1">
+              <span class="pill-small">全部</span>
+              <span class="pill-small">仅图像</span>
+              <span class="pill-small">仅视频</span>
+            </div>
+          </div>
+          <div class="bg-slate-50/70 border border-slate-200 rounded-md p-2 text-[10px] text-slate-600">
+            示例表格位于此处（文件名 / 大小 / 路径 / 是否已索引）。
+          </div>
+          <div class="flex justify-between items-center mt-1">
+            <button class="material-btn-ghost" data-upload-back="0">返回修改路径</button>
+            <button class="material-btn-primary" id="start-index-btn">
+              <i data-lucide="play" class="w-3.5 h-3.5"></i>
+              开始索引 (选中 96 个)
+            </button>
+          </div>
+        </div>
+
+        <!-- Step 2 -->
+        <div class="space-y-3 hidden" data-upload-step="2">
+          <div class="flex flex-col items-center justify-center py-4 text-[11px] text-slate-600">
+            <div class="relative">
+              <div class="w-16 h-16 rounded-full border-2 border-slate-200 flex items-center justify-center">
+                <div class="w-10 h-10 rounded-full border-2 border-emerald-500 border-t-transparent animate-spin"></div>
+              </div>
+            </div>
+            <div class="mt-2">正在索引素材：shot_023_a001.mov</div>
+            <div class="text-[10px] text-slate-500 mt-1">进度：48 / 96 · 预计剩余 02:14</div>
+            <button class="material-btn-ghost mt-2" id="cancel-index-btn">
+              <i data-lucide="square" class="w-3 h-3"></i>
+              取消任务
+            </button>
+          </div>
+        </div>
+
+        <!-- Step 3 -->
+        <div class="space-y-2 hidden" data-upload-step="3">
+          <div class="text-[11px] text-slate-700 font-medium">索引完成</div>
+          <div class="text-[10px] text-slate-500">成功 90 个 · 失败 4 个 · 重复 2 个，可导出失败列表 CSV。</div>
+          <div class="flex gap-2 mt-1">
+            <button class="material-btn-primary">
+              <i data-lucide="check-circle-2" class="w-3.5 h-3.5"></i>
+              完成并关闭
+            </button>
+            <button class="material-btn-ghost">
+              <i data-lucide="list" class="w-3 h-3"></i>
+              查看失败 / 重复详情
+            </button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 项目统计 / 历史 -->
+    <section id="stats-section" class="material-stats">
+      <div class="material-search-panel">
+        <div class="text-[11px] text-slate-600 mb-1">项目使用统计（示意）</div>
+        <div class="grid grid-cols-3 gap-2 text-[10px] text-slate-600">
+          <div class="bg-slate-50/80 border border-slate-200 rounded-lg p-2">
+            <div class="text-slate-500">永久库总素材</div>
+            <div class="text-lg font-semibold text-slate-800">12,430</div>
+          </div>
+          <div class="bg-slate-50/80 border border-slate-200 rounded-lg p-2">
+            <div class="text-slate-500">当前项目素材</div>
+            <div class="text-lg font-semibold text-slate-800">3,240</div>
+          </div>
+          <div class="bg-slate-50/80 border border-slate-200 rounded-lg p-2">
+            <div class="text-slate-500">最近 7 天检索</div>
+            <div class="text-lg font-semibold text-slate-800">684</div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+</div>
+
+<script>
+  lucide.createIcons();
+
+  // 主题切换
+  (function() {
+    const root = document.documentElement;
+    const chip = document.getElementById('theme-toggle');
+    const label = document.getElementById('theme-label');
+    const KEY = 'materialsearch-theme';
+
+    function apply(mode) {
+      if (mode === 'light') {
+        root.dataset.theme = 'light';
+        root.style.colorScheme = 'light';
+        label.textContent = '浅色模式';
+      } else if (mode === 'dark') {
+        root.dataset.theme = 'dark';
+        root.style.colorScheme = 'dark';
+        label.textContent = '深色模式';
+      } else {
+        root.dataset.theme = 'auto';
+        root.style.colorScheme = '';
+        label.textContent = '系统主题自动';
+      }
+    }
+    function nextMode(cur) {
+      if (cur === 'auto') return 'light';
+      if (cur === 'light') return 'dark';
+      return 'auto';
+    }
+    let current = localStorage.getItem(KEY) || 'auto';
+    apply(current);
+    chip.addEventListener('click', () => {
+      current = nextMode(current);
+      localStorage.setItem(KEY, current);
+      apply(current);
+    });
+  })();
+
+  // Tabs 切换
+  (function() {
+    const tabs = document.querySelectorAll('#main-tabs .material-tab');
+    const searchPanel = document.getElementById('search-panel');
+    const searchResults = document.getElementById('search-results');
+    const uploadSection = document.getElementById('upload-section');
+    const statsSection = document.getElementById('stats-section');
+
+    function setActive(tabKey) {
+      tabs.forEach(t => t.classList.toggle('active', t.dataset.tab === tabKey));
+      [searchResults, uploadSection, statsSection].forEach(sec => {
+        sec.classList.remove('material-section-active');
+      });
+      if (tabKey === 'search') {
+        searchPanel.style.display = 'block';
+        searchResults.classList.add('material-section-active');
+      } else {
+        searchPanel.style.display = tabKey === 'search' ? 'block' : 'none';
+      }
+      if (tabKey === 'upload') {
+        uploadSection.classList.add('material-section-active');
+      }
+      if (tabKey === 'stats') {
+        statsSection.classList.add('material-section-active');
+      }
+    }
+
+    tabs.forEach(tab => {
+      tab.addEventListener('click', () => setActive(tab.dataset.tab));
+    });
+
+    // 顶部按钮联动：点击“批量上载素材”直接切到上传 Tab
+    document.getElementById('open-upload-btn').addEventListener('click', () => setActive('upload'));
+
+    setActive('search');
+  })();
+
+  // 高级筛选展开
+  (function() {
+    const toggle = document.getElementById('advanced-toggle');
+    const panel = document.getElementById('advanced-panel');
+    let open = false;
+    toggle.addEventListener('click', () => {
+      open = !open;
+      panel.classList.toggle('hidden', !open);
+    });
+  })();
+
+  // 搜索模式 pill 激活效果
+  (function() {
+    const modes = document.querySelectorAll('.material-pill-search-mode');
+    modes.forEach(m => {
+      m.addEventListener('click', () => {
+        modes.forEach(o => o.classList.remove('active'));
+        m.classList.add('active');
+      });
+    });
+  })();
+
+  // 库类型 / 项目切换示意
+  (function() {
+    const scopePills = document.querySelectorAll('.material-pill[data-scope]');
+    const scopeLabel = document.getElementById('scope-label');
+    const scopeDesc = document.getElementById('scope-desc');
+    const projectItems = document.querySelectorAll('.material-project-item[data-project]');
+    const libraryLabel = document.getElementById('library-label');
+
+    scopePills.forEach(pill => {
+      pill.addEventListener('click', () => {
+        scopePills.forEach(p => p.classList.remove('active'));
+        pill.classList.add('active');
+        const val = pill.dataset.scope;
+        if (val === 'permanent') {
+          scopeLabel.textContent = '当前命中范围：永久素材库';
+          scopeDesc.innerHTML = '当前命中范围：<span class="text-emerald-700">永久素材库</span> · 文本 / 图像 / 视频 / 多模态 搜索';
+          libraryLabel.textContent = '永久库';
+        } else {
+          const activeProject = document.querySelector('.material-project-item.active span:first-child');
+          const name = activeProject ? activeProject.textContent : '当前项目';
+          scopeLabel.textContent = '当前命中范围：项目库 · ' + name;
+          scopeDesc.innerHTML = '当前命中范围：<span class="text-sky-700">项目库 · ' + name + '</span> · 命中仅限该项目素材';
+          libraryLabel.textContent = '项目库';
+        }
+      });
+    });
+
+    projectItems.forEach(item => {
+      item.addEventListener('click', () => {
+        projectItems.forEach(i => i.classList.remove('active'));
+        item.classList.add('active');
+        const scopeProject = document.querySelector('.material-pill[data-scope="project"]');
+        if (scopeProject.classList.contains('active')) {
+          const name = item.querySelector('span').textContent;
+          scopeLabel.textContent = '当前命中范围：项目库 · ' + name;
+          scopeDesc.innerHTML = '当前命中范围：<span class="text-sky-700">项目库 · ' + name + '</span> · 命中仅限该项目素材';
+        }
+      });
+    });
+  })();
+
+  // 批量上传步骤流交互（纯前端模拟）
+  ;(function() {
+    const steps = document.querySelectorAll('.step-dot');
+    const stepViews = document.querySelectorAll('[data-upload-step]');
+    const previewBtn = document.getElementById('preview-btn');
+    const startBtn = document.getElementById('start-index-btn');
+    const cancelBtn = document.getElementById('cancel-index-btn');
+
+    function setStep(target) {
+      steps.forEach(dot => {
+        const s = Number(dot.dataset.step);
+        dot.classList.remove('active','done');
+        if (s < target) dot.classList.add('done');
+        if (s === target) dot.classList.add('active');
+      });
+      stepViews.forEach(view => {
+        const s = Number(view.dataset.uploadStep);
+        view.classList.toggle('hidden', s !== target);
+      });
+    }
+
+    previewBtn.addEventListener('click', () => {
+      setStep(1);
+    });
+    startBtn.addEventListener('click', () => {
+      setStep(2);
+      // 简单模拟 1.2s 后完成
+      setTimeout(() => setStep(3), 1200);
+    });
+    cancelBtn.addEventListener('click', () => {
+      setStep(1);
+    });
+  })();
+</script>
+</body>
+</html>

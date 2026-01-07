@@ -1,5 +1,6 @@
 import importlib.util
 import os
+from pathlib import PureWindowsPath
 
 import torch
 
@@ -15,17 +16,65 @@ PORT = int(os.getenv('PORT', 8085))  # 监听端口
 # Windows系统的路径写法例子：'D:/照片'
 ASSETS_PATH = tuple(os.getenv('ASSETS_PATH', '/home,/srv').split(','))  # 素材所在的目录，绝对路径，逗号分隔
 SKIP_PATH = tuple(os.getenv('SKIP_PATH', '/tmp').split(','))  # 跳过扫描的目录，绝对路径，逗号分隔
-IMAGE_EXTENSIONS = tuple(os.getenv('IMAGE_EXTENSIONS', '.jpg,.jpeg,.png,.gif,.heic,.webp,.bmp').split(','))  # 支持的图片拓展名，逗号分隔，请填小写
+IMAGE_EXTENSIONS = tuple(os.getenv('IMAGE_EXTENSIONS', '.jpg,.jpeg,.png,.gif,.heic,.webp,.bmp,.3dm').split(','))  # 支持的图片拓展名，逗号分隔，请填小写
 VIDEO_EXTENSIONS = tuple(os.getenv('VIDEO_EXTENSIONS', '.mp4,.flv,.mov,.mkv,.webm,.avi').split(','))  # 支持的视频拓展名，逗号分隔，请填小写
+PDF_EXTENSIONS = tuple(os.getenv('PDF_EXTENSIONS', '.pdf').split(','))  # 支持的 PDF 拓展名
 IGNORE_STRINGS = tuple(os.getenv('IGNORE_STRINGS', 'thumb,avatar,__MACOSX,icons,cache').lower().split(','))  # 如果路径或文件名包含这些字符串，就跳过，逗号分隔，不区分大小写
 FRAME_INTERVAL = max(int(os.getenv('FRAME_INTERVAL', 2)), 1)  # 视频每隔多少秒取一帧，视频展示的时候，间隔小于等于2倍FRAME_INTERVAL的算为同一个素材，同时开始时间和结束时间各延长0.5个FRAME_INTERVAL，要求为整数，最小为1
 SCAN_PROCESS_BATCH_SIZE = int(os.getenv('SCAN_PROCESS_BATCH_SIZE', 4))  # 等读取的帧数到这个数量后再一次性输入到模型中进行批量计算，从而提高效率。显存较大可以调高这个值。
 IMAGE_MIN_WIDTH = int(os.getenv('IMAGE_MIN_WIDTH', 64))  # 图片最小宽度，小于此宽度则忽略。不需要可以改成0。
 IMAGE_MIN_HEIGHT = int(os.getenv('IMAGE_MIN_HEIGHT', 64))  # 图片最小高度，小于此高度则忽略。不需要可以改成0。
+PDF_MAX_PAGES = int(os.getenv('PDF_MAX_PAGES', 15))  # PDF 索引默认页数上限
+PDF_RENDER_WIDTH = int(os.getenv('PDF_RENDER_WIDTH', 1920))  # PDF 渲染宽度，等比缩放
+PDF_RENDER_TIMEOUT = int(os.getenv('PDF_RENDER_TIMEOUT', 60))  # PDF 渲染超时时间（秒）
+# Poppler 安装路径（可选），用于 pdf2image 在找不到系统 PATH 时指定 bin 目录
+PDF_POPPLER_PATH = os.getenv('PDF_POPPLER_PATH', '').strip()
+# 尝试自动发现项目内的 Poppler 安装（如存在）
+if not PDF_POPPLER_PATH:
+    local_poppler_root = os.path.join(os.path.dirname(__file__), 'poppler')
+    if os.path.isdir(local_poppler_root):
+        for entry in os.listdir(local_poppler_root):
+            candidate = os.path.join(local_poppler_root, entry, 'Library', 'bin')
+            if os.path.exists(os.path.join(candidate, 'pdftoppm.exe')) or os.path.exists(os.path.join(candidate, 'pdftoppm')):
+                PDF_POPPLER_PATH = candidate
+                break
 AUTO_SCAN = os.getenv('AUTO_SCAN', 'False').lower() == 'true'  # 是否自动扫描，如果开启，则会在指定时间内进行扫描，每天只会扫描一次
 AUTO_SCAN_START_TIME = tuple(map(int, os.getenv('AUTO_SCAN_START_TIME', '22:30').split(':')))  # 自动扫描开始时间
 AUTO_SCAN_END_TIME = tuple(map(int, os.getenv('AUTO_SCAN_END_TIME', '8:00').split(':')))  # 自动扫描结束时间
 AUTO_SAVE_INTERVAL = int(os.getenv('AUTO_SAVE_INTERVAL', 100))  # 扫描自动保存间隔，默认为每 100 个文件自动保存一次
+
+
+def _build_path_mappings():
+    """解析 PATH_MAPPINGS 环境变量，支持驱动器/映射盘符转换。
+    写法示例：PATH_MAPPINGS="Z:=\\Nas\\Share;Y:\\Projects=\\Nas\\Projects"""
+    raw = os.getenv('PATH_MAPPINGS', '').strip()
+    mappings = []
+    if not raw:
+        return mappings
+    for item in raw.split(';'):
+        item = item.strip()
+        if not item or '=' not in item:
+            continue
+        source_raw, target_raw = item.split('=', 1)
+        source_raw = source_raw.strip()
+        target_raw = target_raw.strip()
+        if not source_raw or not target_raw:
+            continue
+        source_norm = str(PureWindowsPath(source_raw))
+        source_std = source_norm.upper()
+        if not source_std.endswith('\\'):
+            source_std = f"{source_std}\\"
+            if not source_norm.endswith('\\'):
+                source_norm = f"{source_norm}\\"
+        mappings.append({
+            'source_norm': source_norm,
+            'source_std': source_std,
+            'target': str(PureWindowsPath(target_raw)) if target_raw.startswith('\\\\') else target_raw
+        })
+    return mappings
+
+
+PATH_MAPPINGS = _build_path_mappings()
 
 # *****模型配置*****
 # 更换模型需要删库重新扫描！否则搜索会报错。数据库路径见下面SQLALCHEMY_DATABASE_URL参数。模型越大，扫描速度越慢，且占用的内存和显存越大。
@@ -52,8 +101,15 @@ IMAGE_THRESHOLD = int(os.getenv('IMAGE_THRESHOLD', 85))  # 图片搜出来的素
 LOG_LEVEL = os.getenv('LOG_LEVEL', 'INFO')  # 日志等级：NOTSET/DEBUG/INFO/WARNING/ERROR/CRITICAL
 
 # *****其它配置*****
-SQLALCHEMY_DATABASE_URL = os.getenv('SQLALCHEMY_DATABASE_URL', 'sqlite:///./instance/assets.db')  # 数据库保存路径
+SQLALCHEMY_DATABASE_URL = os.getenv('SQLALCHEMY_DATABASE_URL', 'sqlite:///./instance/assets.db')  # 数据库保存路径（向后兼容，现改用永久库）
 TEMP_PATH = os.getenv('TEMP_PATH', './tmp')  # 临时目录路径
+
+# *****项目数据库配置*****
+PERMANENT_DATABASE_PATH = os.getenv('PERMANENT_DATABASE_PATH', './instance/permanent.db')  # 永久库路径
+METADATA_DATABASE_PATH = os.getenv('METADATA_DATABASE_PATH', './instance/projects_metadata.db')  # 项目元信息库路径
+PROJECT_DATABASE_DIR = os.getenv('PROJECT_DATABASE_DIR', './instance/projects')  # 项目数据库目录
+BACKUP_DIR = os.getenv('BACKUP_DIR', './backups')  # 备份目录
+BACKUP_RETENTION_DAYS = int(os.getenv('BACKUP_RETENTION_DAYS', 30))  # 备份保留天数
 VIDEO_EXTENSION_LENGTH = int(os.getenv('VIDEO_EXTENSION_LENGTH', 0))  # 下载视频片段时，视频前后增加的时长，单位为秒
 ENABLE_LOGIN = os.getenv('ENABLE_LOGIN', 'False').lower() == 'true'  # 是否启用登录
 USERNAME = os.getenv('USERNAME', 'admin')  # 登录用户名
