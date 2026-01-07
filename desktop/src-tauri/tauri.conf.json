@@ -5,14 +5,14 @@
   "identifier": "com.sa-architects.materialsearch",
   "build": {
     "beforeDevCommand": "",
-    "devUrl": "http://192.168.1.12:58888/workspace",
+    "devUrl": "http://localhost:5000/workspace",
     "beforeBuildCommand": ""
   },
   "app": {
     "withGlobalTauri": true,
     "windows": [
       {
-        "url": "http://192.168.1.12:58888/workspace",
+        "url": "http://localhost:5000/workspace",
         "title": "MaterialSearch Workspace",
         "width": 1500,
         "height": 950,
@@ -40,6 +40,9 @@
       "icons/128x128@2x.png",
       "icons/icon.icns",
       "icons/icon.ico"
+    ],
+    "externalBin": [
+      "binaries/materialsearch-server"
     ],
     "shortDescription": "SA Architects AI 素材工作站",
     "longDescription": "MaterialSearch Workspace - 建筑设计事务所的 AI 素材管理与搜索工作站。"

@@ -44,6 +44,29 @@ To use the "PDF Indexing" feature, you need to install `poppler`:
 - **Linux**: `apt install poppler-utils` or `yum install poppler-utils`
 - **macOS**: `brew install poppler`
 
+### Desktop App (Windows)
+
+A native Windows desktop application is available, featuring:
+- **One-click launch**: No need to manually start the server
+- **Native drag & drop**: Drag materials directly into design software (InDesign, Photoshop, etc.)
+- **System tray**: Minimize to tray, quick access
+
+**Build from source:**
+
+1. Install [Rust](https://rustup.rs/) and [Node.js](https://nodejs.org/)
+2. Install Tauri CLI: `cargo install tauri-cli`
+3. Build the Python backend (requires PyInstaller):
+   ```powershell
+   cd MaterialSearch
+   .\desktop\build_sidecar.ps1
+   ```
+4. Build the desktop app:
+   ```powershell
+   cd desktop/src-tauri
+   cargo tauri build
+   ```
+5. Find the installer in `desktop/src-tauri/target/release/bundle/`
+
 ### Deployment via Docker
 
 Supports `amd64` architectures. It includes the default models (`OFA-Sys/chinese-clip-vit-base-patch16`) and supports GPU acceleration.

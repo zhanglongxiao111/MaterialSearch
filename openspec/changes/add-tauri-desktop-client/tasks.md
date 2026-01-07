@@ -20,14 +20,28 @@
   - **验证结果**：窗口正常显示 MaterialSearch Workspace 界面 ✅
 
 ## 2. Sidecar 集成（Python 后端）
-> ⚠️ Phase 1 暂时跳过，使用独立启动方式
+> ⚠️ Phase 2 核心功能 - 实现一键启动
 
-- [ ] 2.1 创建 `desktop/` 目录结构
-- [ ] 2.2 编写 `main_desktop.py`
-- [ ] 2.3 编写 PyInstaller 打包脚本 `build_sidecar.ps1`
-- [ ] 2.4 测试 Sidecar 独立运行
-- [ ] 2.5 配置 Tauri Sidecar
-- [ ] 2.6 实现健康检查
+- [x] 2.1 创建 `desktop/` 目录结构
+  - `desktop/main_desktop.py` - 桌面版后端入口
+  - `desktop/build_sidecar.ps1` - PyInstaller 打包脚本
+- [x] 2.2 编写 `main_desktop.py`
+  - 固定端口 5000，绑定 127.0.0.1
+  - 禁用 Flask debug/reloader（PyInstaller 兼容）
+- [x] 2.3 编写 PyInstaller 打包脚本 `build_sidecar.ps1`
+  - 支持 --Clean, --OneFile, --Debug 参数
+  - 输出到 `src-tauri/binaries/materialsearch-server-x86_64-pc-windows-msvc.exe`
+- [x] 2.4 测试 Sidecar 独立运行
+  - ✅ `python desktop/main_desktop.py` 测试成功
+  - 确认后端运行在 http://127.0.0.1:5000
+- [x] 2.5 配置 Tauri Sidecar
+  - 更新 `tauri.conf.json` 添加 externalBin
+  - 更新 `capabilities/default.json` 添加 shell 权限
+  - 更新 `Cargo.toml` 添加 tauri-plugin-shell
+  - 更新 `lib.rs` 添加 Sidecar 启动/停止/健康检查逻辑
+- [x] 2.6 实现健康检查
+  - ✅ `check_backend_health()` 函数已实现并验证
+  - ✅ Tauri dev 模式测试通过，Sidecar 正确检测后端状态
 
 ## 3. 原生拖拽功能
 - [x] 3.1 研究拖拽实现方案
@@ -103,16 +117,23 @@
 - 前端环境检测
 - Release 构建 + 安装包
 
-### ⏳ Phase 2 待完成
-- Sidecar 集成（PyInstaller 打包）
+### ✅ Phase 2 已完成 (2026-01-06)
+- Sidecar 集成代码 (`main_desktop.py`, `lib.rs`)
+- 健康检查与自动启动逻辑
+- Tauri dev 模式验证通过
+- 配置文件更新（externalBin, capabilities, Cargo.toml）
+
+### ⏳ Phase 3 待完成（可选，生产发布前）
+- PyInstaller 打包 (`build_sidecar.ps1`)
 - 完整拖拽功能（tauri-plugin-drag）
-- 完整测试
+- 全新安装/卸载测试
 - 文档
 
 ### 📦 交付物
-- `desktop/src-tauri/target/release/bundle/nsis/MaterialSearch_1.0.0_x64-setup.exe`
-- `desktop/src-tauri/target/release/bundle/msi/MaterialSearch_1.0.0_x64_en-US.msi`
-- `desktop/start_desktop.ps1` (一键启动脚本)
+- `desktop/main_desktop.py` - 桌面版后端入口
+- `desktop/build_sidecar.ps1` - PyInstaller 打包脚本
+- `desktop/src-tauri/src/lib.rs` - Sidecar 管理逻辑
+- `desktop/start_desktop.ps1` - 一键启动脚本（开发模式）
 
 ---
 
@@ -123,14 +144,14 @@
     ↓
 1.x (Tauri 初始化) ✅
     ↓
-    ├── 2.x (Sidecar 集成) ──→ 6.x (打包) ✅
+    ├── 2.x (Sidecar 集成) ✅ ──→ 6.x (打包) ⏳
     │       ↓
-    ├── 3.x (原生拖拽) ─────→ 5.x (前端适配) ✅
+    ├── 3.x (原生拖拽) ⏳ ─────→ 5.x (前端适配) ⏳
     │       ↓
     └── 4.x (系统托盘) ✅
             ↓
         7.x (文档) ⏳
 ```
 
-**已完成**：0.x, 1.x, 3.x (部分), 4.x, 5.x (部分), 6.x (部分)
-**待完成**：2.x, 3.5, 5.4, 6.5-6.6, 7.x
+**已完成**：0.x, 1.x, 2.x ✅, 3.x (部分), 4.x, 5.x (部分), 6.x (部分)
+**待完成**：3.5, 5.4, 6.5-6.6, 7.x

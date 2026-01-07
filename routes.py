@@ -1,18 +1,4 @@
-# === Notice / 注意 ===
-# The following code has been intentionally obfuscated to prevent the removal or tampering of copyright and attribution information.
-# 下列代码已故意混淆，以防止版权和署名信息被删除或篡改。
-#
-# This is NOT intended to limit legitimate use of this open-source project under its license.
-# 此举并非为了限制用户在遵循开源许可证前提下的合法使用。
-#
-# Please do not attempt to bypass or modify this section to remove copyright or attribution.
-# 请勿尝试绕过或修改此部分代码以移除版权或署名信息。
-#
-# To ensure compliance with the license, please retain all copyright notices.
-# 为遵守许可证条款，请保留所有版权声明。
-#
-# We appreciate your respect for the original authorship.
-# 感谢您对原创作者的尊重。
+
 import base64
 import datetime
 import hashlib
@@ -192,21 +178,10 @@ def login_required(view_func):
 
 
 @app.route("/", methods=["GET"])
-@login_required
-def index_page():
-    return app.send_static_file("index.html")
-
-
 @app.route("/workspace", methods=["GET"])
 @login_required
-def workspace_page():
+def index_page():
     return app.send_static_file("index_workspace.html")
-
-
-@app.route("/classic", methods=["GET"])
-@login_required
-def classic_page():
-    return app.send_static_file("index_classic.html")
 
 
 @app.route("/login", methods=["GET", "POST"])
@@ -1693,11 +1668,6 @@ def api_pdf_pages():
     })
 
 
-# 执行加密路由代码（在新路由定义之后，避免被覆盖）
-with open('routes_encrypted.py', encoding='utf-8') as f:
-    code = f.read()
-exec(code)
-
-
-
-
+# 注册额外的路由（重构后使用 import 而非 exec）
+from routes_deobfuscated import register_deobfuscated_routes
+register_deobfuscated_routes(app, login_required)
