@@ -5,7 +5,7 @@ import threading
 
 from app import create_app
 from app.services.scan_service import scanner
-from config import *
+from app.config import *
 
 logger = logging.getLogger(__name__)
 

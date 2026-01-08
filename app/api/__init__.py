@@ -98,7 +98,7 @@ def register_blueprints(app: Flask) -> None:
         import os
         import urllib.parse
         from pathlib import Path
-        from config import IMAGE_EXTENSIONS, VIDEO_EXTENSIONS, PDF_EXTENSIONS
+        from app.config import IMAGE_EXTENSIONS, VIDEO_EXTENSIONS, PDF_EXTENSIONS
         from app.integrations.sqlite_manager import get_db_manager
         from app.models import Image, ProjectImage
         
@@ -122,7 +122,7 @@ def register_blueprints(app: Flask) -> None:
                 db_session = get_db_manager().get_project_session(target)
                 ImageModel = ProjectImage
             else:
-                from models import DatabaseSession
+                from app.integrations.sqlite_manager import DatabaseSession
                 db_session = DatabaseSession()
                 ImageModel = Image
         except Exception as e:
@@ -211,7 +211,7 @@ def register_blueprints(app: Flask) -> None:
             db_session = get_db_manager().get_project_session(target)
             PageModel = ProjectPDFPage
         else:
-            from models import DatabaseSession
+            from app.integrations.sqlite_manager import DatabaseSession
             db_session = DatabaseSession()
             PageModel = PDFPage
         
@@ -251,7 +251,8 @@ def register_blueprints(app: Flask) -> None:
     def legacy_thumbnail():
         """旧版缩略图API - 前端 index.html 使用"""
         from flask import request, abort
-        from models import Image, DatabaseSession
+        from app.integrations.sqlite_manager import DatabaseSession
+        from app.models import Image
         from app.utils.common import resize_image_with_aspect_ratio
         from app.utils.image import extract_rhino_preview
         
@@ -314,7 +315,7 @@ def register_blueprints(app: Flask) -> None:
     def legacy_get_image_by_id(image_id):
         """旧版按ID获取图片API - 搜索结果使用"""
         from flask import request, abort
-        from models import Image
+        from app.models import Image
         from app.integrations.sqlite_manager import get_db_manager
         from app.utils.image import extract_rhino_preview
         
@@ -326,7 +327,7 @@ def register_blueprints(app: Flask) -> None:
         elif target.startswith('proj_'):
             db_session = get_db_manager().get_project_session(target)
         else:
-            from models import DatabaseSession
+            from app.integrations.sqlite_manager import DatabaseSession
             db_session = DatabaseSession()
         
         with db_session:
@@ -372,7 +373,7 @@ def register_blueprints(app: Flask) -> None:
             db_session = get_db_manager().get_project_session(target)
             PageModel = ProjectPDFPage
         else:
-            from models import DatabaseSession
+            from app.integrations.sqlite_manager import DatabaseSession
             db_session = DatabaseSession()
             PageModel = PDFPage
         

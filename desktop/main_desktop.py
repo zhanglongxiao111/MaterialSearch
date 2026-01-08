@@ -34,9 +34,9 @@ os.chdir(application_path)
 import shutil
 import threading
 
-import routes
-from config import ASSETS_PATH, TEMP_PATH, AUTO_SCAN, LOG_LEVEL
-from scan import scanner
+from app import create_app
+from app.config import ASSETS_PATH, TEMP_PATH, AUTO_SCAN, LOG_LEVEL
+from app.services.scan_service import scanner
 
 # 桌面版固定配置
 DESKTOP_PORT = 5000
@@ -87,7 +87,8 @@ def main():
     
     # 启动 Flask 服务（关闭 debug 避免双重启动）
     # use_reloader=False 防止 PyInstaller 打包后出现问题
-    routes.app.run(
+    app = create_app()
+    app.run(
         port=DESKTOP_PORT,
         host=DESKTOP_HOST,
         debug=False,

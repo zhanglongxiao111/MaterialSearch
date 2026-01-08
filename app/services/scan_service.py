@@ -11,7 +11,7 @@ import threading
 import time
 from pathlib import Path
 
-from config import *
+from app.config import *
 from app.integrations.sqlite_manager import (
     get_image_count,
     get_video_count,
@@ -27,7 +27,7 @@ from app.integrations.sqlite_manager import (
     add_pdf_page,
     delete_pdf_pages_by_path,
 )
-from models import create_tables, DatabaseSession
+from app.integrations.sqlite_manager import create_tables, DatabaseSession
 from app.services.asset_service import process_images, process_video, process_image, process_pdf_pages
 from app.services.search_service import clean_cache
 from app.utils.common import get_file_hash

@@ -1,0 +1,792 @@
+/*
+ * MaterialSearch Swiss Theme
+ * Swiss International Style / Brutalist Design
+ * Brand: SA Architects
+ */
+
+/* ============================================
+   CSS VARIABLES - SWISS COLOR PALETTE
+   ============================================ */
+:root {
+    /* Core Colors */
+    --swiss-black: #111111;
+    --swiss-dark: #1A1A1A;
+    --swiss-gray: #888888;
+    --swiss-light: #F4F4F4;
+    --swiss-white: #FFFFFF;
+    --swiss-accent: #FF3300;
+    /* International Orange */
+
+    /* Functional Colors */
+    --background: var(--swiss-light);
+    --foreground: var(--swiss-black);
+    --sidebar-bg: var(--swiss-black);
+    --sidebar-fg: var(--swiss-white);
+    --border: #E0E0E0;
+    --border-dark: #333333;
+    --muted: #666666;
+    --muted-foreground: var(--swiss-gray);
+
+    /* Typography */
+    --font-ui: 'Inter', 'PingFang SC', -apple-system, sans-serif;
+    --font-mono: 'JetBrains Mono', 'Consolas', monospace;
+
+    /* Spacing */
+    --sidebar-width: 320px;
+    --header-height: 96px;
+
+    /* No rounded corners */
+    --radius: 0px;
+    --radius-sm: 0px;
+    --radius-lg: 0px;
+}
+
+/* ============================================
+   GLOBAL RESET - SHARP EDGES
+   ============================================ */
+*,
+*::before,
+*::after {
+    border-radius: 0 !important;
+}
+
+/* ============================================
+   BASE STYLES
+   ============================================ */
+body.swiss-theme {
+    background: var(--background);
+    color: var(--foreground);
+    font-family: var(--font-ui);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+/* Architect's Grid Background */
+.bg-grid {
+    background-size: 40px 40px;
+    background-image:
+        linear-gradient(to right, rgba(0, 0, 0, 0.04) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(0, 0, 0, 0.04) 1px, transparent 1px);
+}
+
+/* ============================================
+   SCROLLBAR - MINIMALIST
+   ============================================ */
+::-webkit-scrollbar {
+    width: 4px;
+    height: 4px;
+}
+
+::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+    background: var(--swiss-black);
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: var(--swiss-accent);
+}
+
+/* ============================================
+   TYPOGRAPHY UTILITIES
+   ============================================ */
+.typo-label {
+    font-family: var(--font-ui);
+    font-size: 0.65rem;
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    font-weight: 600;
+    color: var(--swiss-gray);
+}
+
+.typo-mono {
+    font-family: var(--font-mono);
+}
+
+.typo-title {
+    font-size: 1.5rem;
+    font-weight: 300;
+    letter-spacing: -0.02em;
+}
+
+/* ============================================
+   SIDEBAR - DARK THEME
+   ============================================ */
+.swiss-sidebar {
+    width: var(--sidebar-width);
+    background: var(--sidebar-bg);
+    color: var(--sidebar-fg);
+    display: flex;
+    flex-direction: column;
+    flex-shrink: 0;
+    height: 100vh;
+    border-right: 1px solid var(--border-dark);
+    position: relative;
+    z-index: 100;
+}
+
+/* Brand Header */
+.swiss-brand {
+    height: var(--header-height);
+    display: flex;
+    align-items: center;
+    padding: 0 2rem;
+    border-bottom: 1px solid var(--border-dark);
+}
+
+.swiss-brand-title {
+    font-weight: 700;
+    font-size: 1.25rem;
+    letter-spacing: -0.02em;
+    color: var(--swiss-white);
+}
+
+.swiss-brand-subtitle {
+    font-size: 0.65rem;
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    color: var(--swiss-gray);
+    margin-top: 0.25rem;
+}
+
+/* Sidebar Tabs */
+.swiss-tabs {
+    display: flex;
+    border-bottom: 1px solid var(--border-dark);
+}
+
+.swiss-tab {
+    flex: 1;
+    padding: 1.5rem 0;
+    text-align: center;
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    color: var(--swiss-gray);
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    position: relative;
+    transition: all 0.2s ease;
+}
+
+.swiss-tab:hover {
+    color: var(--swiss-white);
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.swiss-tab.active {
+    color: var(--swiss-white);
+    background: var(--swiss-dark);
+}
+
+.swiss-tab.active::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: var(--swiss-accent);
+}
+
+/* Sidebar Navigation Items */
+.swiss-nav-item {
+    padding: 0.75rem 1.5rem;
+    padding-left: 2rem;
+    cursor: pointer;
+    border-left: 2px solid transparent;
+    transition: all 0.2s ease;
+    color: var(--swiss-gray);
+}
+
+.swiss-nav-item:hover {
+    color: var(--swiss-white);
+    background: rgba(255, 255, 255, 0.03);
+}
+
+.swiss-nav-item.active {
+    color: var(--swiss-white);
+    border-left-color: var(--swiss-white);
+}
+
+.swiss-nav-item .item-title {
+    font-size: 0.875rem;
+    font-weight: 500;
+}
+
+.swiss-nav-item .item-subtitle {
+    font-size: 0.65rem;
+    font-family: var(--font-mono);
+    color: var(--swiss-gray);
+    margin-top: 0.25rem;
+}
+
+/* Sidebar Status Bar */
+.swiss-status-bar {
+    margin-top: auto;
+    padding: 2rem;
+    border-top: 1px solid var(--border-dark);
+    background: rgba(0, 0, 0, 0.3);
+}
+
+.swiss-status-indicator {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.swiss-status-dot {
+    width: 6px;
+    height: 6px;
+    background: var(--swiss-accent);
+    animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+
+    0%,
+    100% {
+        opacity: 1;
+    }
+
+    50% {
+        opacity: 0.5;
+    }
+}
+
+/* ============================================
+   HEADER - LIGHT THEME
+   ============================================ */
+.swiss-header {
+    height: var(--header-height);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 3rem;
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--border);
+    position: sticky;
+    top: 0;
+    z-index: 50;
+}
+
+.swiss-breadcrumb {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.swiss-header-actions {
+    display: flex;
+    align-items: center;
+    gap: 2rem;
+}
+
+.swiss-header-tab {
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    color: var(--swiss-gray);
+    background: none;
+    border: none;
+    padding: 0.5rem 0;
+    cursor: pointer;
+    position: relative;
+    transition: color 0.2s;
+}
+
+.swiss-header-tab:hover {
+    color: var(--swiss-accent);
+}
+
+.swiss-header-tab.active {
+    color: var(--swiss-black);
+}
+
+.swiss-header-tab.active::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: var(--swiss-black);
+}
+
+/* ============================================
+   SEARCH INPUT - BRUTALIST
+   ============================================ */
+.swiss-search-input {
+    width: 100%;
+    background: transparent;
+    border: none;
+    border-bottom: 2px solid var(--border);
+    font-size: 2rem;
+    font-weight: 300;
+    padding: 1rem 0;
+    color: var(--foreground);
+    transition: border-color 0.3s;
+}
+
+.swiss-search-input::placeholder {
+    color: #ccc;
+}
+
+.swiss-search-input:focus {
+    outline: none;
+    border-bottom-color: var(--swiss-black);
+}
+
+/* ============================================
+   BUTTONS
+   ============================================ */
+.swiss-btn {
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    padding: 1rem 2rem;
+    cursor: pointer;
+    transition: all 0.2s;
+    border: 2px solid transparent;
+}
+
+.swiss-btn-primary {
+    background: var(--swiss-black);
+    color: var(--swiss-white);
+    border-color: var(--swiss-black);
+}
+
+.swiss-btn-primary:hover {
+    background: var(--swiss-accent);
+    border-color: var(--swiss-accent);
+}
+
+.swiss-btn-outline {
+    background: transparent;
+    color: var(--swiss-black);
+    border-color: var(--swiss-black);
+}
+
+.swiss-btn-outline:hover {
+    background: var(--swiss-black);
+    color: var(--swiss-white);
+}
+
+/* ============================================
+   CARDS / RESULTS
+   ============================================ */
+.swiss-card {
+    background: var(--swiss-white);
+    border: 1px solid transparent;
+    transition: border-color 0.2s;
+    cursor: pointer;
+}
+
+.swiss-card:hover {
+    border-color: var(--swiss-accent);
+}
+
+.swiss-card-meta {
+    border-top: 1px solid var(--border);
+    padding-top: 0.5rem;
+    margin-top: 0.75rem;
+    transition: border-color 0.2s;
+}
+
+.swiss-card:hover .swiss-card-meta {
+    border-color: var(--swiss-black);
+}
+
+/* ============================================
+   RESPONSIVE SIDEBAR
+   ============================================ */
+@media (max-width: 768px) {
+    .swiss-sidebar {
+        position: fixed;
+        left: 0;
+        top: 0;
+        transform: translateX(-100%);
+        transition: transform 0.3s ease;
+        z-index: 200;
+    }
+
+    .swiss-sidebar.open {
+        transform: translateX(0);
+    }
+
+    .swiss-sidebar-overlay {
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.5);
+        z-index: 199;
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.3s;
+    }
+
+    .swiss-sidebar-overlay.open {
+        opacity: 1;
+        pointer-events: auto;
+    }
+
+    .swiss-hamburger {
+        display: flex;
+        width: 40px;
+        height: 40px;
+        align-items: center;
+        justify-content: center;
+        background: var(--swiss-black);
+        color: var(--swiss-white);
+        cursor: pointer;
+    }
+}
+
+@media (min-width: 769px) {
+
+    .swiss-hamburger,
+    .swiss-sidebar-overlay {
+        display: none !important;
+    }
+}
+
+/* ============================================
+   UPLOAD FLOW - TERMINAL STYLE
+   ============================================ */
+.swiss-step-indicator {
+    display: flex;
+    gap: 2rem;
+}
+
+.swiss-step {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+    cursor: pointer;
+}
+
+.swiss-step-dot {
+    width: 8px;
+    height: 8px;
+    background: var(--border);
+    transition: background 0.2s;
+}
+
+.swiss-step.active .swiss-step-dot {
+    background: var(--swiss-accent);
+}
+
+.swiss-step.completed .swiss-step-dot {
+    background: var(--swiss-black);
+}
+
+.swiss-step-label {
+    font-family: var(--font-mono);
+    font-size: 0.6rem;
+    text-transform: uppercase;
+    color: var(--swiss-gray);
+}
+
+.swiss-step.active .swiss-step-label {
+    color: var(--swiss-black);
+    font-weight: 700;
+}
+
+/* Terminal Progress */
+.swiss-terminal {
+    background: var(--swiss-black);
+    color: #4ade80;
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    padding: 1.5rem;
+    position: relative;
+    overflow: hidden;
+}
+
+.swiss-terminal-line {
+    opacity: 0.7;
+}
+
+.swiss-terminal-line.current {
+    opacity: 1;
+}
+
+.swiss-progress-bar {
+    height: 2px;
+    background: rgba(74, 222, 128, 0.3);
+    margin-top: 1rem;
+}
+
+.swiss-progress-fill {
+    height: 100%;
+    background: #4ade80;
+    transition: width 0.1s;
+}
+
+/* ============================================
+   UTILITIES
+   ============================================ */
+.swiss-divider {
+    width: 1px;
+    height: 24px;
+    background: var(--border);
+}
+
+.swiss-avatar {
+    width: 32px;
+    height: 32px;
+    background: var(--swiss-black);
+    color: var(--swiss-white);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.75rem;
+    font-weight: 700;
+}
+
+/* ============================================
+   OVERRIDES FOR EXISTING MATERIAL-* COMPONENTS
+   ============================================ */
+
+/* Sidebar Override */
+.swiss-theme .material-sidebar {
+    width: var(--sidebar-width);
+    background: var(--swiss-black);
+    color: var(--swiss-white);
+    border-right: 1px solid var(--border-dark);
+}
+
+.swiss-theme .material-sidebar-section-title {
+    color: var(--swiss-gray);
+    font-size: 0.65rem;
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    padding: 0.5rem 1rem;
+}
+
+.swiss-theme .material-sidebar-pills {
+    border-bottom: 1px solid var(--border-dark);
+    padding: 0;
+    margin: 0;
+    gap: 0;
+}
+
+.swiss-theme .material-pill {
+    flex: 1;
+    background: transparent;
+    color: var(--swiss-gray);
+    border: none;
+    padding: 1rem 0;
+    text-transform: uppercase;
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.15em;
+    position: relative;
+    transition: all 0.2s;
+}
+
+.swiss-theme .material-pill:hover {
+    color: var(--swiss-white);
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.swiss-theme .material-pill.active {
+    color: var(--swiss-white);
+    background: var(--swiss-dark);
+}
+
+.swiss-theme .material-pill.active::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: var(--swiss-accent);
+}
+
+/* Sidebar List Items */
+.swiss-theme .material-list-item {
+    background: transparent;
+    color: var(--swiss-gray);
+    border: none;
+    border-left: 2px solid transparent;
+    padding: 0.75rem 1.5rem;
+    transition: all 0.2s;
+}
+
+.swiss-theme .material-list-item:hover {
+    color: var(--swiss-white);
+    background: rgba(255, 255, 255, 0.03);
+}
+
+.swiss-theme .material-list-item.active {
+    color: var(--swiss-white);
+    border-left-color: var(--swiss-white);
+    background: rgba(255, 255, 255, 0.05);
+}
+
+/* Header Override */
+.swiss-theme .material-header {
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--border);
+}
+
+/* Tabs Override */
+.swiss-theme .material-tabs {
+    gap: 0;
+    margin: 0;
+    border-bottom: 1px solid var(--border);
+}
+
+.swiss-theme .material-tab {
+    background: transparent;
+    color: var(--swiss-gray);
+    border: none;
+    padding: 1rem 1.5rem;
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    position: relative;
+    transition: all 0.2s;
+}
+
+.swiss-theme .material-tab:hover {
+    color: var(--swiss-accent);
+}
+
+.swiss-theme .material-tab.active {
+    color: var(--swiss-black);
+    background: transparent;
+}
+
+.swiss-theme .material-tab.active::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: var(--swiss-black);
+}
+
+/* Search Panel Override */
+.swiss-theme .material-search-panel {
+    background: var(--swiss-white);
+    border: 1px solid var(--border);
+    box-shadow: none;
+}
+
+/* Input Override */
+.swiss-theme .material-input-main {
+    border: none;
+    border-bottom: 2px solid var(--border);
+    background: transparent;
+    font-size: 1.25rem;
+    font-weight: 300;
+    padding: 0.75rem 0;
+    transition: border-color 0.2s;
+}
+
+.swiss-theme .material-input-main:focus {
+    border-bottom-color: var(--swiss-black);
+    outline: none;
+}
+
+/* Buttons Override */
+.swiss-theme .btn-inline {
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    font-size: 0.7rem;
+    padding: 0.75rem 1.5rem;
+    transition: all 0.2s;
+}
+
+.swiss-theme .btn-inline.primary {
+    background: var(--swiss-black);
+    color: var(--swiss-white);
+    border: 2px solid var(--swiss-black);
+}
+
+.swiss-theme .btn-inline.primary:hover {
+    background: var(--swiss-accent);
+    border-color: var(--swiss-accent);
+}
+
+.swiss-theme .btn-inline:not(.primary) {
+    background: transparent;
+    color: var(--swiss-black);
+    border: 1px solid var(--border);
+}
+
+.swiss-theme .btn-inline:not(.primary):hover {
+    border-color: var(--swiss-black);
+}
+
+/* Chips Override */
+.swiss-theme .material-chip {
+    background: var(--swiss-black);
+    color: var(--swiss-white);
+    font-size: 0.65rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    padding: 0.35rem 0.75rem;
+}
+
+/* Stats Override */
+.swiss-theme .scope-stat-pill {
+    background: var(--swiss-white);
+    border: 1px solid var(--border);
+}
+
+.swiss-theme .header-stat {
+    border-left: 1px solid var(--border);
+    padding-left: 1rem;
+}
+
+/* Progress Bar Override */
+.swiss-theme .progress-fill {
+    background: var(--swiss-black);
+}
+
+/* Upload Steps Override */
+.swiss-theme .upload-step {
+    border: 1px solid var(--border);
+    background: var(--swiss-white);
+}
+
+.swiss-theme .upload-step.active {
+    border-color: var(--swiss-black);
+    background: var(--swiss-white);
+}
+
+.swiss-theme .upload-step.active .index {
+    background: var(--swiss-black);
+    color: var(--swiss-white);
+    border-color: var(--swiss-black);
+}
+
+.swiss-theme .upload-step.done {
+    border-color: var(--swiss-black);
+}
+
+/* Result Cards Override */
+.swiss-theme .result-card {
+    border: 1px solid transparent;
+    transition: border-color 0.2s;
+}
+
+.swiss-theme .result-card:hover {
+    border-color: var(--swiss-accent);
+}

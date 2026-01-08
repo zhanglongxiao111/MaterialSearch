@@ -20,7 +20,7 @@ from PIL import Image
 from tqdm import trange
 from transformers import AutoModelForZeroShotImageClassification, AutoProcessor
 
-from config import *
+from app.config import *
 from app.utils.image import extract_rhino_preview
 
 logger = logging.getLogger(__name__)

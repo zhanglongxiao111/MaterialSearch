@@ -11,7 +11,7 @@ import time
 import pytest
 import requests
 
-from utils import get_hash
+from app.utils.common import get_hash
 
 upload_file = 'test.png'
 

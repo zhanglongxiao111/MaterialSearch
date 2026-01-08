@@ -6,9 +6,47 @@ from typing import Optional, Dict
 from sqlalchemy import asc, create_engine, text, or_, inspect
 from sqlalchemy.orm import Session, sessionmaker
 
-from app.models import Image, Video, PexelsVideo, Project, ProjectImage, ProjectVideo, PDFPage, ProjectPDFPage, BaseModel, BaseModelProject
+from app.config import SQLALCHEMY_DATABASE_URL
+from app.models import (
+    BaseModel,
+    BaseModelProject,
+    BaseModelPexelsVideo,
+    Image,
+    PDFPage,
+    PexelsVideo,
+    Project,
+    ProjectImage,
+    ProjectPDFPage,
+    ProjectVideo,
+    Video,
+)
 
 logger = logging.getLogger(__name__)
+
+folder_path = os.path.dirname(SQLALCHEMY_DATABASE_URL.replace("sqlite:///", ""))
+if folder_path and not os.path.exists(folder_path):
+    os.makedirs(folder_path)
+
+engine = create_engine(
+    SQLALCHEMY_DATABASE_URL,
+    connect_args={"check_same_thread": False}
+)
+DatabaseSession = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+
+engine_pexels_video = create_engine(
+    "sqlite:///./PexelsVideo.db",
+    connect_args={"check_same_thread": False}
+)
+DatabaseSessionPexelsVideo = sessionmaker(
+    autocommit=False,
+    autoflush=False,
+    bind=engine_pexels_video
+)
+
+
+def create_tables():
+    BaseModel.metadata.create_all(bind=engine)
+    BaseModelPexelsVideo.metadata.create_all(bind=engine_pexels_video)
 
 # 通用过滤条件：仅返回未被软删除的记录（兼容旧数据 is_deleted 为空的情况）
 NOT_DELETED_IMAGE = or_(Image.is_deleted.is_(False), Image.is_deleted.is_(None))
@@ -250,7 +288,7 @@ def get_db_manager() -> ProjectDatabaseManager:
     if db_manager is None:
         # 从配置文件读取路径，确保一致性
         try:
-            from config import PERMANENT_DATABASE_PATH, METADATA_DATABASE_PATH, PROJECT_DATABASE_DIR
+            from app.config import PERMANENT_DATABASE_PATH, METADATA_DATABASE_PATH, PROJECT_DATABASE_DIR
             db_manager = ProjectDatabaseManager(
                 permanent_db_path=PERMANENT_DATABASE_PATH,
                 metadata_db_path=METADATA_DATABASE_PATH,

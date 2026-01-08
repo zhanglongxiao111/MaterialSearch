@@ -8,9 +8,9 @@ import sys
 import click
 import logging
 
-from config import PERMANENT_DATABASE_PATH, METADATA_DATABASE_PATH, PROJECT_DATABASE_DIR
-from database import init_database_manager, get_db_manager
-from project_manager import get_project_manager
+from app.config import PERMANENT_DATABASE_PATH, METADATA_DATABASE_PATH, PROJECT_DATABASE_DIR
+from app.integrations.sqlite_manager import init_database_manager, get_db_manager
+from app.services.project_service import get_project_manager
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)

@@ -11,7 +11,7 @@ from functools import lru_cache
 
 import numpy as np
 
-from config import *
+from app.config import *
 from app.integrations.sqlite_manager import (
     get_image_id_path_features_filter_by_path_time,
     get_image_features_by_id,
@@ -22,7 +22,7 @@ from app.integrations.sqlite_manager import (
     get_db_manager,
     get_pdf_page_features,
 )
-from models import DatabaseSession, DatabaseSessionPexelsVideo
+from app.integrations.sqlite_manager import DatabaseSession, DatabaseSessionPexelsVideo
 from app.services.asset_service import match_batch, match_text_and_image, process_image, process_text
 
 logger = logging.getLogger(__name__)

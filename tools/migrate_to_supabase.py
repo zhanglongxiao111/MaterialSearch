@@ -77,7 +77,7 @@ def migrate_images(
     dry_run: bool = False
 ) -> None:
     """迁移图片数据"""
-    from models import Image
+    from app.models import Image
     
     logger.info("开始迁移图片...")
     
@@ -133,7 +133,7 @@ def migrate_videos(
     dry_run: bool = False
 ) -> None:
     """迁移视频数据"""
-    from models import Video
+    from app.models import Video
     
     logger.info("开始迁移视频...")
     
@@ -185,7 +185,7 @@ def migrate_projects(
     dry_run: bool = False
 ) -> None:
     """迁移项目数据"""
-    from models import Project
+    from app.models import Project
     
     logger.info("开始迁移项目...")
     

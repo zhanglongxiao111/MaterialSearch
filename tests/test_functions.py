@@ -7,7 +7,7 @@
 import sys
 sys.path.insert(0, "D:\\AI\\materialsearch")
 
-from search import search_image_by_text_path_time, search_video_by_text_path_time
+from app.services.search_service import search_image_by_text_path_time, search_video_by_text_path_time
 print("="*60)
 print("测试搜索函数 - 直接调用")
 print("="*60)

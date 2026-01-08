@@ -49,13 +49,13 @@ class TestDatabaseConnection:
     
     def test_database_manager_exists(self):
         """测试数据库管理器存在"""
-        from database import get_db_manager
+        from app.integrations.sqlite_manager import get_db_manager
         db_manager = get_db_manager()
         assert db_manager is not None
     
     def test_permanent_session(self):
         """测试永久库 session"""
-        from database import get_db_manager
+        from app.integrations.sqlite_manager import get_db_manager
         db_manager = get_db_manager()
         session = db_manager.get_permanent_session()
         assert session is not None
@@ -66,7 +66,7 @@ class TestModels:
     
     def test_image_model_import(self):
         """测试 Image 模型可导入"""
-        from models import Image
+        from app.models import Image
         assert Image is not None
         assert hasattr(Image, 'id')
         assert hasattr(Image, 'path')
@@ -74,13 +74,13 @@ class TestModels:
     
     def test_video_model_import(self):
         """测试 Video 模型可导入"""
-        from models import Video
+        from app.models import Video
         assert Video is not None
         assert hasattr(Video, 'frame_time')
     
     def test_project_model_import(self):
         """测试 Project 模型可导入"""
-        from models import Project
+        from app.models import Project
         assert Project is not None
         assert hasattr(Project, 'name')
 
@@ -90,13 +90,13 @@ class TestSearchModule:
     
     def test_search_module_import(self):
         """测试 search 模块可导入"""
-        import search
-        assert hasattr(search, 'process_text')
-        assert hasattr(search, 'search_image_by_text_path_time')
+        from app.services import search_service
+        assert hasattr(search_service, 'process_text')
+        assert hasattr(search_service, 'search_image_by_text_path_time')
     
     def test_process_text(self):
         """测试文本处理"""
-        from search import process_text
+        from app.services.search_service import process_text
         # 应该能处理中文文本
         result = process_text("现代建筑")
         assert result is not None
@@ -107,9 +107,9 @@ class TestScanModule:
     
     def test_scan_module_import(self):
         """测试 scan 模块可导入"""
-        import scan
-        assert hasattr(scan, 'scanning')
-        assert hasattr(scan, 'status')
+        from app.services import scan_service
+        assert hasattr(scan_service, 'scanning')
+        assert hasattr(scan_service, 'status')
 
 
 class TestProjectManager:
@@ -117,7 +117,7 @@ class TestProjectManager:
     
     def test_project_manager_import(self):
         """测试 project_manager 模块可导入"""
-        from project_manager import get_project_manager
+        from app.services.project_service import get_project_manager
         pm = get_project_manager()
         assert pm is not None
         assert hasattr(pm, 'list_projects')
@@ -197,6 +197,67 @@ class TestAPIEndpoints:
         """测试扫描状态端点"""
         response = client.get('/api/scan/status')
         assert response.status_code in [200, 401, 403]
+
+
+class TestConfigBasics:
+    """测试基础配置"""
+
+    def test_config_values_present(self):
+        """配置项存在且类型合理"""
+        from app import config
+        assert isinstance(config.ASSETS_PATH, tuple)
+        assert isinstance(config.IMAGE_EXTENSIONS, tuple)
+        assert isinstance(config.PATH_MAPPINGS, list)
+        assert hasattr(config, 'SQLALCHEMY_DATABASE_URL')
+        assert hasattr(config, 'PDF_POPPLER_PATH')
+
+
+class TestSQLiteManager:
+    """测试 SQLite 管理器"""
+
+    def test_database_sessions_available(self):
+        """DatabaseSession 可创建"""
+        from app.integrations.sqlite_manager import DatabaseSession, DatabaseSessionPexelsVideo, create_tables
+        create_tables()
+        assert DatabaseSession is not None
+        assert DatabaseSessionPexelsVideo is not None
+
+    def test_project_database_lifecycle(self, tmp_path):
+        """项目数据库创建与关闭"""
+        import os
+        from app.integrations.sqlite_manager import get_db_manager
+
+        project_id = "proj_test_unit"
+        db_manager = get_db_manager()
+        db_path = db_manager.create_project_database(project_id)
+        assert db_path
+
+        session = db_manager.get_project_session(project_id)
+        assert session is not None
+        session.close()
+
+        db_manager.close_project_db(project_id)
+        if os.path.exists(db_path):
+            os.remove(db_path)
+
+
+class TestScanServiceBehavior:
+    """测试扫描服务行为"""
+
+    def test_scan_service_rejects_missing_paths(self):
+        """项目库缺少路径时不启动扫描"""
+        from app.services.scan_service import get_scan_service
+        service = get_scan_service()
+        assert service.start_scan(target="proj_missing", paths=None) is False
+
+    def test_scan_status_shape(self):
+        """扫描状态结构完整"""
+        from app.services.scan_service import scanner
+        status = scanner.get_status()
+        assert "status" in status
+        assert "total_images" in status
+        assert "total_videos" in status
+        assert "progress" in status
 
 
 if __name__ == '__main__':

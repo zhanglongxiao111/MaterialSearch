@@ -7,7 +7,7 @@ import numpy as np
 from PIL import Image, ImageOps, ImageDraw
 from pillow_heif import register_heif_opener
 
-from config import LOG_LEVEL
+from app.config import LOG_LEVEL
 from app.utils.image import extract_rhino_preview
 
 logging.basicConfig(level=LOG_LEVEL, format='%(asctime)s %(name)s %(levelname)s %(message)s')
