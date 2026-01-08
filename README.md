@@ -1,175 +1,80 @@
 # MaterialSearch
 
-[**中文**](./README_ZH.md) | [**English**](./README.md)
+**AI-Powered Local Asset Search Engine** | Search your design library with natural language or images
 
-Search local photos and videos through natural language.
+---
 
-Online Demo：https://chn-lee-yumi.github.io/MaterialSearchWebDemo/
+## ✨ Features
 
-Some parts of the source code in this repository have been intentionally obfuscated.
-This decision was made in response to previous incidents where individuals maliciously removed or altered copyright and attribution information, resulting in negative consequences.
-The obfuscation is meant solely to protect authorship and legal integrity, and does not restrict legitimate use under the GNU General Public License v3.0 (GPLv3).
+- 🔍 **Text-to-Image/Video** - Find assets using natural language descriptions
+- 🖼️ **Image-to-Image/Video** - Upload an image to find similar content
+- 📁 **Multi-Library** - Separate permanent and project-based storage
+- 📄 **PDF Indexing** - Auto-render and index PDF pages
+- 🚀 **Batch Import** - Drag & drop folders to build your library
+- 🖥️ **Desktop App** - Cross-platform Tauri client
 
-We kindly ask users to respect the original authorship and retain all relevant notices.
+---
 
-If you’ve made any useful changes to the code (bug fixes, new features, etc.), please consider contributing them back via a pull request — so the whole community can benefit!
+## 🎯 Project Vision
 
-## Features
+Building an **AI Workstation** for architectural design firms:
 
-- Text-based image search
-- Image-based image search
-- Text-based video search (provides matching video clips based on descriptions)
-- Image-based video search (searches for video segments based on screenshots)
-- Calculation of image-text similarity (provides a score, not very useful)
+| Phase | Feature | Status |
+|-------|---------|--------|
+| **Phase 1** | Asset Search Engine | ✅ Complete |
+| **Phase 2** | RAG Knowledge Base | 🔜 Planned |
+| **Phase 3** | AI Image Generation | 🔜 Planned |
+| **Phase 4** | Agent Workflow Automation | 🔜 Planned |
 
-## Deploy Instructions
+---
 
-### Deployment via Source Code
+## 🚀 Quick Start
 
-First, install the Python environment (version 3.9 or higher) and then download the code from this repository.
-
-Note that the first run will automatically download the models. The download speed may be slow, so please be patient. If the network is poor, the model download may fail. In that case, simply rerun the program.
-
-1. Install the dependencies before first use: `pip install -U -r requirements.txt`. For Windows systems, use `requirements_windows.txt` instead, or you can double-click on `install.bat`.
-2. Start the program: `python main.py`. For Windows systems, you can double-click on `run.bat`.
-
-Note: The `requirements.txt` uses the CPU versions of `torch` and `faiss`. If you wish to enable GPU acceleration, please adjust the settings accordingly.
-
-If you encounter any issues with the version dependencies in `requirements.txt` (for example, if a library version is too new and causes errors), please provide feedback by opening an issue. I will add version range restrictions.
-
-To use the "Download Video Segments" feature, you need to install `ffmpeg`. If you are using Windows, you can run `install_ffmpeg.bat` to install.
-
-To use the "PDF Indexing" feature, you need to install `poppler`:
-- **Windows**: Download from [poppler-windows](https://github.com/oschwartz10612/poppler-windows/releases) and add the `bin` directory to your system PATH
-- **Linux**: `apt install poppler-utils` or `yum install poppler-utils`
-- **macOS**: `brew install poppler`
-
-### Desktop App (Windows)
-
-A native Windows desktop application is available, featuring:
-- **One-click launch**: No need to manually start the server
-- **Native drag & drop**: Drag materials directly into design software (InDesign, Photoshop, etc.)
-- **System tray**: Minimize to tray, quick access
-
-**Build from source:**
-
-1. Install [Rust](https://rustup.rs/) and [Node.js](https://nodejs.org/)
-2. Install Tauri CLI: `cargo install tauri-cli`
-3. Build the Python backend (requires PyInstaller):
-   ```powershell
-   cd MaterialSearch
-   .\desktop\build_sidecar.ps1
-   ```
-4. Build the desktop app:
-   ```powershell
-   cd desktop/src-tauri
-   cargo tauri build
-   ```
-5. Find the installer in `desktop/src-tauri/target/release/bundle/`
-
-### Deployment via Docker
-
-Supports `amd64` architectures. It includes the default models (`OFA-Sys/chinese-clip-vit-base-patch16`) and supports GPU acceleration.
-
-Image repositories:
-- [yumilee/materialsearch](https://hub.docker.com/r/yumilee/materialsearch) (DockerHub)
-- registry.cn-hongkong.aliyuncs.com/chn-lee-yumi/materialsearch (Aliyun, recommended for users in Mainland China)
-
-Before starting the image, you need to prepare:
-
-1. The path to save the database
-2. The scan paths on your local machine and the paths to be mounted inside the container
-3. You can configure through modifying the `environment` and `volumes` sections in the `docker-compose.yml` file
-4. If you plan to use GPU acceleration, uncomment the corresponding section in the `docker-compose.yml` file
-
-Please refer to the `docker-compose.yml` file for details, as it contains detailed comments.
-
-Finally, execute `docker-compose up -d` to start the container.
-
-Note:
-- It is not recommended to set memory limits for the container, as it may cause strange issues. For example, refer to [this issue](https://github.com/chn-lee-yumi/MaterialSearch/issues/6).
-- Docker image has the default environment variables `TRANSFORMERS_OFFLINE=1`, which means it won't connect to huggingface to check the model version. If you want to change the default model in the container, you have to modify `.env` and set `TRANSFORMERS_OFFLINE=0`.
-
-### Server Deployment (Multi-User Mode)
-
-MaterialSearch supports server deployment with multi-user authentication. Two modes are available:
-
-| Mode | Database | Authentication | Use Case |
-|------|----------|----------------|----------|
-| **SQLite** | SQLite | Local Session | Development, single-user |
-| **Supabase** | PostgreSQL + pgvector | JWT + RBAC | Production, multi-user |
-
-**Quick Start (Development Mode):**
+### Local Installation
 
 ```bash
-# SQLite mode - default
-USE_SUPABASE=false python main.py
+# Install dependencies
+pip install -r requirements.txt
+
+# Configure asset path (edit .env)
+ASSETS_PATH=/path/to/your/assets
+
+# Start server
+python main.py
 ```
 
-**Production Mode (Supabase):**
+Visit http://localhost:58888
+
+### Docker Deployment
 
 ```bash
-# Start the full stack with Docker
 docker-compose up -d
 ```
 
-This will launch:
-- PostgreSQL 15 with pgvector extension
-- Supabase Auth (GoTrue)
-- PostgREST API
-- MaterialSearch application
+---
 
-For detailed server deployment instructions, see:
-- [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) - Full deployment guide
-- [docs/SUPABASE_SETUP.md](docs/SUPABASE_SETUP.md) - Supabase configuration
-- [docs/API.md](docs/API.md) - API documentation
+## 🛠️ Tech Stack
 
-## Configuration Instructions
+| Component | Technology |
+|-----------|------------|
+| Backend | Python + Flask + SQLAlchemy |
+| AI Model | Chinese-CLIP (HuggingFace) |
+| Vector Search | FAISS / pgvector |
+| Frontend | Vue.js + Vanilla CSS |
+| Desktop | Tauri (Rust) |
+| Deployment | Docker + Supabase (optional) |
 
-All configurations are in the `config.py` file, which contains detailed comments.
+---
 
-It is recommended to modify the configuration through environment variables or by creating a `.env` file in the project root directory. If a corresponding variable is not configured, the default value in `config.py` will be used. For example, `os.getenv('HOST', '127.0.0.1')` will default to `127.0.0.1` if the `HOST` variable is not configured.
+## 📖 Documentation
 
-Example `.env` file configuration:
+- [Project Docs](openspec/project.md)
+- [Changelog](CHANGELOG_PROJECT.md)
+- [Development Guide](docs/MIGRATION_SPEC.md)
 
-```conf
-ASSETS_PATH=C:/Users/Administrator/Pictures,C:/Users/Administrator/Videos
-SKIP_PATH=C:/Users/Administrator/AppData
-```
+---
 
-If you find that certain formats of images or videos are not being scanned, you can try adding the corresponding file extensions to `IMAGE_EXTENSIONS` and `VIDEO_EXTENSIONS`. If you find that some supported extensions have not been added to the code, please feel free to open an issue or submit a pull request to add them.
+## 📄 License
 
-If small images are not being scanned, you can try reducing `IMAGE_MIN_WIDTH` and `IMAGE_MIN_HEIGHT` and try again.
-
-If you want to use proxy, you can use `http_proxy` and `https_proxy`. For example: 
-
-```conf
-http_proxy=http://127.0.0.1:7070
-https_proxy=http://127.0.0.1:7070
-```
-
-Note: It is no recommended to set `ASSETS_PATH` as remote directory such as SMB/NFS, which may slow your scanning speed.
-
-## Troubleshooting
-
-If you encounter any issues, please read this documentation carefully first. If you cannot find an answer, search the issues to see if there are similar problems. If not, you can open a new issue and provide detailed information about the problem, including your attempted solutions and thoughts, error messages and screenshots, and the system you are using (Windows/Linux/MacOS) and the configuration (which will be printed while running `main.py`).
-
-I am only responsible for issues related to the functionality, code, and documentation of this project (such as malfunctions, code errors, and incorrect documentation). **Please resolve any runtime environment issues on your own (such as how to configure the Python environment, inability to use GPU acceleration, how to install ffmpeg, etc.).**
-
-I am doing this project purely "for the love of it" (which means, in fact, I am not obligated to answer your questions). To improve the efficiency of problem solving, please provide as much information as possible when opening an issue. If your issue has been resolved, please remember to close it. Issues that receive no response for one week will be closed. If you have resolved the issue on your own before receiving a response, it is recommended to leave the solution so that others may benefit.
-
-## Hardware Requirements
-
-It is recommended to use a `amd64 (x86_64)` or `arm64 (aarch64)` architecture CPU. The minimum requirement is 2GB of memory, but it is recommended to have at least 4GB of memory. If you have a large number of photos, it is recommended to increase the amount of memory.
-
-## Search Speed
-
-Test environment: J3455 CPU, 8GB of memory.
-
-On a J3455 CPU, approximately 31,000 image matches or 25,000 video frame matches can be performed in 1 second.
-
-## Known Issues
-
-1. Some videos cannot be displayed on the web page because the browser does not support that file type (e.g. videos encoded with SVQ3).
-2. When you click on an image to enlarge it, some images cannot be displayed because the browser does not support this type of file (e.g. images in tiff format). Small images can be displayed normally because they are converted into thumbnails in a format supported by the browser. Large images use the original file.
-3. When searching for videos, if too many videos are displayed and the video size is too large, the computer may freeze, which is normal. So it is suggested that do not select more than 12 results when you searching videos.
+Forked from [MaterialSearch](https://github.com/chn-lee-yumi/MaterialSearch)  
+GNU GPLv3 License
