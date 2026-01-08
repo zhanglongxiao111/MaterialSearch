@@ -53,6 +53,7 @@ class Scanner:
         self.total_video_frames = 0
         self.scanned_files = 0
         self.is_continue_scan = False
+        self.stop_requested = False
         self.logger = logging.getLogger(__name__)
         self.temp_file = f"{TEMP_PATH}/assets.pickle"
         self.assets = dict()
@@ -281,6 +282,7 @@ class Scanner:
         self.logger.info(f"开始扫描 (目标库: {target})")
         self.is_scanning = True
         scanning = True
+        self.stop_requested = False
         self.scan_start_time = time.time()
 
         # 为不同库使用不同的缓存文件
@@ -326,6 +328,9 @@ class Scanner:
                 self.scanning_files = len(self.assets)
                 image_batch_dict = {}  # 批量处理文件的字典，用字典方便某个图片有问题的时候的处理
                 for path in self.assets.copy():
+                    if self.stop_requested:
+                        self.logger.info("收到停止请求，终止扫描")
+                        break
                     self.scanned_files += 1
                     if self.scanned_files % AUTO_SAVE_INTERVAL == 0:  # 每扫描 AUTO_SAVE_INTERVAL 个文件重新save一下
                         self.save_assets()
@@ -392,6 +397,10 @@ class Scanner:
             clean_cache()  # 清空搜索缓存
             self.is_scanning = False
             scanning = False
+            self.stop_requested = False
+
+    def stop_scan(self):
+        self.stop_requested = True
 
     def scan_single_file(self, file_path, target='permanent'):
         """

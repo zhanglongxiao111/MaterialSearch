@@ -198,6 +198,55 @@ class TestAPIEndpoints:
         response = client.get('/api/scan/status')
         assert response.status_code in [200, 401, 403]
 
+    def test_search_blank_query_rejected(self, client):
+        """永久库空查询应拒绝"""
+        payload = {
+            "search_type": 0,
+            "positive": "",
+            "negative": "",
+            "path": "",
+            "start_time": None,
+            "end_time": None,
+            "library_type": "permanent",
+        }
+        response = client.post('/api/search/match', json=payload)
+        assert response.status_code == 400
+        data = response.get_json()
+        assert isinstance(data, dict)
+        assert "error" in data
+
+    def test_search_missing_upload_rejected(self, client):
+        """上传文件缺失应拒绝图片搜索"""
+        payload = {
+            "search_type": 1,
+            "library_type": "permanent",
+            "image_threshold": 0.9,
+        }
+        response = client.post('/api/search/match', json=payload)
+        assert response.status_code == 400
+        data = response.get_json()
+        assert isinstance(data, dict)
+        assert "error" in data
+
+    def test_search_invalid_library_type(self, client):
+        """无效库类型应返回 400"""
+        payload = {
+            "search_type": 0,
+            "library_type": "invalid",
+        }
+        response = client.post('/api/search/match', json=payload)
+        assert response.status_code == 400
+
+    def test_scan_start_requires_paths_for_project(self, client):
+        """项目库扫描缺少路径应返回 400"""
+        response = client.get('/api/scan/start', query_string={"target": "proj_test"})
+        assert response.status_code == 400
+
+    def test_scan_stop_endpoint(self, client):
+        """停止扫描端点可用"""
+        response = client.post('/api/scan/stop')
+        assert response.status_code in [200, 401, 403]
+
 
 class TestConfigBasics:
     """测试基础配置"""
@@ -211,6 +260,14 @@ class TestConfigBasics:
         assert hasattr(config, 'SQLALCHEMY_DATABASE_URL')
         assert hasattr(config, 'PDF_POPPLER_PATH')
 
+    def test_path_mappings_parse(self, monkeypatch):
+        """路径映射解析逻辑"""
+        from app import config
+        monkeypatch.setenv("PATH_MAPPINGS", "Z:=\\\\Nas\\\\Share;Y:\\\\Projects=\\\\Nas\\\\Projects")
+        mappings = config._build_path_mappings()
+        assert len(mappings) == 2
+        assert mappings[0]["source_std"].startswith("Z:")
+
 
 class TestSQLiteManager:
     """测试 SQLite 管理器"""
@@ -221,6 +278,18 @@ class TestSQLiteManager:
         create_tables()
         assert DatabaseSession is not None
         assert DatabaseSessionPexelsVideo is not None
+
+    def test_session_by_target_invalid(self):
+        """非法目标应抛出异常"""
+        from app.integrations.sqlite_manager import get_session_by_target
+        with pytest.raises(ValueError):
+            get_session_by_target("invalid-target")
+
+    def test_project_session_missing(self):
+        """缺失项目库应抛出异常"""
+        from app.integrations.sqlite_manager import get_session_by_target
+        with pytest.raises(FileNotFoundError):
+            get_session_by_target("proj_missing_unit")
 
     def test_project_database_lifecycle(self, tmp_path):
         """项目数据库创建与关闭"""

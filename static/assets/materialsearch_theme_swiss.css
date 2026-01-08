@@ -18,14 +18,43 @@
     /* International Orange */
 
     /* Functional Colors */
-    --background: var(--swiss-light);
-    --foreground: var(--swiss-black);
+    --background: #F4F4F4;
+    --foreground: #111111;
     --sidebar-bg: var(--swiss-black);
     --sidebar-fg: var(--swiss-white);
     --border: #E0E0E0;
     --border-dark: #333333;
-    --muted: #666666;
-    --muted-foreground: var(--swiss-gray);
+    --muted: #E0E0E0;
+    --muted-foreground: #888888;
+
+    /* Override original theme oklch colors */
+    --card: #FFFFFF;
+    --card-foreground: #111111;
+    --popover: #FFFFFF;
+    --popover-foreground: #111111;
+    --primary: #111111;
+    --primary-foreground: #FFFFFF;
+    --secondary: #E0E0E0;
+    --secondary-foreground: #333333;
+    --accent: #FF3300;
+    --accent-foreground: #FFFFFF;
+    --destructive: #dc2626;
+    --destructive-foreground: #FFFFFF;
+    --input: #F4F4F4;
+    --ring: #111111;
+    --chart-1: #111111;
+    --chart-2: #333333;
+    --chart-3: #555555;
+    --chart-4: #777777;
+    --chart-5: #999999;
+    --sidebar: #111111;
+    --sidebar-foreground: #FFFFFF;
+    --sidebar-primary: #FFFFFF;
+    --sidebar-primary-foreground: #111111;
+    --sidebar-accent: #1A1A1A;
+    --sidebar-accent-foreground: #FFFFFF;
+    --sidebar-border: #333333;
+    --sidebar-ring: #FF3300;
 
     /* Typography */
     --font-ui: 'Inter', 'PingFang SC', -apple-system, sans-serif;
@@ -789,4 +818,154 @@ body.swiss-theme {
 
 .swiss-theme .result-card:hover {
     border-color: var(--swiss-accent);
+}
+
+/* ============================================
+   ADDITIONAL FIXES - LAYOUT & COLORS
+   ============================================ */
+
+/* Fix: Remove all purple/blue colors */
+.swiss-theme .text-emerald-600,
+.swiss-theme .text-sky-600,
+.swiss-theme .text-blue-600,
+.swiss-theme .text-indigo-600,
+.swiss-theme .text-purple-600,
+.swiss-theme .text-violet-600 {
+    color: var(--swiss-black) !important;
+}
+
+.swiss-theme .bg-emerald-600,
+.swiss-theme .bg-sky-600,
+.swiss-theme .bg-blue-600,
+.swiss-theme .bg-indigo-600,
+.swiss-theme .bg-purple-600,
+.swiss-theme .bg-violet-600 {
+    background-color: var(--swiss-black) !important;
+}
+
+/* Fix: Range input slider */
+.swiss-theme input[type="range"] {
+    -webkit-appearance: none;
+    appearance: none;
+    background: var(--border);
+    height: 2px;
+}
+
+.swiss-theme input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 12px;
+    height: 12px;
+    background: var(--swiss-black);
+    cursor: pointer;
+}
+
+.swiss-theme input[type="range"]::-moz-range-thumb {
+    width: 12px;
+    height: 12px;
+    background: var(--swiss-black);
+    cursor: pointer;
+    border: none;
+}
+
+/* Fix: Notification toast */
+.swiss-theme .toast,
+.swiss-theme [class*="toast"],
+.swiss-theme [class*="notification"] {
+    background: var(--swiss-black) !important;
+    color: var(--swiss-white) !important;
+    border: none !important;
+}
+
+/* Fix: Primary color override from original theme */
+.swiss-theme {
+    --primary: var(--swiss-black);
+    --primary-foreground: var(--swiss-white);
+    --accent: var(--swiss-accent);
+}
+
+/* Fix: Active/selected states */
+.swiss-theme .active,
+.swiss-theme [class*="active"] {
+    --primary: var(--swiss-black);
+}
+
+/* Fix: Link colors */
+.swiss-theme a {
+    color: var(--swiss-black);
+}
+
+.swiss-theme a:hover {
+    color: var(--swiss-accent);
+}
+
+/* Fix: Focus states */
+.swiss-theme *:focus {
+    outline: 2px solid var(--swiss-black);
+    outline-offset: 2px;
+}
+
+/* Fix: Header should have same branding style */
+.swiss-theme .material-header {
+    background: var(--swiss-black);
+    color: var(--swiss-white);
+    border-bottom: 1px solid var(--border-dark);
+}
+
+.swiss-theme .material-header .swiss-brand-title,
+.swiss-theme .material-header .typo-label {
+    color: var(--swiss-white);
+}
+
+.swiss-theme .material-header .typo-label {
+    color: var(--swiss-gray);
+}
+
+/* Fix: Stats bar */
+.swiss-theme .material-header-stats {
+    background: var(--swiss-white);
+    border-bottom: 1px solid var(--border);
+}
+
+.swiss-theme .header-stat .value {
+    color: var(--swiss-black);
+}
+
+/* Fix: Scope description text */
+.swiss-theme [class*="text-emerald"],
+.swiss-theme [class*="text-sky"] {
+    color: var(--swiss-black) !important;
+}
+
+/* Fix: Button/chip interactive colors */
+.swiss-theme .material-chip.interactive:hover {
+    background: var(--swiss-accent);
+    color: var(--swiss-white);
+}
+
+/* Fix: Tailwind color classes override */
+.swiss-theme .text-slate-500 {
+    color: var(--swiss-gray) !important;
+}
+
+.swiss-theme .bg-slate-500,
+.swiss-theme .bg-slate-600,
+.swiss-theme .bg-slate-700 {
+    background-color: var(--swiss-dark) !important;
+}
+
+/* Fix: Lucide icon colors in header */
+.swiss-theme .material-header [data-lucide] {
+    color: var(--swiss-white);
+}
+
+/* Fix: Main layout - ensure sidebar and content are side by side */
+.swiss-theme .material-shell {
+    display: flex;
+    min-height: calc(100vh - 60px);
+}
+
+/* Fix: Material main background */
+.swiss-theme .material-main {
+    background: var(--swiss-light);
 }
