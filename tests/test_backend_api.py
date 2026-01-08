@@ -4,8 +4,14 @@
 后端API测试脚本 - 测试库类型选择功能
 """
 
-import requests
+import os
+import pytest
+
+if os.getenv("RUN_INTEGRATION_TESTS") != "1":
+    pytest.skip("Integration test requires a running backend.", allow_module_level=True)
+
 import json
+import requests
 
 BASE_URL = "http://localhost:5000"
 

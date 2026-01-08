@@ -5,7 +5,12 @@
 """
 
 import sys
+import os
+import pytest
 sys.path.insert(0, "D:\\AI\\materialsearch")
+
+if os.getenv("RUN_INTEGRATION_TESTS") != "1":
+    pytest.skip("Integration test requires prepared data.", allow_module_level=True)
 
 from app.services.search_service import search_image_by_text_path_time, search_video_by_text_path_time
 print("="*60)
