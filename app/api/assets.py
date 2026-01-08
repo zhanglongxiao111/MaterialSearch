@@ -10,10 +10,11 @@ from io import BytesIO
 
 from flask import Blueprint, request, jsonify, session, send_file, abort
 
-from database import get_db_manager, is_video_exist
-from models import DatabaseSession, Image
-from utils import get_hash, crop_video, resize_image_with_aspect_ratio
-from utils_image import extract_rhino_preview
+from app.integrations.sqlite_manager import get_db_manager, is_video_exist
+from app.models import Image
+from models import DatabaseSession
+from app.utils.common import get_hash, crop_video, resize_image_with_aspect_ratio
+from app.utils.image import extract_rhino_preview
 
 logger = logging.getLogger(__name__)
 

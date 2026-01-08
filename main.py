@@ -1,10 +1,11 @@
 import logging
+import os
 import shutil
 import threading
 
-import routes
+from app import create_app
+from app.services.scan_service import scanner
 from config import *
-from scan import scanner
 
 logger = logging.getLogger(__name__)
 
@@ -31,4 +32,5 @@ def init():
 if __name__ == "__main__":
     init()
     logging.getLogger('werkzeug').setLevel(LOG_LEVEL)
-    routes.app.run(port=PORT, host=HOST, debug=FLASK_DEBUG)
+    app = create_app()
+    app.run(port=PORT, host=HOST, debug=FLASK_DEBUG)

@@ -8,8 +8,8 @@ import threading
 
 from flask import Blueprint, request, jsonify
 
-from scan import scanner
-from project_manager import get_project_manager
+from app.services.scan_service import scanner
+from app.services.project_service import get_project_manager
 
 logger = logging.getLogger(__name__)
 

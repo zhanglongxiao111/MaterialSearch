@@ -7,8 +7,8 @@ import logging
 
 from flask import Blueprint, request, jsonify
 
-from project_manager import get_project_manager
-from search import clean_cache
+from app.services.project_service import get_project_manager
+from app.services.search_service import clean_cache
 from .auth import login_required, require_role
 
 logger = logging.getLogger(__name__)

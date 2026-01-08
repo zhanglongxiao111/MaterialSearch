@@ -9,15 +9,15 @@ import logging
 from flask import Blueprint, request, jsonify, session, abort
 
 # 导入搜索服务（暂时使用旧模块，后续迁移到 services 层）
-from search import (
+from app.services.search_service import (
     search_image_by_image,
     search_image_by_text_path_time,
     search_video_by_image,
     search_video_by_text_path_time,
     search_pexels_video_by_text,
 )
-from process_assets import match_text_and_image, process_image, process_text
-from project_manager import get_project_manager
+from app.services.asset_service import match_text_and_image, process_image, process_text
+from app.services.project_service import get_project_manager
 
 logger = logging.getLogger(__name__)
 

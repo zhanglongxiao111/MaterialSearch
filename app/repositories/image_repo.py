@@ -8,8 +8,8 @@ from typing import Optional, List, Tuple
 import numpy as np
 
 from .base import BaseRepository
-from database import get_db_manager
-from models import Image
+from app.integrations.sqlite_manager import get_db_manager
+from app.models import Image
 
 logger = logging.getLogger(__name__)
 
@@ -119,7 +119,7 @@ class ImageRepository(BaseRepository[Image]):
     ) -> List[dict]:
         """SQLite + FAISS 实现向量搜索"""
         # 暂时使用旧实现
-        from search import search_image_by_text_path_time
+        from app.services.search_service import search_image_by_text_path_time
         # TODO: 实现纯 Repository 版本
         logger.warning("search_by_vector 暂时使用旧实现")
         return []

@@ -7,9 +7,9 @@ import logging
 
 from flask import Blueprint, request, jsonify
 
-from dedup_service import get_dedup_service
-from database import get_db_manager
-from models import DedupJob
+from app.services.dedup_service import get_dedup_service
+from app.integrations.sqlite_manager import get_db_manager
+from app.models import DedupJob
 
 logger = logging.getLogger(__name__)
 

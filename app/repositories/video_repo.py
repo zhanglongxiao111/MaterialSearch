@@ -8,8 +8,8 @@ from typing import Optional, List, Tuple
 import numpy as np
 
 from .base import BaseRepository
-from database import get_db_manager
-from models import Video
+from app.integrations.sqlite_manager import get_db_manager
+from app.models import Video
 
 logger = logging.getLogger(__name__)
 

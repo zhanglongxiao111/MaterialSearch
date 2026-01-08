@@ -7,8 +7,8 @@ import logging
 from typing import Optional, List
 
 from .base import BaseRepository
-from database import get_db_manager
-from models import Project
+from app.integrations.sqlite_manager import get_db_manager
+from app.models import Project
 
 logger = logging.getLogger(__name__)
 

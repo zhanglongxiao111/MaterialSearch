@@ -7,7 +7,7 @@ import logging
 
 from flask import Blueprint, request, jsonify
 
-from archive import get_archive_manager
+from app.services.archive_service import get_archive_manager
 
 logger = logging.getLogger(__name__)
 
