@@ -1,0 +1,652 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SuperDesign - Material Manager</title>
+    
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    },
+                    colors: {
+                        brand: {
+                            blue: '#3A7AFE',
+                            purple: '#6C63FF',
+                            gray: '#F5F7FA',
+                            text: '#2c3e50',
+                            muted: '#94a3b8'
+                        }
+                    },
+                    boxShadow: {
+                        'soft': '0 4px 20px -2px rgba(58, 122, 254, 0.1)',
+                        'card': '0 0 0 1px rgba(0,0,0,0.03), 0 2px 8px rgba(0,0,0,0.04)',
+                        'float': '0 10px 40px -10px rgba(0,0,0,0.1)'
+                    }
+                }
+            }
+        }
+    </script>
+
+    <!-- Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Vue 3 -->
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+
+    <style>
+        body {
+            background-color: #F5F7FA;
+            color: #2c3e50;
+        }
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 3px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+        
+        /* Transitions */
+        .fade-enter-active, .fade-leave-active {
+            transition: opacity 0.2s ease;
+        }
+        .fade-enter-from, .fade-leave-to {
+            opacity: 0;
+        }
+        
+        .slide-up-enter-active, .slide-up-leave-active {
+            transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        .slide-up-enter-from, .slide-up-leave-to {
+            opacity: 0;
+            transform: translateY(10px);
+        }
+
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255,255,255,0.5);
+        }
+    </style>
+</head>
+<body>
+    <div id="app" class="flex h-screen w-full overflow-hidden">
+        
+        <!-- ==================== LEFT SIDEBAR ==================== -->
+        <aside class="w-[280px] flex-shrink-0 bg-white border-r border-slate-100 flex flex-col z-20 transition-all duration-300">
+            <!-- Header / Logo -->
+            <div class="h-16 flex items-center px-6 border-b border-slate-50">
+                <div class="w-8 h-8 bg-gradient-to-br from-brand-blue to-brand-purple rounded-lg flex items-center justify-center text-white mr-3 shadow-soft">
+                    <i class="fa-solid fa-layer-group"></i>
+                </div>
+                <span class="font-bold text-lg tracking-tight">SuperDesign</span>
+            </div>
+
+            <!-- Library Switcher -->
+            <div class="p-4">
+                <div class="bg-slate-50 p-1 rounded-xl flex text-sm font-medium mb-4">
+                    <button 
+                        @click="currentLibrary = 'permanent'"
+                        :class="currentLibrary === 'permanent' ? 'bg-white text-brand-blue shadow-sm' : 'text-slate-500 hover:text-slate-700'"
+                        class="flex-1 py-2 rounded-lg transition-all text-center"
+                    >
+                        永久库
+                    </button>
+                    <button 
+                        @click="currentLibrary = 'project'"
+                        :class="currentLibrary === 'project' ? 'bg-white text-brand-purple shadow-sm' : 'text-slate-500 hover:text-slate-700'"
+                        class="flex-1 py-2 rounded-lg transition-all text-center"
+                    >
+                        项目库
+                    </button>
+                </div>
+
+                <!-- Project List (Only visible in Project Mode) -->
+                <transition name="slide-up" mode="out-in">
+                    <div v-if="currentLibrary === 'project'" class="space-y-1">
+                        <div class="flex justify-between items-center px-2 mb-2">
+                            <span class="text-xs font-bold text-slate-400 uppercase tracking-wider">Active Projects</span>
+                            <button class="w-6 h-6 rounded hover:bg-slate-100 text-slate-400 hover:text-brand-blue transition-colors">
+                                <i class="fa-solid fa-plus text-xs"></i>
+                            </button>
+                        </div>
+                        
+                        <div 
+                            v-for="project in projects" 
+                            :key="project.id"
+                            @click="activeProjectId = project.id"
+                            :class="activeProjectId === project.id ? 'bg-indigo-50 border-indigo-100' : 'hover:bg-slate-50 border-transparent'"
+                            class="group border rounded-xl p-3 cursor-pointer transition-all relative overflow-hidden"
+                        >
+                            <div v-if="activeProjectId === project.id" class="absolute left-0 top-0 bottom-0 w-1 bg-brand-purple rounded-l-xl"></div>
+                            <div class="flex justify-between items-start mb-1">
+                                <span class="font-medium text-sm truncate pr-2" :class="activeProjectId === project.id ? 'text-brand-purple' : 'text-slate-700'">{{ project.name }}</span>
+                                <span class="text-[10px] px-1.5 py-0.5 bg-white rounded border border-slate-100 text-slate-400 whitespace-nowrap">{{ project.client }}</span>
+                            </div>
+                            <div class="flex items-center text-xs text-slate-400 space-x-3">
+                                <span><i class="fa-regular fa-image mr-1"></i>{{ project.count }}</span>
+                                <span><i class="fa-solid fa-database mr-1"></i>{{ project.size }}</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Permanent Library Categories -->
+                    <div v-else class="space-y-1">
+                         <div class="px-2 mb-2 text-xs font-bold text-slate-400 uppercase tracking-wider">Categories</div>
+                         <button v-for="cat in ['Textures', '3D Models', 'HDri', 'Reference']" class="w-full text-left px-3 py-2 rounded-lg hover:bg-slate-50 text-sm text-slate-600 hover:text-brand-blue transition-colors flex items-center">
+                            <i class="fa-regular fa-folder mr-3 text-slate-400"></i> {{ cat }}
+                         </button>
+                    </div>
+                </transition>
+            </div>
+
+            <!-- Bottom: Scan Status -->
+            <div class="mt-auto p-4 border-t border-slate-100 bg-slate-50/50">
+                <div class="bg-white border border-slate-100 rounded-xl p-3 shadow-sm">
+                    <div class="flex justify-between items-center mb-2">
+                        <div class="flex items-center">
+                            <div class="w-2 h-2 rounded-full bg-green-500 mr-2 animate-pulse"></div>
+                            <span class="text-xs font-medium text-slate-600">System Status</span>
+                        </div>
+                        <i class="fa-solid fa-rotate text-slate-300 text-xs hover:text-brand-blue cursor-pointer hover:rotate-180 transition-all duration-500"></i>
+                    </div>
+                    <div class="space-y-2">
+                        <div class="flex justify-between text-[10px] text-slate-400">
+                            <span>Last Scan</span>
+                            <span>10 mins ago</span>
+                        </div>
+                        <div class="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden">
+                            <div class="bg-brand-blue w-full h-full rounded-full"></div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- User Profile -->
+                <div class="flex items-center mt-4 px-1 cursor-pointer hover:bg-slate-100 p-2 rounded-lg transition-colors">
+                    <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=Felix" class="w-8 h-8 rounded-full bg-slate-200 mr-3">
+                    <div class="flex-1 overflow-hidden">
+                        <div class="text-xs font-bold text-slate-700">Long Xiao</div>
+                        <div class="text-[10px] text-slate-400 truncate">Architectural Designer</div>
+                    </div>
+                    <i class="fa-solid fa-chevron-right text-xs text-slate-300"></i>
+                </div>
+            </div>
+        </aside>
+
+        <!-- ==================== MAIN CONTENT ==================== -->
+        <main class="flex-1 flex flex-col h-full relative">
+            
+            <!-- Top Navigation -->
+            <header class="h-16 bg-white border-b border-slate-100 flex items-center justify-between px-6 shrink-0 z-10">
+                <!-- Context Indicator -->
+                <div class="flex items-center">
+                    <div v-if="currentLibrary === 'project'" class="flex items-center space-x-2 animate-fade-in">
+                        <span class="bg-indigo-50 text-brand-purple px-2 py-1 rounded text-xs font-bold uppercase border border-indigo-100">Project</span>
+                        <span class="text-slate-300">/</span>
+                        <span class="font-semibold text-slate-700">{{ activeProjectName }}</span>
+                    </div>
+                    <div v-else class="flex items-center space-x-2 animate-fade-in">
+                        <span class="bg-blue-50 text-brand-blue px-2 py-1 rounded text-xs font-bold uppercase border border-blue-100">Permanent</span>
+                        <span class="text-slate-300">/</span>
+                        <span class="font-semibold text-slate-700">Global Repository</span>
+                    </div>
+                </div>
+
+                <!-- Right Actions -->
+                <div class="flex items-center space-x-3">
+                    <!-- View Tabs -->
+                    <div class="bg-slate-100 p-1 rounded-lg flex space-x-1 mr-4">
+                        <button 
+                            @click="currentTab = 'search'"
+                            :class="currentTab === 'search' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-400 hover:text-slate-600'"
+                            class="px-3 py-1.5 rounded-md text-xs font-medium transition-all flex items-center"
+                        >
+                            <i class="fa-solid fa-magnifying-glass mr-2"></i> Search
+                        </button>
+                        <button 
+                            v-if="currentLibrary === 'project'"
+                            @click="currentTab = 'upload'"
+                            :class="currentTab === 'upload' ? 'bg-white text-brand-purple shadow-sm' : 'text-slate-400 hover:text-slate-600'"
+                            class="px-3 py-1.5 rounded-md text-xs font-medium transition-all flex items-center"
+                        >
+                            <i class="fa-solid fa-cloud-arrow-up mr-2"></i> Upload
+                        </button>
+                        <button 
+                             @click="currentTab = 'stats'"
+                            :class="currentTab === 'stats' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-400 hover:text-slate-600'"
+                            class="px-3 py-1.5 rounded-md text-xs font-medium transition-all flex items-center"
+                        >
+                            <i class="fa-solid fa-chart-pie mr-2"></i> Stats
+                        </button>
+                    </div>
+                    
+                    <button class="w-9 h-9 rounded-full border border-slate-200 text-slate-400 hover:text-brand-blue hover:border-brand-blue hover:bg-blue-50 flex items-center justify-center transition-all" title="Notifications">
+                        <i class="fa-regular fa-bell"></i>
+                    </button>
+                     <button class="w-9 h-9 rounded-full border border-slate-200 text-slate-400 hover:text-brand-blue hover:border-brand-blue hover:bg-blue-50 flex items-center justify-center transition-all" title="Settings">
+                        <i class="fa-solid fa-gear"></i>
+                    </button>
+                </div>
+            </header>
+
+            <!-- Content Area -->
+            <div class="flex-1 overflow-y-auto relative p-6">
+                
+                <!-- ==================== TAB: SEARCH ==================== -->
+                <transition name="fade" mode="out-in">
+                    <div v-if="currentTab === 'search'" key="search" class="max-w-7xl mx-auto">
+                        
+                        <!-- Search Hero -->
+                        <div class="bg-white rounded-2xl p-6 shadow-card mb-8">
+                            <div class="flex flex-col md:flex-row gap-6">
+                                <!-- Text & Upload Input -->
+                                <div class="flex-1 space-y-4">
+                                    <div class="relative group">
+                                        <i class="fa-solid fa-magnifying-glass absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-brand-blue transition-colors"></i>
+                                        <input 
+                                            type="text" 
+                                            placeholder="Find materials by name, tag, or description..." 
+                                            class="w-full pl-12 pr-4 py-4 bg-slate-50 border border-transparent focus:bg-white focus:border-brand-blue/30 focus:ring-4 focus:ring-brand-blue/10 rounded-xl transition-all outline-none text-slate-700 placeholder-slate-400"
+                                        >
+                                        <button class="absolute right-3 top-1/2 -translate-y-1/2 p-2 text-slate-400 hover:text-brand-blue bg-white rounded-lg shadow-sm border border-slate-100 text-xs font-medium transition-all">
+                                            ⌘ K
+                                        </button>
+                                    </div>
+                                    
+                                    <!-- Filters Row -->
+                                    <div class="flex flex-wrap gap-3 items-center">
+                                        <div class="flex items-center space-x-2 bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-100">
+                                            <span class="text-xs font-medium text-slate-500">Type:</span>
+                                            <select class="bg-transparent text-xs font-semibold text-slate-700 outline-none cursor-pointer">
+                                                <option>All Assets</option>
+                                                <option>Images</option>
+                                                <option>3D Models</option>
+                                                <option>CAD</option>
+                                            </select>
+                                        </div>
+                                        
+                                        <div class="flex items-center space-x-2 bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-100">
+                                            <span class="text-xs font-medium text-slate-500">Date:</span>
+                                            <select class="bg-transparent text-xs font-semibold text-slate-700 outline-none cursor-pointer">
+                                                <option>Anytime</option>
+                                                <option>Last 7 days</option>
+                                                <option>Last Month</option>
+                                            </select>
+                                        </div>
+
+                                        <!-- Active Chips -->
+                                        <div v-if="currentLibrary === 'project'" class="flex items-center">
+                                            <span class="bg-indigo-50 text-brand-purple border border-indigo-100 px-3 py-1 rounded-full text-xs font-medium flex items-center">
+                                                <i class="fa-solid fa-filter mr-1.5 opacity-50"></i>
+                                                Project: {{ activeProjectName }}
+                                            </span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Weight Slider (Image vs Text) -->
+                                <div class="w-full md:w-64 bg-slate-50 rounded-xl p-4 border border-slate-100 flex flex-col justify-center">
+                                    <div class="flex justify-between text-xs font-bold text-slate-500 mb-2">
+                                        <span>Text Match</span>
+                                        <span>Visual Match</span>
+                                    </div>
+                                    <input type="range" class="w-full h-1.5 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-brand-blue" min="0" max="100">
+                                    <div class="mt-3 flex items-center justify-center text-xs text-brand-blue font-medium bg-blue-50 py-1 rounded border border-blue-100">
+                                        <i class="fa-solid fa-image mr-2"></i> Drag image to search
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Results Grid -->
+                        <div class="mb-4 flex justify-between items-end">
+                            <h2 class="text-lg font-bold text-slate-700">
+                                Results <span class="text-sm font-normal text-slate-400 ml-2">(124 items found)</span>
+                            </h2>
+                            <div class="flex gap-2">
+                                <button class="p-2 text-slate-400 hover:text-slate-700 transition-colors"><i class="fa-solid fa-list"></i></button>
+                                <button class="p-2 text-brand-blue bg-white shadow-sm rounded border border-slate-100"><i class="fa-solid fa-border-all"></i></button>
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6 pb-20">
+                            <!-- Result Card Mock -->
+                            <div v-for="n in 10" :key="n" class="group bg-white rounded-xl overflow-hidden shadow-card hover:shadow-float transition-all duration-300 cursor-pointer transform hover:-translate-y-1">
+                                <div class="aspect-[4/3] bg-slate-100 relative overflow-hidden">
+                                    <img :src="`https://picsum.photos/seed/${n+activeProjectId}/400/300`" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500">
+                                    <div class="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                        <button class="w-8 h-8 bg-white/90 backdrop-blur rounded-full text-slate-700 hover:text-red-500 shadow-sm flex items-center justify-center">
+                                            <i class="fa-regular fa-heart"></i>
+                                        </button>
+                                    </div>
+                                    <div class="absolute bottom-2 left-2">
+                                        <span class="bg-black/50 backdrop-blur text-white text-[10px] px-1.5 py-0.5 rounded">JPG</span>
+                                    </div>
+                                </div>
+                                <div class="p-3">
+                                    <h3 class="text-sm font-medium text-slate-700 truncate">Modern Facade {{n}}</h3>
+                                    <p class="text-[11px] text-slate-400 mt-1 flex items-center justify-between">
+                                        <span>2.4 MB</span>
+                                        <span v-if="currentLibrary==='permanent'" class="text-brand-blue bg-blue-50 px-1.5 rounded">Global</span>
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- ==================== TAB: BATCH UPLOAD ==================== -->
+                    <div v-else-if="currentTab === 'upload'" key="upload" class="max-w-5xl mx-auto h-full flex flex-col">
+                        
+                        <!-- Stepper -->
+                        <div class="mb-8">
+                            <div class="flex items-center justify-between relative">
+                                <div class="absolute left-0 top-1/2 -translate-y-1/2 w-full h-0.5 bg-slate-200 -z-10"></div>
+                                
+                                <div v-for="(step, index) in uploadSteps" :key="index" class="relative bg-[#F5F7FA] px-2">
+                                    <div 
+                                        class="flex items-center space-x-2 cursor-pointer"
+                                        @click="currentUploadStep > index + 1 ? currentUploadStep = index + 1 : null"
+                                    >
+                                        <div :class="[
+                                            'w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold transition-all duration-300 border-2',
+                                            currentUploadStep > index + 1 ? 'bg-brand-purple border-brand-purple text-white' : 
+                                            currentUploadStep === index + 1 ? 'bg-white border-brand-purple text-brand-purple' : 
+                                            'bg-white border-slate-300 text-slate-300'
+                                        ]">
+                                            <i v-if="currentUploadStep > index + 1" class="fa-solid fa-check"></i>
+                                            <span v-else>{{ index + 1 }}</span>
+                                        </div>
+                                        <span :class="[
+                                            'text-sm font-medium transition-colors',
+                                            currentUploadStep === index + 1 ? 'text-brand-purple' : 'text-slate-400'
+                                        ]">{{ step }}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Step 1: Input Path -->
+                        <div v-if="currentUploadStep === 1" class="flex-1 flex flex-col items-center justify-center bg-white rounded-2xl shadow-card p-12 animate-fade-in text-center">
+                            <div class="w-20 h-20 bg-indigo-50 rounded-full flex items-center justify-center text-brand-purple text-3xl mb-6">
+                                <i class="fa-solid fa-folder-tree"></i>
+                            </div>
+                            <h2 class="text-2xl font-bold text-slate-800 mb-2">Select Source Directory</h2>
+                            <p class="text-slate-400 mb-8 max-w-md">Enter the local path or network address (NAS) where your project materials are stored.</p>
+                            
+                            <div class="w-full max-w-2xl relative group">
+                                <input type="text" placeholder="E.g. \\NAS\Project_2024\Images or D:\Work\Photos" class="w-full bg-slate-50 border-2 border-slate-200 hover:border-brand-purple/50 focus:border-brand-purple rounded-xl px-5 py-4 outline-none text-slate-700 transition-all font-mono text-sm">
+                                <div class="absolute right-2 top-2 bottom-2 flex items-center">
+                                    <button class="bg-white hover:bg-slate-50 text-slate-500 border border-slate-200 px-4 rounded-lg h-full text-sm font-medium transition-colors shadow-sm">
+                                        Browse
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div class="mt-8 w-full max-w-2xl">
+                                <div class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3 text-left">Recent Paths</div>
+                                <div class="space-y-2">
+                                    <div v-for="path in ['\\192.168.1.20\Design\Project_A', 'D:\\Dropbox\\Material_Lib']" class="flex items-center justify-between p-3 bg-slate-50 hover:bg-indigo-50 rounded-lg cursor-pointer group transition-colors border border-transparent hover:border-indigo-100">
+                                        <div class="flex items-center text-slate-600 font-mono text-xs">
+                                            <i class="fa-regular fa-clock mr-3 text-slate-400"></i>
+                                            {{ path }}
+                                        </div>
+                                        <i class="fa-solid fa-arrow-right text-slate-300 group-hover:text-brand-purple transition-colors"></i>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="mt-auto pt-12 w-full max-w-2xl flex justify-end">
+                                <button @click="simulateScan" class="bg-brand-purple hover:bg-indigo-500 text-white px-8 py-3 rounded-xl font-medium shadow-lg shadow-indigo-200 transition-all transform hover:-translate-y-0.5 flex items-center">
+                                    Scan Directory <i class="fa-solid fa-arrow-right ml-2"></i>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Step 2: Preview (Mock) -->
+                        <div v-if="currentUploadStep === 2" class="bg-white rounded-2xl shadow-card flex-1 flex flex-col overflow-hidden animate-fade-in">
+                            <div class="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
+                                <div class="flex items-center space-x-4">
+                                    <div class="flex flex-col">
+                                        <span class="text-sm font-bold text-slate-700">42 Files Found</span>
+                                        <span class="text-xs text-slate-400">\\NAS\Project_2024\Images</span>
+                                    </div>
+                                    <div class="h-8 w-px bg-slate-200"></div>
+                                    <label class="flex items-center space-x-2 text-sm text-slate-600 cursor-pointer select-none">
+                                        <input type="checkbox" checked class="accent-brand-purple w-4 h-4 rounded">
+                                        <span>Select All</span>
+                                    </label>
+                                </div>
+                                <div class="flex space-x-2">
+                                    <button class="px-3 py-1.5 text-xs font-medium text-slate-500 bg-white border border-slate-200 rounded-lg hover:text-brand-purple">Images Only</button>
+                                    <button class="px-3 py-1.5 text-xs font-medium text-slate-500 bg-white border border-slate-200 rounded-lg hover:text-brand-purple">Videos</button>
+                                </div>
+                            </div>
+                            
+                            <div class="flex-1 overflow-y-auto p-4">
+                                <table class="w-full text-left text-sm text-slate-600">
+                                    <thead class="bg-slate-50 text-xs uppercase text-slate-400 font-semibold sticky top-0">
+                                        <tr>
+                                            <th class="px-4 py-3 rounded-l-lg w-10"></th>
+                                            <th class="px-4 py-3">File Name</th>
+                                            <th class="px-4 py-3">Type</th>
+                                            <th class="px-4 py-3">Size</th>
+                                            <th class="px-4 py-3 rounded-r-lg">Status</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody class="divide-y divide-slate-50">
+                                        <tr v-for="i in 8" class="hover:bg-slate-50 group">
+                                            <td class="px-4 py-3"><input type="checkbox" checked class="accent-brand-purple rounded"></td>
+                                            <td class="px-4 py-3 flex items-center">
+                                                <div class="w-8 h-8 bg-slate-200 rounded mr-3 overflow-hidden">
+                                                    <img :src="`https://picsum.photos/seed/${i+100}/50`" class="w-full h-full object-cover">
+                                                </div>
+                                                <span class="font-medium group-hover:text-brand-purple transition-colors">render_v2_option_{{i}}.jpg</span>
+                                            </td>
+                                            <td class="px-4 py-3"><span class="px-2 py-0.5 bg-slate-100 text-slate-500 rounded text-xs font-mono">JPG</span></td>
+                                            <td class="px-4 py-3 font-mono text-xs text-slate-400">4.2 MB</td>
+                                            <td class="px-4 py-3"><span class="text-orange-500 text-xs flex items-center"><i class="fa-regular fa-circle mr-1"></i> Pending</span></td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                            <div class="p-4 border-t border-slate-100 flex justify-between bg-slate-50/50">
+                                <button @click="currentUploadStep = 1" class="px-6 py-2 text-slate-500 hover:text-slate-700 font-medium">Back</button>
+                                <button @click="startIndexing" class="bg-brand-purple hover:bg-indigo-500 text-white px-8 py-2 rounded-lg font-medium shadow-lg shadow-indigo-200 transition-all">Start Indexing (42)</button>
+                            </div>
+                        </div>
+
+                        <!-- Step 3: Processing -->
+                        <div v-if="currentUploadStep === 3" class="flex-1 flex flex-col items-center justify-center bg-white rounded-2xl shadow-card animate-fade-in">
+                            <div class="relative w-40 h-40 mb-8">
+                                <svg class="w-full h-full transform -rotate-90">
+                                    <circle cx="80" cy="80" r="70" stroke="currentColor" stroke-width="8" fill="transparent" class="text-slate-100" />
+                                    <circle cx="80" cy="80" r="70" stroke="currentColor" stroke-width="8" fill="transparent" :stroke-dasharray="440" :stroke-dashoffset="440 - (440 * progress / 100)" class="text-brand-purple transition-all duration-300 ease-out" />
+                                </svg>
+                                <div class="absolute inset-0 flex items-center justify-center flex-col">
+                                    <span class="text-3xl font-bold text-brand-purple">{{ progress }}%</span>
+                                    <span class="text-xs text-slate-400 font-medium uppercase tracking-widest mt-1">Indexing</span>
+                                </div>
+                            </div>
+                            <p class="text-slate-600 font-medium mb-2 animate-pulse">{{ currentAction }}</p>
+                            <p class="text-sm text-slate-400 mb-8">Please wait while we generate thumbnails and extract metadata.</p>
+                            <button class="text-red-400 text-sm hover:text-red-600 font-medium px-4 py-2 rounded-lg hover:bg-red-50 transition-colors">Cancel Operation</button>
+                        </div>
+
+                        <!-- Step 4: Success -->
+                        <div v-if="currentUploadStep === 4" class="flex-1 flex flex-col items-center justify-center bg-white rounded-2xl shadow-card animate-fade-in p-12">
+                             <div class="w-20 h-20 bg-green-50 rounded-full flex items-center justify-center text-green-500 text-3xl mb-6 shadow-lg shadow-green-100">
+                                <i class="fa-solid fa-check"></i>
+                            </div>
+                            <h2 class="text-2xl font-bold text-slate-800 mb-2">Import Completed!</h2>
+                            <p class="text-slate-500 mb-8 text-center max-w-md">Successfully indexed <strong class="text-slate-800">38 files</strong>. <br>4 duplicates were skipped, 0 errors.</p>
+                            
+                            <div class="grid grid-cols-3 gap-4 w-full max-w-lg mb-10">
+                                <div class="bg-slate-50 p-4 rounded-xl text-center border border-slate-100">
+                                    <div class="text-2xl font-bold text-slate-700">38</div>
+                                    <div class="text-xs text-slate-400 uppercase font-bold">Success</div>
+                                </div>
+                                <div class="bg-slate-50 p-4 rounded-xl text-center border border-slate-100">
+                                    <div class="text-2xl font-bold text-orange-400">4</div>
+                                    <div class="text-xs text-slate-400 uppercase font-bold">Skipped</div>
+                                </div>
+                                <div class="bg-slate-50 p-4 rounded-xl text-center border border-slate-100">
+                                    <div class="text-2xl font-bold text-red-400">0</div>
+                                    <div class="text-xs text-slate-400 uppercase font-bold">Failed</div>
+                                </div>
+                            </div>
+
+                            <div class="flex gap-4">
+                                <button @click="currentUploadStep = 1" class="px-6 py-3 text-slate-500 hover:text-slate-700 font-medium">Upload More</button>
+                                <button @click="currentTab = 'search'" class="bg-brand-blue hover:bg-blue-600 text-white px-8 py-3 rounded-xl font-medium shadow-lg shadow-blue-200 transition-all">View in Library</button>
+                            </div>
+                        </div>
+
+                    </div>
+                    
+                    <!-- ==================== TAB: STATS ==================== -->
+                    <div v-else-if="currentTab === 'stats'" key="stats" class="flex items-center justify-center h-full text-slate-400">
+                        <div class="text-center">
+                            <i class="fa-solid fa-chart-pie text-4xl mb-4 opacity-20"></i>
+                            <p>Statistics Dashboard Placeholder</p>
+                        </div>
+                    </div>
+                </transition>
+            </div>
+
+        </main>
+
+        <!-- Toast Notification -->
+        <transition name="slide-up">
+            <div v-if="showToast" class="fixed bottom-8 right-8 z-50">
+                <div class="bg-slate-800 text-white px-4 py-3 rounded-lg shadow-float flex items-center gap-3 text-sm font-medium">
+                    <i class="fa-solid fa-circle-check text-green-400"></i>
+                    <span>{{ toastMessage }}</span>
+                </div>
+            </div>
+        </transition>
+
+    </div>
+
+    <script>
+        const { createApp, ref, computed, watch } = Vue;
+
+        createApp({
+            setup() {
+                // State
+                const currentLibrary = ref('project'); // permanent | project
+                const currentTab = ref('search'); // search | upload | stats
+                const activeProjectId = ref(1);
+                const showToast = ref(false);
+                const toastMessage = ref('');
+                
+                // Upload Wizard State
+                const currentUploadStep = ref(1);
+                const progress = ref(0);
+                const currentAction = ref('Initializing...');
+
+                // Mock Data
+                const projects = ref([
+                    { id: 1, name: 'Villa Serenity', client: 'Chen Private', count: 245, size: '4.2GB' },
+                    { id: 2, name: 'Tech Park Ph2', client: 'Huawei', count: 1204, size: '18.5GB' },
+                    { id: 3, name: 'Riverside Gallery', client: 'City Art', count: 89, size: '1.1GB' },
+                ]);
+
+                const activeProjectName = computed(() => {
+                    const p = projects.value.find(p => p.id === activeProjectId.value);
+                    return p ? p.name : 'Unknown Project';
+                });
+
+                const uploadSteps = ['Source', 'Selection', 'Indexing', 'Complete'];
+
+                // Methods
+                const notify = (msg) => {
+                    toastMessage.value = msg;
+                    showToast.value = true;
+                    setTimeout(() => showToast.value = false, 3000);
+                };
+
+                const simulateScan = () => {
+                    currentAction.value = "Scanning directory structure...";
+                    // Mock loading
+                    setTimeout(() => {
+                        currentUploadStep.value = 2;
+                    }, 800);
+                };
+
+                const startIndexing = () => {
+                    currentUploadStep.value = 3;
+                    progress.value = 0;
+                    
+                    const interval = setInterval(() => {
+                        progress.value += Math.floor(Math.random() * 5) + 1;
+                        
+                        if (progress.value < 30) currentAction.value = "Generating thumbnails...";
+                        else if (progress.value < 70) currentAction.value = "Extracting EXIF metadata...";
+                        else currentAction.value = "Syncing database...";
+
+                        if (progress.value >= 100) {
+                            progress.value = 100;
+                            clearInterval(interval);
+                            setTimeout(() => {
+                                currentUploadStep.value = 4;
+                                notify("Batch upload completed successfully");
+                            }, 500);
+                        }
+                    }, 100);
+                };
+
+                // Watchers for logic enforcement from requirements
+                watch(currentLibrary, (newVal) => {
+                    if (newVal === 'permanent') {
+                        if (currentTab.value === 'upload') currentTab.value = 'search';
+                        notify("Switched to Permanent Global Library");
+                    } else {
+                        notify(`Switched to Project: ${activeProjectName.value}`);
+                    }
+                });
+                
+                watch(activeProjectId, () => {
+                    if(currentLibrary.value === 'project') {
+                        notify(`Active Project Changed: ${activeProjectName.value}`);
+                    }
+                });
+
+                return {
+                    currentLibrary,
+                    currentTab,
+                    activeProjectId,
+                    projects,
+                    activeProjectName,
+                    uploadSteps,
+                    currentUploadStep,
+                    progress,
+                    currentAction,
+                    simulateScan,
+                    startIndexing,
+                    showToast,
+                    toastMessage
+                };
+            }
+        }).mount('#app');
+    </script>
+</body>
+</html>

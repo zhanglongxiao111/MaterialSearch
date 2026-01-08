@@ -1,0 +1,704 @@
+<!DOCTYPE html>
+
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SuperDesign | Asset Architect</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    
+    <script src="https://unpkg.com/lucide@latest"></script>
+    
+    <style>
+        /* --- 1. Design Tokens (Swiss Style Variables) --- */
+        :root {
+            /* 品牌色 */
+            --color-brand: #3A7AFE;      /* 读取/浏览 - International Blue */
+            --color-project: #6C63FF;    /* 写入/项目 - Structural Purple */
+            --color-alert: #FF3B30;      /* 警告 - Signal Red */
+            --color-success: #00C853;    /* 成功 */
+    
+            /* 中性色 (建筑灰度) */
+            --color-bg: #FFFFFF;
+            --color-canvas: #F5F7FA;     /* 浅灰底，模拟模型底座 */
+            --color-border: #E5E5E5;     /* 网格线 */
+            --color-ink-strong: #111111; /* 墨黑 */
+            --color-ink-sub: #888888;    /* 标注灰 */
+            --color-ink-weak: #C0C0C0;   /* 占位符 */
+    
+            /* 排版 */
+            --font-sans: 'Inter', system-ui, sans-serif;
+            --font-mono: 'JetBrains Mono', monospace;
+    
+            /* 布局度量 */
+            --sidebar-width: 280px;
+            --header-height: 64px;
+        }
+    
+        /* --- 2. Reset & Base --- */
+        * { box-sizing: border-box; margin: 0; padding: 0; outline: none; }
+    
+        body {
+            font-family: var(--font-sans);
+            background-color: var(--color-canvas);
+            color: var(--color-ink-strong);
+            height: 100vh;
+            display: flex;
+            overflow: hidden;
+            font-size: 13px;
+            line-height: 1.5;
+            -webkit-font-smoothing: antialiased;
+        }
+    
+        /* --- 3. Atomic Components --- */
+    
+        /* 按钮：直角，无阴影，纯粹的边框或填充 */
+        .btn {
+            height: 40px;
+            padding: 0 24px;
+            border: 1px solid transparent;
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            transition: all 0.2s;
+            border-radius: 0; /* 拒绝圆角 */
+        }
+    
+        .btn-primary { background: var(--color-brand); color: white; border-color: var(--color-brand); }
+        .btn-primary:hover { background: #2A60D0; }
+    
+        .btn-project { background: var(--color-project); color: white; border-color: var(--color-project); }
+        .btn-project:hover { background: #564ED0; }
+    
+        .btn-outline { background: transparent; border-color: var(--color-border); color: var(--color-ink-strong); }
+        .btn-outline:hover { border-color: var(--color-ink-strong); background: white; }
+    
+        .btn-text { background: transparent; color: var(--color-ink-sub); padding: 0 8px; }
+        .btn-text:hover { color: var(--color-ink-strong); }
+    
+        /* 输入控件：建筑图纸风格 */
+        input[type="text"], textarea {
+            width: 100%;
+            background: white;
+            border: 1px solid var(--color-border);
+            padding: 12px 16px;
+            font-family: var(--font-mono);
+            font-size: 12px;
+            color: var(--color-ink-strong);
+            border-radius: 0;
+            transition: border-color 0.2s;
+        }
+        input[type="text"]:focus, textarea:focus {
+            border-color: var(--color-brand); /* 默认聚焦蓝 */
+        }
+        /* 项目模式下聚焦紫 */
+        body[data-mode="project"] input[type="text"]:focus, 
+        body[data-mode="project"] textarea:focus {
+            border-color: var(--color-project);
+        }
+    
+        /* 标签 Badge */
+        .badge {
+            font-family: var(--font-mono);
+            font-size: 10px;
+            padding: 2px 6px;
+            border: 1px solid;
+            text-transform: uppercase;
+            font-weight: 500;
+        }
+        .badge-gray { border-color: var(--color-border); color: var(--color-ink-sub); background: var(--color-canvas); }
+        .badge-purple { border-color: #E0D9FF; color: var(--color-project); background: #F3F0FF; }
+        .badge-green { border-color: #B9F6CA; color: #007E33; background: #E8F5E9; }
+    
+        /* --- 4. Layout Regions --- */
+    
+        /* 侧边栏 */
+        aside {
+            width: var(--sidebar-width);
+            background: white;
+            border-right: 1px solid var(--color-border);
+            display: flex;
+            flex-direction: column;
+            z-index: 10;
+        }
+    
+        .brand {
+            height: var(--header-height);
+            display: flex;
+            align-items: center;
+            padding: 0 24px;
+            border-bottom: 1px solid var(--color-border);
+            font-weight: 800;
+            font-size: 16px;
+            letter-spacing: -0.02em;
+        }
+        .brand span { color: var(--color-brand); }
+    
+        /* 模式切换器 (核心交互) */
+        .mode-switcher {
+            padding: 24px;
+            border-bottom: 1px solid var(--color-border);
+        }
+        .switch-group {
+            display: flex;
+            border: 1px solid var(--color-border);
+        }
+        .switch-btn {
+            flex: 1;
+            padding: 10px 0;
+            text-align: center;
+            font-size: 10px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            cursor: pointer;
+            transition: all 0.2s;
+            color: var(--color-ink-sub);
+        }
+        .switch-btn:hover { background: var(--color-canvas); }
+    
+        /* 状态类 */
+        .switch-btn.active.perm { background: var(--color-ink-strong); color: white; }
+        .switch-btn.active.proj { background: var(--color-project); color: white; }
+    
+        .scope-hint {
+            margin-top: 12px;
+            font-family: var(--font-mono);
+            font-size: 10px;
+            color: var(--color-ink-sub);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+    
+        /* 项目列表 */
+        .project-list {
+            flex: 1;
+            overflow-y: auto;
+        }
+        .list-header {
+            padding: 16px 24px 8px;
+            font-size: 10px;
+            font-weight: 700;
+            text-transform: uppercase;
+            color: var(--color-ink-sub);
+        }
+        .project-item {
+            padding: 12px 24px;
+            border-bottom: 1px solid var(--color-border);
+            cursor: pointer;
+            transition: background 0.2s;
+            border-left: 3px solid transparent;
+        }
+        .project-item:hover { background: var(--color-canvas); }
+        .project-item.active {
+            background: #F9F8FF;
+            border-left-color: var(--color-project);
+        }
+        .p-name { display: block; font-weight: 600; margin-bottom: 2px; }
+        .p-meta { font-family: var(--font-mono); font-size: 10px; color: var(--color-ink-sub); }
+    
+        /* 扫描状态 (底部固定) */
+        .scanner-card {
+            padding: 20px 24px;
+            border-top: 1px solid var(--color-border);
+            background: #FAFAFA;
+        }
+        .progress-track {
+            height: 2px;
+            background: var(--color-border);
+            margin: 10px 0;
+            position: relative;
+        }
+        .progress-fill {
+            height: 100%;
+            background: var(--color-project);
+            width: 0%;
+            transition: width 0.3s linear;
+        }
+    
+        /* 主工作台 */
+        main {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            background: white;
+        }
+    
+        header {
+            height: var(--header-height);
+            border-bottom: 1px solid var(--color-border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 40px;
+            flex-shrink: 0;
+        }
+    
+        .header-context { font-size: 14px; font-weight: 500; display: flex; align-items: center; gap: 8px; }
+    
+        .tabs { display: flex; height: 100%; gap: 40px; }
+        .tab {
+            height: 100%;
+            display: flex;
+            align-items: center;
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--color-ink-sub);
+            border-bottom: 2px solid transparent;
+            cursor: pointer;
+            transition: color 0.2s;
+        }
+        .tab:hover { color: var(--color-ink-strong); }
+        .tab.active { color: var(--color-ink-strong); border-bottom-color: var(--color-ink-strong); }
+    
+        /* 批量上传Tab激活态 */
+        body[data-mode="project"] .tab.tab-upload.active {
+            color: var(--color-project);
+            border-bottom-color: var(--color-project);
+        }
+    
+        .workspace {
+            flex: 1;
+            overflow-y: auto;
+            position: relative;
+            background: var(--color-canvas); /* 灰色底板 */
+            padding: 40px;
+        }
+    
+        /* 视图容器 (White Paper) */
+        .sheet {
+            background: white;
+            border: 1px solid var(--color-border);
+            min-height: 100%;
+            padding: 40px;
+        }
+    
+        /* --- 模块：搜索 --- */
+        .search-toolbar {
+            display: flex;
+            gap: 24px;
+            margin-bottom: 40px;
+            align-items: flex-end;
+        }
+        .input-group label {
+            display: block;
+            font-size: 10px;
+            font-weight: 700;
+            text-transform: uppercase;
+            margin-bottom: 8px;
+            color: var(--color-ink-sub);
+        }
+    
+        .grid-gallery {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+            gap: 24px;
+        }
+        .asset-card {
+            border: 1px solid var(--color-border);
+            background: white;
+            transition: all 0.2s;
+            cursor: pointer;
+        }
+        .asset-card:hover { border-color: var(--color-brand); transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
+        .asset-thumb {
+            aspect-ratio: 4/3;
+            background: #F0F0F0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #DDD;
+            overflow: hidden;
+        }
+        .asset-info { padding: 12px; }
+        .asset-title { font-weight: 600; font-size: 12px; margin-bottom: 4px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis;}
+        .asset-meta { font-family: var(--font-mono); font-size: 10px; color: var(--color-ink-sub); display: flex; justify-content: space-between; }
+    
+        /* --- 模块：批量上传 (Pipeline) --- */
+        .pipeline-container {
+            max-width: 960px;
+            margin: 0 auto;
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+        }
+    
+        .stepper {
+            display: flex;
+            border-bottom: 1px solid var(--color-border);
+            margin-bottom: 40px;
+        }
+        .step {
+            flex: 1;
+            padding: 16px;
+            text-align: center;
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            color: var(--color-ink-weak);
+            border-bottom: 2px solid transparent;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+        .step.active { color: var(--color-project); border-bottom-color: var(--color-project); }
+        .step.done { color: var(--color-ink-strong); }
+    
+        .step-num { 
+            width: 20px; height: 20px; 
+            border: 1px solid currentColor; 
+            display: flex; align-items: center; justify-content: center; 
+            font-family: var(--font-mono); font-size: 10px; 
+        }
+    
+        .upload-view { display: none; flex-direction: column; height: 100%; }
+        .upload-view.active { display: flex; }
+    
+        /* 预览表格 */
+        .preview-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+        .preview-table th { text-align: left; padding: 12px; border-bottom: 2px solid var(--color-ink-strong); color: var(--color-ink-sub); font-weight: 600; text-transform: uppercase; }
+        .preview-table td { padding: 12px; border-bottom: 1px solid var(--color-border); font-family: var(--font-mono); }
+    
+        /* 索引动画 */
+        .indexing-circle {
+            width: 160px; height: 160px;
+            border: 1px solid var(--color-border);
+            border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            flex-direction: column;
+            position: relative;
+            margin: 40px auto;
+        }
+        .spinner {
+            position: absolute; top: -1px; left: -1px; right: -1px; bottom: -1px;
+            border: 2px solid var(--color-project);
+            border-radius: 50%;
+            border-left-color: transparent;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin { 100% { transform: rotate(360deg); } }
+    
+        /* 通用辅助类 */
+        .hidden { display: none !important; }
+        .flex-between { display: flex; justify-content: space-between; align-items: center; }
+        .mono { font-family: var(--font-mono); }
+        .text-sub { color: var(--color-ink-sub); }
+        .text-proj { color: var(--color-project); }
+    
+    </style>
+
+</head>
+<body data-mode="project">
+
+    <aside>
+        <div class="brand">
+            SuperDesign<span style="font-size: 24px; line-height: 0; margin-left: 2px;">.</span>
+        </div>
+    
+        <div class="mode-switcher">
+            <span class="text-sub" style="font-size: 10px; font-weight: 700; text-transform: uppercase; margin-bottom: 8px; display: block;">Library Context</span>
+            <div class="switch-group">
+                <div class="switch-btn" id="mode-perm" onclick="app.setMode('permanent')">Permanent</div>
+                <div class="switch-btn active proj" id="mode-proj" onclick="app.setMode('project')">Project</div>
+            </div>
+            <div class="scope-hint" id="scope-hint">
+                <i data-lucide="crosshair" size="12"></i>
+                <span id="scope-text">Filtered to: 2401-MOMA</span>
+            </div>
+        </div>
+    
+        <div class="list-header">Active Projects</div>
+        <div class="project-list" id="project-list">
+            </div>
+    
+        <div class="scanner-card">
+            <div class="flex-between" style="margin-bottom: 8px;">
+                <div style="display: flex; align-items: center; gap: 6px;">
+                    <div style="width: 6px; height: 6px; background: var(--color-project); border-radius: 50%;" class="pulse"></div>
+                    <span class="text-sub" style="font-size: 10px; font-weight: 700; text-transform: uppercase;">Scanning NAS</span>
+                </div>
+                <span class="mono" style="font-size: 10px;">42%</span>
+            </div>
+            <div class="progress-track">
+                <div class="progress-fill" style="width: 42%;"></div>
+            </div>
+            <div class="mono text-sub" style="font-size: 10px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                > .../MOMA/Renders/Shot_04.exr
+            </div>
+        </div>
+    </aside>
+    
+    <main>
+        <header>
+            <div class="header-context">
+                <i data-lucide="folder-open" size="16" class="text-sub"></i>
+                <span class="text-sub">Library / </span>
+                <span id="header-title" style="font-weight: 700;">Museum of Modern Art</span>
+            </div>
+    
+            <nav class="tabs">
+                <div class="tab active" onclick="app.switchTab('search')" id="tab-search">Search</div>
+                <div class="tab tab-upload" onclick="app.switchTab('upload')" id="tab-upload">Batch Upload</div>
+                <div class="tab" onclick="app.switchTab('stats')" id="tab-stats">Statistics</div>
+            </nav>
+    
+            <div style="display: flex; gap: 16px; align-items: center;">
+                <span class="mono text-sub" style="font-size: 11px;">Server: Online</span>
+                <button class="btn btn-outline" style="height: 32px; padding: 0 12px;">AR</button>
+            </div>
+        </header>
+    
+        <div class="workspace">
+    
+            <div class="sheet" id="view-search">
+                <div class="search-toolbar">
+                    <div class="input-group" style="flex: 1;">
+                        <label>Keywords / Tags / File ID</label>
+                        <input type="text" placeholder="e.g. Concrete, Facade, 2024..." style="font-size: 14px; height: 48px;">
+                    </div>
+                    <div class="input-group" style="width: 240px;">
+                        <label>Weight (FG vs BG)</label>
+                        <div style="height: 48px; border: 1px solid var(--color-border); display: flex; align-items: center; padding: 0 16px;">
+                            <input type="range" style="width: 100%; height: 2px;">
+                        </div>
+                    </div>
+                    <button class="btn btn-primary" style="height: 48px;">Search</button>
+                </div>
+    
+                <div class="grid-gallery" id="gallery-grid">
+                    </div>
+            </div>
+    
+            <div class="sheet hidden" id="view-upload">
+                <div class="pipeline-container">
+    
+                    <div class="stepper">
+                        <div class="step active" id="step-nav-1"><span class="step-num">1</span> Input Paths</div>
+                        <div class="step" id="step-nav-2"><span class="step-num">2</span> Preview</div>
+                        <div class="step" id="step-nav-3"><span class="step-num">3</span> Indexing</div>
+                        <div class="step" id="step-nav-4"><span class="step-num">4</span> Result</div>
+                    </div>
+    
+                    <div class="upload-view active" id="step-1">
+                        <h2 style="font-size: 18px; margin-bottom: 24px;">Source Definition</h2>
+                        <div style="display: flex; gap: 40px; height: 100%;">
+                            <div style="flex: 2; display: flex; flex-direction: column;">
+                                <label class="text-sub" style="font-size: 10px; font-weight: 700; margin-bottom: 8px;">UNC PATHS (ONE PER LINE)</label>
+                                <textarea style="flex: 1; resize: none; line-height: 1.6;" placeholder="\\NAS\Projects\2024\MOMA\Renderings\Final&#10;D:\Local\Site_Photos">\\NAS\Projects\2024\MOMA\Renderings\Final</textarea>
+                                <div class="mono text-sub" style="font-size: 10px; margin-top: 8px;">* Recursive scanning enabled</div>
+                            </div>
+                            <div style="flex: 1; border-left: 1px solid var(--color-border); padding-left: 24px;">
+                                <label class="text-sub" style="font-size: 10px; font-weight: 700; margin-bottom: 16px; display: block;">RECENT PATHS</label>
+                                <div style="display: flex; flex-direction: column; gap: 8px;">
+                                    <div class="mono text-sub" style="font-size: 11px; cursor: pointer; padding: 8px; background: var(--color-canvas);">\MOMA\Concept\v2</div>
+                                    <div class="mono text-sub" style="font-size: 11px; cursor: pointer; padding: 8px; background: var(--color-canvas);">\Library\Textures\Wood</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div style="margin-top: 32px; text-align: right;">
+                            <button class="btn btn-project" onclick="app.setStep(2)">Scan & Preview <i data-lucide="arrow-right" size="14"></i></button>
+                        </div>
+                    </div>
+    
+                    <div class="upload-view" id="step-2">
+                        <div class="flex-between" style="margin-bottom: 24px;">
+                            <div style="display: flex; align-items: center; gap: 12px;">
+                                <span class="badge badge-purple" style="font-size: 12px;">FOUND 4 FILES</span>
+                                <span class="mono text-sub">124 MB Total</span>
+                            </div>
+                            <div style="display: flex; gap: 8px;">
+                                <button class="btn btn-outline" onclick="app.setStep(1)">Back</button>
+                                <button class="btn btn-project" onclick="app.startProcess()">Start Indexing</button>
+                            </div>
+                        </div>
+                        <div style="flex: 1; border: 1px solid var(--color-border); overflow: auto;">
+                            <table class="preview-table">
+                                <thead><tr><th>File Name</th><th>Path</th><th>Size</th><th>Status</th></tr></thead>
+                                <tbody>
+                                    <tr><td>render_v1.jpg</td><td>.../Renderings/Final</td><td>12.4 MB</td><td><span class="text-proj mono">NEW</span></td></tr>
+                                    <tr><td>render_v2.jpg</td><td>.../Renderings/Final</td><td>14.1 MB</td><td><span class="text-proj mono">NEW</span></td></tr>
+                                    <tr><td>site_plan.dwg</td><td>.../Renderings/Final</td><td>4.2 MB</td><td><span class="text-proj mono">NEW</span></td></tr>
+                                    <tr><td class="text-sub">logo.svg</td><td class="text-sub">.../Renderings/Final</td><td class="text-sub">0.2 MB</td><td><span class="text-sub mono">EXIST</span></td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+    
+                    <div class="upload-view center" id="step-3" style="justify-content: center; text-align: center;">
+                        <div class="indexing-circle">
+                            <div class="spinner"></div>
+                            <span class="mono" style="font-size: 24px; font-weight: 700;">Processing</span>
+                        </div>
+                        <div class="mono text-sub" id="console-log" style="height: 60px;">> Connecting to NAS...</div>
+                    </div>
+    
+                    <div class="upload-view center" id="step-4" style="justify-content: center; text-align: center;">
+                        <i data-lucide="check-circle" size="64" color="#00C853" style="margin-bottom: 24px;"></i>
+                        <h2 style="font-size: 24px; margin-bottom: 16px;">Import Complete</h2>
+                        <p class="text-sub" style="margin-bottom: 32px;">Successfully indexed 3 new assets to <span class="text-proj">MOMA Museum</span>.</p>
+                        <div style="display: flex; gap: 16px;">
+                            <button class="btn btn-outline" onclick="app.setStep(1)">Upload More</button>
+                            <button class="btn btn-primary" onclick="app.finishUpload()">View in Library</button>
+                        </div>
+                    </div>
+    
+                </div>
+            </div>
+    
+            <div class="sheet hidden" id="view-stats">
+                <div style="height: 100%; display: flex; align-items: center; justify-content: center; flex-direction: column; color: var(--color-ink-sub);">
+                    <i data-lucide="bar-chart-2" size="48" style="margin-bottom: 16px; opacity: 0.5;"></i>
+                    <span class="mono">STATISTICS MODULE NOT LOADED</span>
+                </div>
+            </div>
+    
+        </div>
+    </main>
+    
+    <script>
+        // Init Icons
+        lucide.createIcons();
+    
+        const projects = [
+            { id: '2401', name: 'Museum of Modern Art', count: 1240 },
+            { id: '2311', name: 'Riverside Villa 04', count: 850 },
+            { id: '2205', name: 'Skyline Tower HZ', count: 3200 },
+        ];
+    
+        const app = {
+            state: { mode: 'project', projId: 0 },
+    
+            init() {
+                this.renderProjects();
+                this.renderGallery();
+            },
+    
+            // 模式切换
+            setMode(mode) {
+                this.state.mode = mode;
+                document.body.setAttribute('data-mode', mode);
+    
+                // 按钮状态
+                document.querySelectorAll('.switch-btn').forEach(b => b.classList.remove('active', 'perm', 'proj'));
+                if(mode === 'permanent') {
+                    document.getElementById('mode-perm').classList.add('active', 'perm');
+                    document.getElementById('scope-text').innerText = "Global Library Scope";
+                    document.getElementById('header-title').innerText = "Permanent Library";
+                    // 禁用上传
+                    this.switchTab('search');
+                    document.getElementById('project-list').style.opacity = '0.4';
+                    document.getElementById('project-list').style.pointerEvents = 'none';
+                } else {
+                    document.getElementById('mode-proj').classList.add('active', 'proj');
+                    const p = projects[this.state.projId];
+                    document.getElementById('scope-text').innerText = `Filtered to: ${p.id}-${p.name.split(' ')[0]}`;
+                    document.getElementById('header-title').innerText = p.name;
+                    document.getElementById('project-list').style.opacity = '1';
+                    document.getElementById('project-list').style.pointerEvents = 'auto';
+                }
+            },
+    
+            selectProject(idx) {
+                this.state.projId = idx;
+                this.renderProjects(); // 刷新高亮
+                if(this.state.mode === 'project') {
+                    const p = projects[idx];
+                    document.getElementById('scope-text').innerText = `Filtered to: ${p.id}-${p.name.split(' ')[0]}`;
+                    document.getElementById('header-title').innerText = p.name;
+                    this.renderGallery(); // 模拟数据刷新
+                }
+            },
+    
+            switchTab(tab) {
+                if(tab === 'upload' && this.state.mode === 'permanent') return; // 禁止
+    
+                // 样式
+                document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+                document.getElementById(`tab-${tab}`).classList.add('active');
+    
+                // 视图
+                document.querySelectorAll('.sheet').forEach(s => s.classList.add('hidden'));
+                document.getElementById(`view-${tab}`).classList.remove('hidden');
+            },
+    
+            // 上传向导逻辑
+            setStep(step) {
+                document.querySelectorAll('.upload-view').forEach(v => v.classList.remove('active'));
+                document.getElementById(`step-${step}`).classList.add('active');
+    
+                // 更新 Nav
+                for(let i=1; i<=4; i++) {
+                    const el = document.getElementById(`step-nav-${i}`);
+                    el.classList.remove('active', 'done');
+                    if(i === step) el.classList.add('active');
+                    if(i < step) el.classList.add('done');
+                }
+            },
+    
+            startProcess() {
+                this.setStep(3);
+                const logs = document.getElementById('console-log');
+                setTimeout(() => logs.innerText = "> Reading metadata...", 800);
+                setTimeout(() => logs.innerText = "> Generating thumbnails...", 1600);
+                setTimeout(() => this.setStep(4), 2500);
+            },
+    
+            finishUpload() {
+                this.setStep(1);
+                this.switchTab('search');
+                this.renderGallery();
+            },
+    
+            // 渲染列表
+            renderProjects() {
+                const list = document.getElementById('project-list');
+                list.innerHTML = projects.map((p, i) => `
+                    <div class="project-item ${i === this.state.projId ? 'active' : ''}" onclick="app.selectProject(${i})">
+                        <span class="p-name ${i === this.state.projId ? 'text-proj' : ''}">${p.name}</span>
+                        <div class="p-meta">
+                            <span>${p.id}</span>
+                            <span>${p.count} items</span>
+                        </div>
+                    </div>
+                `).join('');
+            },
+    
+            renderGallery() {
+                const grid = document.getElementById('gallery-grid');
+                grid.innerHTML = Array.from({length: 8}).map((_, i) => `
+                    <div class="asset-card">
+                        <div class="asset-thumb">
+                            <i data-lucide="image" size="24"></i>
+                        </div>
+                        <div class="asset-info">
+                            <div class="asset-title">Render_View_Final_${i+1}.jpg</div>
+                            <div class="asset-meta">
+                                <span>JPG</span>
+                                <span>2.${i} MB</span>
+                            </div>
+                        </div>
+                    </div>
+                `).join('');
+                lucide.createIcons();
+            }
+        };
+    
+        // 启动
+        app.init();
+    </script>
+
+</body>
+</html>

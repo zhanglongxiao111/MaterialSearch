@@ -1,0 +1,1494 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SuperDesign - 建筑师资源库</title>
+    
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <!-- Inter for UI, JetBrains Mono for Data -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@200;300;400;500;600;700&family=JetBrains+Mono:wght@400;500&family=Noto+Sans+SC:wght@300;400;500;700&display=swap" rel="stylesheet">
+    
+    <!-- Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Viewer.js CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/viewerjs@1.11.6/dist/viewer.min.css" />
+
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'Noto Sans SC', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace'],
+                    },
+                    colors: {
+                        arch: {
+                            black: '#111111',
+                            dark: '#1A1A1A',
+                            gray: '#888888',
+                            light: '#F4F4F4',
+                            white: '#FFFFFF',
+                            accent: '#FF3300', /* International Orange */
+                            bg: '#F4F4F4',
+                            border: '#E5E5E5'
+                        }
+                    },
+                    spacing: {
+                        '128': '32rem',
+                    }
+                }
+            }
+        }
+    </script>
+
+    <!-- Vue 3 & Axios -->
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+    <!-- Viewer.js -->
+    <script src="https://unpkg.com/viewerjs@1.11.6/dist/viewer.min.js"></script>
+
+    <style>
+        /* Global Reset */
+        body {
+            background-color: #F4F4F4;
+            color: #111111;
+            font-family: 'Inter', 'Noto Sans SC', sans-serif;
+            -webkit-font-smoothing: antialiased;
+        }
+        
+        /* Sharp Edges Everywhere */
+        * {
+            border-radius: 0 !important;
+        }
+
+        /* Architect's Grid Background */
+        .bg-grid {
+            background-size: 40px 40px;
+            background-image:
+                linear-gradient(to right, rgba(0, 0, 0, 0.05) 1px, transparent 1px),
+                linear-gradient(to bottom, rgba(0, 0, 0, 0.05) 1px, transparent 1px);
+        }
+
+        /* Custom Scrollbar - Minimalist */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #CCCCCC;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #FF3300;
+        }
+
+        /* Typography Utilities */
+        .typo-label {
+            font-family: 'Inter', 'Noto Sans SC', sans-serif;
+            font-size: 0.65rem;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            font-weight: 600;
+            color: #888;
+        }
+        
+        .typo-mono {
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        /* Brutalist Inputs */
+        .input-line {
+            background: transparent;
+            border: none;
+            border-bottom: 1px solid #ccc;
+            padding: 10px 0;
+            transition: all 0.3s ease;
+        }
+        .input-line:focus {
+            outline: none;
+            border-bottom: 2px solid #111;
+        }
+
+        /* Animations */
+        .fade-enter-active, .fade-leave-active {
+            transition: opacity 0.2s ease;
+        }
+        .fade-enter-from, .fade-leave-to {
+            opacity: 0;
+        }
+
+        /* Range Slider */
+        input[type=range] {
+            -webkit-appearance: none;
+            background: transparent;
+        }
+        input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            height: 12px;
+            width: 12px;
+            background: #111;
+            cursor: pointer;
+            margin-top: -5px;
+        }
+        input[type=range]::-webkit-slider-runnable-track {
+            width: 100%;
+            height: 2px;
+            background: #ddd;
+        }
+
+        /* Viewer.js Override */
+        .viewer-container {
+            background-color: rgba(255, 255, 255, 0.95) !important;
+            backdrop-filter: blur(10px);
+        }
+        .viewer-toolbar > ul > li {
+            background-color: #111 !important;
+            border-radius: 0 !important;
+            margin: 0 1px;
+        }
+        .viewer-toolbar > ul > li:hover {
+            background-color: #FF3300 !important;
+        }
+
+        /* Loading Skeleton */
+        .skeleton {
+            background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+            background-size: 200% 100%;
+            animation: skeleton-loading 1.5s infinite;
+        }
+        @keyframes skeleton-loading {
+            0% { background-position: 200% 0; }
+            100% { background-position: -200% 0; }
+        }
+
+        /* Checkbox Custom */
+        .arch-checkbox {
+            appearance: none;
+            width: 16px;
+            height: 16px;
+            border: 1px solid #ccc;
+            background: white;
+            cursor: pointer;
+            position: relative;
+        }
+        .arch-checkbox:checked {
+            background: #FF3300;
+            border-color: #FF3300;
+        }
+        .arch-checkbox:checked::after {
+            content: '';
+            position: absolute;
+            top: 2px;
+            left: 5px;
+            width: 4px;
+            height: 8px;
+            border: solid white;
+            border-width: 0 2px 2px 0;
+            transform: rotate(45deg);
+        }
+
+        /* Masonry Layout Fix */
+        .column-layout {
+            column-count: 4;
+            column-gap: 1.5rem;
+        }
+        @media (max-width: 1600px) { .column-layout { column-count: 3; } }
+        @media (max-width: 1200px) { .column-layout { column-count: 2; } }
+        @media (max-width: 768px) { .column-layout { column-count: 1; } }
+        
+        [v-cloak] { display: none; }
+    </style>
+</head>
+<body class="h-screen w-full overflow-hidden flex bg-arch-light">
+
+    <div id="app" class="flex w-full h-full" v-cloak>
+
+        <!-- ==================== SIDEBAR: The Structure ==================== -->
+        <aside class="w-[320px] bg-[#111111] text-white flex flex-col flex-shrink-0 h-full relative z-20 border-r border-gray-800">
+            
+            <!-- Brand -->
+            <div class="h-20 flex items-center px-8 border-b border-gray-800">
+                <div class="flex flex-col">
+                    <span class="font-bold text-lg tracking-tight">Daga&SA</span>
+                    <span class="typo-label text-gray-500 mt-1">素材管理</span>
+                </div>
+            </div>
+
+            <!-- Mode Switcher (Physical Tab Feel) -->
+            <div class="flex border-b border-gray-800">
+                <button 
+                    @click="switchSidebar('permanent')"
+                    class="flex-1 py-5 text-xs font-bold uppercase tracking-widest transition-colors relative group"
+                    :class="sidebarLibrary === 'permanent' ? 'text-white bg-[#1A1A1A]' : 'text-gray-600 hover:text-white hover:bg-[#161616]'">
+                    永久库
+                    <div v-if="sidebarLibrary === 'permanent'" class="absolute bottom-0 left-0 w-full h-[2px] bg-arch-accent"></div>
+                </button>
+                <button 
+                    @click="switchSidebar('project')"
+                    class="flex-1 py-5 text-xs font-bold uppercase tracking-widest transition-colors relative group"
+                    :class="sidebarLibrary === 'project' ? 'text-white bg-[#1A1A1A]' : 'text-gray-600 hover:text-white hover:bg-[#161616]'">
+                    项目库
+                    <div v-if="sidebarLibrary === 'project'" class="absolute bottom-0 left-0 w-full h-[2px] bg-arch-accent"></div>
+                </button>
+            </div>
+
+            <!-- Navigation List -->
+            <div class="flex-1 overflow-y-auto py-8 px-0">
+                
+                <!-- Project List -->
+                <transition name="fade" mode="out-in">
+                    <div v-if="sidebarLibrary === 'project'" class="space-y-8">
+                        <div class="px-8">
+                            <div class="typo-label mb-6 flex justify-between items-center">
+                                <span>活跃项目</span>
+                                <span class="typo-mono text-[10px]">0{{ projects.length }}</span>
+                            </div>
+                            
+                            <div class="space-y-1 border-l border-gray-800 ml-1">
+                                <div 
+                                    v-for="project in projects" 
+                                    :key="project.id"
+                                    @click="selectProject(project)"
+                                    class="pl-6 py-3 cursor-pointer group transition-all relative"
+                                >
+                                    <!-- Active Indicator Line -->
+                                    <div v-if="currentLibrary === project.id" class="absolute left-[-1px] top-0 bottom-0 w-[2px] bg-white"></div>
+                                    
+                                    <div class="flex flex-col w-full">
+                                        <div class="flex justify-between items-center">
+                                            <span class="text-sm font-medium tracking-wide transition-colors truncate max-w-[160px]"
+                                                :class="currentLibrary === project.id ? 'text-white' : 'text-gray-500 group-hover:text-gray-300'">
+                                                {{ project.name }}
+                                            </span>
+                                        </div>
+                                        <div class="flex justify-between items-center mt-1">
+                                            <span class="typo-mono text-[10px] text-gray-600 group-hover:text-arch-accent transition-colors truncate max-w-[120px]">
+                                                {{ project.client_name || '无客户信息' }}
+                                            </span>
+                                            <span class="typo-mono text-[9px] text-gray-700 group-hover:text-gray-500">
+                                                IMG:{{ project.image_count || 0 }} VID:{{ project.video_count || 0 }}
+                                            </span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="px-8">
+                            <button @click="openProjectDialog" class="w-full border border-gray-700 hover:border-white text-gray-400 hover:text-white py-3 text-xs uppercase tracking-widest transition-all flex items-center justify-center gap-2">
+                                <i class="fa-solid fa-plus text-[10px]"></i> 新建项目
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Permanent Categories -->
+                    <div v-else class="px-8 space-y-1">
+                        <div class="typo-label mb-6">资源分类</div>
+                        <div v-for="group in permanentGroups" :key="group.id"
+                             @click="selectPermanentGroup(group)"
+                             class="py-3 border-b border-gray-800 hover:pl-2 transition-all cursor-pointer flex justify-between items-center group"
+                             :class="activePermanentGroup === group.id ? 'text-white border-white' : 'text-gray-400'">
+                            <span class="text-sm">{{ group.name }}</span>
+                            <span class="typo-mono text-[10px] group-hover:text-white text-gray-600">{{ group.countDisplay }}</span>
+                        </div>
+
+                        <div class="mt-12 typo-label mb-4">维护工具</div>
+                        <div class="py-2 text-gray-500 hover:text-white cursor-pointer flex items-center gap-2" @click="startDedupJob">
+                            <i class="fa-solid fa-broom text-xs"></i>
+                            <span class="text-xs">去重扫描</span>
+                            <span v-if="dedup.running" class="w-1.5 h-1.5 bg-arch-accent animate-pulse rounded-full ml-auto"></span>
+                        </div>
+                         <div class="py-2 text-gray-500 hover:text-white cursor-pointer flex items-center gap-2" @click="openDedupReport(dedup.latestReport)">
+                            <i class="fa-solid fa-file-lines text-xs"></i>
+                            <span class="text-xs">去重报告</span>
+                        </div>
+                    </div>
+                </transition>
+            </div>
+
+            <!-- Bottom Status (Technical) -->
+            <div class="p-8 border-t border-gray-800 bg-[#0D0D0D]">
+                <div class="flex items-center justify-between mb-4">
+                    <span class="typo-label">系统状态</span>
+                    <div class="flex items-center gap-2">
+                        <div class="w-1.5 h-1.5 bg-arch-accent animate-pulse"></div>
+                        <span class="typo-mono text-[10px] text-gray-400">在线</span>
+                    </div>
+                </div>
+                <div class="typo-mono text-[10px] text-gray-600 space-y-1">
+                    <div class="flex justify-between">
+                        <span>INDEX</span> 
+                        <span>{{ statusSummary.total_images }} IMG</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span>QUEUE</span> 
+                        <span>{{ statusSummary.scanning_files }} FILES</span>
+                    </div>
+                </div>
+            </div>
+        </aside>
+
+
+        <!-- ==================== MAIN CANVAS ==================== -->
+        <main class="flex-1 flex flex-col h-full relative bg-grid">
+            
+            <!-- Header -->
+            <header class="h-20 flex items-center justify-between px-12 bg-white/90 backdrop-blur border-b border-gray-200 sticky top-0 z-30">
+                <!-- Breadcrumbs -->
+                <div class="flex items-center gap-4">
+                    <span class="typo-label text-black">{{ sidebarLibrary === 'permanent' ? 'GLOBAL LIBRARY' : 'PROJECT SPACE' }}</span>
+                    <i class="fa-solid fa-slash text-gray-300 text-xs transform -rotate-12"></i>
+                    <h1 class="text-xl font-light tracking-tight text-black uppercase truncate max-w-md" :title="scopeHeadline">{{ scopeHeadline }}</h1>
+                </div>
+
+                <!-- Actions (Text Buttons) -->
+                <div class="flex items-center gap-8">
+                    <button 
+                        @click="activeTab = 'search'"
+                        class="text-xs font-bold uppercase tracking-widest hover:text-arch-accent transition-colors relative py-2"
+                        :class="activeTab === 'search' ? 'text-black border-b-2 border-black' : 'text-gray-400'"
+                    >
+                        搜索 [S]
+                    </button>
+                    <button 
+                        v-if="sidebarLibrary === 'project'"
+                        @click="activeTab = 'upload'"
+                        class="text-xs font-bold uppercase tracking-widest hover:text-arch-accent transition-colors relative py-2"
+                        :class="activeTab === 'upload' ? 'text-black border-b-2 border-black' : 'text-gray-400'"
+                    >
+                        批量导入 [U]
+                    </button>
+                    
+                    <div class="w-px h-6 bg-gray-300 mx-2"></div>
+                    
+                    <div class="flex items-center gap-2 cursor-pointer group">
+                        <div class="w-8 h-8 bg-black text-white flex items-center justify-center text-xs font-bold hover:bg-arch-accent transition-colors">LX</div>
+                    </div>
+                </div>
+            </header>
+
+            <!-- Content -->
+            <div class="flex-1 overflow-y-auto p-12" id="main-scroll">
+                
+                <!-- TAB: SEARCH -->
+                <transition name="fade" mode="out-in">
+                    <div v-if="activeTab === 'search'" key="search" class="max-w-[1800px] mx-auto pb-20">
+                        
+                        <!-- Search Interface -->
+                        <div class="mb-12">
+                            <div class="relative flex items-center border-b-2 border-gray-200 focus-within:border-black transition-colors">
+                                <!-- Search Mode Select -->
+                                <div class="flex items-center mr-4 relative group">
+                                    <div class="flex items-center gap-2 cursor-pointer py-6">
+                                        <i class="fa-solid text-gray-400 group-hover:text-black" :class="searchModeIcon"></i>
+                                        <span class="typo-label text-black">{{ searchModeLabel }}</span>
+                                        <i class="fa-solid fa-caret-down text-[10px] text-gray-400"></i>
+                                    </div>
+                                    <!-- Dropdown -->
+                                    <div class="absolute top-full left-0 bg-white border border-gray-200 shadow-xl z-20 w-32 hidden group-hover:block">
+                                        <div v-for="mode in searchModes" :key="mode.value" 
+                                             @click="selectSearchMode(mode.value)"
+                                             class="px-4 py-3 hover:bg-gray-50 cursor-pointer flex items-center gap-2 text-xs"
+                                             :class="{'text-gray-400 cursor-not-allowed': mode.disabled}">
+                                            <i class="fa-solid w-4" :class="'fa-' + mode.icon"></i>
+                                            <span>{{ mode.label }}</span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <input type="text" 
+                                    v-model="form.positive"
+                                    @keyup.enter="search"
+                                    class="flex-1 bg-transparent text-3xl font-light py-6 placeholder-gray-300 focus:outline-none"
+                                    :placeholder="searchPlaceholder">
+                                
+                                <button @click="search" class="text-xl text-black hover:text-arch-accent transition-colors px-4">
+                                    <i class="fa-solid fa-arrow-right"></i>
+                                </button>
+                            </div>
+
+                            <!-- Image Search Uploader -->
+                            <div v-if="searchMode === 1" class="mt-4 bg-white border border-gray-200 p-4 flex items-center gap-6 animate-fade-in">
+                                <div v-if="searchImage.preview" class="w-20 h-20 border border-gray-200 bg-gray-50 flex-shrink-0">
+                                    <img :src="searchImage.preview" class="w-full h-full object-cover">
+                                </div>
+                                <div class="flex-1">
+                                    <div class="flex items-center gap-4 mb-1">
+                                        <button @click="triggerSearchImagePick" class="text-xs font-bold uppercase bg-black text-white px-4 py-2 hover:bg-arch-accent transition-colors">
+                                            {{ searchImage.name ? '更换图片' : '上传参考图' }}
+                                        </button>
+                                        <span class="text-xs text-gray-500">{{ searchImage.name || '支持 JPG/PNG, 最大 25MB' }}</span>
+                                    </div>
+                                    <div v-if="searchImage.error" class="text-xs text-red-500 mt-1">{{ searchImage.error }}</div>
+                                </div>
+                                <input type="file" ref="searchImageInput" class="hidden" accept="image/*" @change="handleSearchImageChange">
+                            </div>
+
+                            <!-- Filters Bar -->
+                            <div class="flex flex-wrap gap-12 mt-8 border-b border-gray-200 pb-8 items-end">
+                                <!-- Top N -->
+                                <div class="flex flex-col gap-2">
+                                    <span class="typo-label">数量限制</span>
+                                    <select v-model="form.top_n" class="bg-transparent border-none text-sm font-medium p-0 pr-4 cursor-pointer focus:outline-none text-gray-500 hover:text-black">
+                                        <option value="30">Top 30</option>
+                                        <option value="60">Top 60</option>
+                                        <option value="150">Top 150</option>
+                                        <option value="1000">All Results</option>
+                                    </select>
+                                </div>
+
+                                <!-- Exclude -->
+                                <div class="flex flex-col gap-2 flex-1 max-w-md">
+                                    <span class="typo-label">排除词 (可选)</span>
+                                    <input type="text" v-model="form.negative" placeholder="不需要的元素..." class="bg-transparent border-b border-gray-300 text-sm py-1 focus:border-black focus:outline-none">
+                                </div>
+
+                                <!-- Path Limit -->
+                                <div class="flex flex-col gap-2 flex-1 max-w-md">
+                                    <span class="typo-label">路径限制 (可选)</span>
+                                    <input type="text" v-model="form.path" placeholder="限定文件夹..." class="bg-transparent border-b border-gray-300 text-sm py-1 focus:border-black focus:outline-none">
+                                </div>
+                                
+                                <!-- Include Duplicates Toggle -->
+                                <div class="flex items-center gap-2 cursor-pointer group" v-if="sidebarLibrary === 'permanent'" @click="toggleDuplicates">
+                                    <div class="w-4 h-4 border border-gray-300 group-hover:border-black flex items-center justify-center">
+                                        <div class="w-2 h-2 bg-black" v-if="form.include_duplicates"></div>
+                                    </div>
+                                    <span class="text-xs text-gray-500 group-hover:text-black">包含重复项</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Results -->
+                        <div>
+                            <!-- Results Header -->
+                            <div class="flex justify-between items-end mb-6 sticky top-20 z-20 bg-arch-light/90 backdrop-blur py-2">
+                                <div class="flex items-center gap-6">
+                                    <div class="flex items-center gap-2">
+                                        <span class="typo-mono text-xs text-gray-500">RESULT: {{ files.length }} ITEMS</span>
+                                        <span v-if="isLoading" class="typo-mono text-xs text-arch-accent animate-pulse">PROCESSING...</span>
+                                    </div>
+
+                                    <!-- Time Filter (New) -->
+                                    <div class="flex items-center gap-2">
+                                        <select v-model="form.time_range" @change="applyTimeFilter" class="bg-transparent text-xs font-bold uppercase text-gray-500 hover:text-black cursor-pointer border-none focus:ring-0 py-0 pl-0">
+                                            <option value="all">所有时间</option>
+                                            <option value="30">最近 30 天</option>
+                                            <option value="90">最近 3 个月</option>
+                                            <option value="365">最近 1 年</option>
+                                        </select>
+                                        <i class="fa-solid fa-caret-down text-[10px] text-gray-400"></i>
+                                    </div>
+                                </div>
+                                
+                                <!-- Project Selection Actions -->
+                                <div v-if="selectionVisible" class="flex items-center gap-4 bg-black text-white px-4 py-2 animate-fade-in">
+                                    <span class="text-xs font-bold">已选 {{ selectedCount }} 项</span>
+                                    <div class="h-3 w-px bg-gray-700"></div>
+                                    <button @click="archiveSelected" class="text-xs hover:text-arch-accent">归档</button>
+                                    <button @click="deleteSelected" class="text-xs hover:text-red-500">删除</button>
+                                    <button @click="clearSelection" class="text-xs text-gray-400 hover:text-white"><i class="fa-solid fa-xmark"></i></button>
+                                </div>
+
+                                <div class="flex gap-3 items-center">
+                                    <div class="flex items-center gap-2 mr-2 group" title="调整缩略图大小">
+                                        <i class="fa-solid fa-image text-gray-300 text-xs group-hover:text-black"></i>
+                                        <input type="range" min="2" max="6" v-model.number="thumbnailScale" class="w-16">
+                                    </div>
+                                    
+                                    <div class="flex bg-gray-200 p-0.5">
+                                        <button class="w-8 h-8 flex items-center justify-center transition-all"
+                                            title="网格视图"
+                                            :class="viewMode === 'grid' ? 'bg-white text-black shadow-sm' : 'text-gray-400 hover:text-gray-600'"
+                                            @click="viewMode = 'grid'">
+                                            <i class="fa-solid fa-table-cells"></i>
+                                        </button>
+                                        <button class="w-8 h-8 flex items-center justify-center transition-all"
+                                            title="瀑布流视图"
+                                            :class="viewMode === 'masonry' ? 'bg-white text-black shadow-sm' : 'text-gray-400 hover:text-gray-600'"
+                                            @click="viewMode = 'masonry'">
+                                            <i class="fa-solid fa-layer-group"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Grid/Masonry -->
+                            <div :style="resultsWrapperStyle" :class="viewMode === 'grid' ? 'grid gap-6' : 'column-layout'">
+                                <!-- Skeleton Loader -->
+                                <template v-if="isLoading">
+                                    <div v-for="n in 8" :key="'skel-'+n" class="bg-white p-2 border border-gray-100 mb-6 break-inside-avoid">
+                                        <div class="aspect-[4/3] skeleton mb-2"></div>
+                                        <div class="h-3 w-2/3 skeleton mb-1"></div>
+                                        <div class="h-2 w-1/3 skeleton"></div>
+                                    </div>
+                                </template>
+
+                                <!-- Items -->
+                                <template v-else>
+                                    <div v-for="item in files" :key="item.id" 
+                                        class="group relative bg-white mb-6 break-inside-avoid border border-transparent hover:border-black transition-all duration-200"
+                                        :class="{'ring-2 ring-black ring-offset-2': isSelected(item)}"
+                                        @click="openDetail(item)">
+                                        
+                                        <!-- Selection Checkbox (Project Mode) -->
+                                        <div v-if="isProjectResult(item)" class="absolute top-2 left-2 z-10 opacity-0 group-hover:opacity-100 transition-opacity" :class="{'opacity-100': isSelected(item)}">
+                                            <input type="checkbox" class="arch-checkbox" :checked="isSelected(item)" @click.stop="toggleSelection(item)">
+                                        </div>
+
+                                        <!-- PDF Badge -->
+                                        <div v-if="item.type === 'pdf'" class="absolute top-2 right-2 z-10 bg-black text-white text-[9px] px-1.5 py-0.5 font-bold uppercase tracking-wider pointer-events-none">
+                                            PDF <span v-if="item.page_count" class="opacity-70">/ {{ item.page_count }}P</span>
+                                        </div>
+
+                                        <!-- Video Badge -->
+                                        <div v-if="item.type === 'video'" class="absolute top-2 right-2 z-10 bg-black text-white text-[9px] px-1.5 py-0.5 font-bold uppercase tracking-wider pointer-events-none flex items-center gap-1">
+                                            <i class="fa-solid fa-play text-[8px]"></i> VIDEO
+                                        </div>
+
+                                        <!-- Image -->
+                                        <div class="relative bg-gray-100 overflow-hidden cursor-pointer">
+                                            <img :src="resultImage(item)" class="w-full h-auto object-contain min-h-[120px]" loading="lazy">
+                                            
+                                            <!-- Hover Overlay -->
+                                            <div class="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100">
+                                                <button @click.stop="copyPath(item.path)" class="bg-white text-black w-8 h-8 flex items-center justify-center hover:bg-arch-accent hover:text-white transition-colors" title="复制路径">
+                                                    <i class="fa-regular fa-copy"></i>
+                                                </button>
+                                                <button @click.stop="searchSimilar(item)" class="bg-white text-black w-8 h-8 flex items-center justify-center hover:bg-arch-accent hover:text-white transition-colors" title="找相似">
+                                                    <i class="fa-solid fa-wand-magic-sparkles"></i>
+                                                </button>
+                                            </div>
+                                        </div>
+
+                                        <!-- Meta -->
+                                        <div class="p-3">
+                                            <div class="flex justify-between items-start">
+                                                <h3 class="text-xs font-bold truncate w-3/4" :title="formatName(item)">{{ formatName(item) }}</h3>
+                                                <span class="typo-mono text-[9px] text-gray-400">{{ formatBytes(item.size) }}</span>
+                                            </div>
+                                            <div class="flex justify-between items-center mt-1">
+                                                <span class="text-[10px] text-gray-500 truncate max-w-[180px]" :title="formatSource(item)">{{ formatSource(item) }}</span>
+                                                <span v-if="item.score" class="text-[9px] font-bold text-arch-accent">{{ formatScore(item.score) }}</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </template>
+
+                                <!-- Empty State -->
+                                <div v-if="!isLoading && files.length === 0" class="col-span-full py-20 text-center">
+                                    <div class="text-4xl text-gray-200 mb-4"><i class="fa-solid fa-ghost"></i></div>
+                                    <div class="text-sm text-gray-400">没有找到匹配的素材</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- TAB: UPLOAD -->
+                    <div v-else-if="activeTab === 'upload'" key="upload" class="max-w-5xl mx-auto h-full flex flex-col pb-20">
+                        
+                        <!-- Technical Header -->
+                        <div class="border-b border-black pb-6 mb-12 flex justify-between items-end">
+                            <div>
+                                <h2 class="text-3xl font-light mb-1 tracking-tight">批量导入向导</h2>
+                                <p class="typo-mono text-xs text-gray-500">/// BATCH_INDEXING_PROTOCOL</p>
+                            </div>
+                            
+                            <!-- Steps -->
+                            <div class="flex gap-12">
+                                <div v-for="(step, i) in ['路径来源', '素材预览', '索引处理', '结果报告']" :key="i" 
+                                    class="flex flex-col items-center gap-2 cursor-default relative">
+                                    <div class="w-2 h-2 transition-all" 
+                                        :class="uploadStep === i ? 'bg-arch-accent scale-125' : (uploadStep > i ? 'bg-black' : 'bg-gray-300')"></div>
+                                    <span class="typo-mono text-[10px] uppercase" 
+                                        :class="uploadStep === i ? 'text-black font-bold' : 'text-gray-400'">
+                                        0{{i+1}}_{{step}}
+                                    </span>
+                                    <!-- Connecting Line -->
+                                    <div v-if="i < 3" class="absolute top-1 left-6 w-8 h-px bg-gray-200"></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Step 1: Input -->
+                        <div v-if="uploadStep === 0" class="flex-1 flex flex-col animate-fade-in">
+                            <div class="bg-white border border-gray-200 p-12 relative shadow-sm">
+                                <span class="absolute top-4 left-4 typo-mono text-[10px] text-gray-400">INPUT_SOURCE</span>
+                                
+                                <label class="block text-sm font-bold mb-4">目录路径 (支持多行粘贴)</label>
+                                <textarea v-model="uploadPathInput" 
+                                    class="w-full h-40 bg-gray-50 border border-gray-300 p-4 font-mono text-sm focus:border-black focus:bg-white outline-none transition-colors resize-none"
+                                    placeholder="D:\Projects\Renderings&#10;\\NAS\Library\Textures"
+                                    @paste="handleUploadPathPaste"></textarea>
+
+                                <div class="mt-8">
+                                    <span class="typo-label block mb-4 text-gray-400">最近使用的路径</span>
+                                    <div class="flex flex-wrap gap-2">
+                                        <button v-for="item in uploadHistory" :key="item.path"
+                                            @click="applyUploadHistory(item.path)"
+                                            class="px-3 py-1 border border-gray-200 hover:border-black text-xs text-gray-600 hover:text-black transition-colors bg-white">
+                                            {{ item.path }}
+                                        </button>
+                                        <span v-if="uploadHistory.length === 0" class="text-xs text-gray-400">暂无历史记录</span>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="mt-8 flex justify-between items-center">
+                                <button @click="clearUploadInput" class="text-gray-400 hover:text-black text-xs font-bold uppercase tracking-widest">清空输入</button>
+                                <button @click="previewUploadFiles" 
+                                    :disabled="uploadLoadingPreview"
+                                    class="border-2 border-black bg-black text-white hover:bg-white hover:text-black px-10 py-4 text-sm font-bold uppercase tracking-widest transition-all flex items-center gap-3 disabled:opacity-50 disabled:cursor-wait">
+                                    {{ uploadLoadingPreview ? '扫描中...' : '开始扫描' }} <i class="fa-solid fa-arrow-right"></i>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Step 2: Preview -->
+                        <div v-if="uploadStep === 1" class="flex-1 flex flex-col animate-fade-in h-[600px]">
+                            <div class="bg-white border border-gray-200 flex-1 flex flex-col shadow-sm">
+                                <div class="p-4 border-b border-gray-200 bg-gray-50 flex justify-between items-center">
+                                    <span class="typo-mono text-xs font-bold">FOUND: {{ uploadPreviewFiles.length }} FILES</span>
+                                    
+                                    <div class="flex gap-4">
+                                        <button @click="setUploadFilter('all')" :class="uploadFilter === 'all' ? 'text-black font-bold' : 'text-gray-400'" class="text-[10px] uppercase">All</button>
+                                        <button @click="setUploadFilter('image')" :class="uploadFilter === 'image' ? 'text-black font-bold' : 'text-gray-400'" class="text-[10px] uppercase">Image</button>
+                                        <button @click="setUploadFilter('video')" :class="uploadFilter === 'video' ? 'text-black font-bold' : 'text-gray-400'" class="text-[10px] uppercase">Video</button>
+                                        <button @click="setUploadFilter('pdf')" :class="uploadFilter === 'pdf' ? 'text-black font-bold' : 'text-gray-400'" class="text-[10px] uppercase">PDF</button>
+                                    </div>
+
+                                    <div class="flex gap-4 text-[10px] font-bold uppercase tracking-wider">
+                                        <button @click="selectAllUploadFiles" class="hover:text-arch-accent hover:underline">Select All</button>
+                                        <button @click="invertUploadSelection" class="hover:text-arch-accent hover:underline">Invert</button>
+                                    </div>
+                                </div>
+                                
+                                <div class="flex-1 overflow-y-auto p-0">
+                                    <table class="w-full text-left border-collapse">
+                                        <thead class="sticky top-0 bg-white z-10">
+                                            <tr class="border-b border-black text-[10px] uppercase tracking-wider text-gray-500">
+                                                <th class="p-4 w-12 text-center">#</th>
+                                                <th class="p-4 w-20">Thumb</th>
+                                                <th class="p-4">Filename</th>
+                                                <th class="p-4 w-24">Type</th>
+                                                <th class="p-4 w-32 text-right">Size</th>
+                                                <th class="p-4 w-24 text-center">Status</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody class="font-mono text-xs text-gray-600">
+                                            <tr v-for="file in filteredUploadFiles" :key="file.path" 
+                                                class="border-b border-gray-100 hover:bg-gray-50 group cursor-pointer"
+                                                @click="toggleUploadSelection(file)">
+                                                <td class="p-4 text-center border-r border-gray-100">
+                                                    <input type="checkbox" class="arch-checkbox" :checked="isUploadSelected(file)" @click.stop="toggleUploadSelection(file)">
+                                                </td>
+                                                <td class="p-2 border-r border-gray-100">
+                                                    <div class="w-12 h-12 bg-gray-100 flex items-center justify-center overflow-hidden">
+                                                        <img v-if="file.thumbnailUrl" :src="file.thumbnailUrl" class="w-full h-full object-cover">
+                                                        <i v-else class="fa-regular fa-file text-gray-300"></i>
+                                                    </div>
+                                                </td>
+                                                <td class="p-4 text-black font-medium group-hover:text-arch-accent truncate max-w-xs" :title="file.path">
+                                                    {{ file.filename }}
+                                                    <div class="text-[10px] text-gray-400 truncate">{{ file.path }}</div>
+                                                </td>
+                                                <td class="p-4 border-l border-gray-100">{{ file.type }}</td>
+                                                <td class="p-4 text-right border-l border-gray-100">{{ formatBytes(file.size) }}</td>
+                                                <td class="p-4 text-center border-l border-gray-100" :class="file.is_indexed ? 'text-green-600' : 'text-gray-400'">
+                                                    {{ file.is_indexed ? 'INDEXED' : 'NEW' }}
+                                                </td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                                
+                                <div class="p-4 bg-gray-50 border-t border-gray-200 flex justify-between items-center">
+                                    <span class="text-xs font-bold">选中: {{ uploadSelectedCount }} / {{ formatBytes(uploadSelectedSize) }}</span>
+                                </div>
+                            </div>
+                            <div class="mt-8 flex justify-between">
+                                <button @click="uploadStep = 0" class="text-gray-400 hover:text-black text-xs font-bold uppercase tracking-widest">上一步</button>
+                                <button @click="startUploadIndex" class="bg-black text-white px-10 py-4 text-sm font-bold uppercase tracking-widest hover:bg-arch-accent transition-colors disabled:opacity-50 disabled:cursor-not-allowed" :disabled="!uploadSelectedCount">
+                                    执行导入
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Step 3: Processing -->
+                        <div v-if="uploadStep === 2" class="flex-1 flex flex-col items-center justify-center animate-fade-in">
+                            <div class="w-full max-w-lg bg-black text-green-500 font-mono text-xs p-6 shadow-2xl relative overflow-hidden">
+                                <!-- Scanline effect -->
+                                <div class="absolute inset-0 bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(0,0,0,0.25)_50%),linear-gradient(90deg,rgba(255,0,0,0.06),rgba(0,255,0,0.02),rgba(0,0,255,0.06))] z-10 pointer-events-none bg-[length:100%_2px,3px_100%]"></div>
+                                
+                                <div class="mb-4 border-b border-green-900 pb-2 flex justify-between">
+                                    <span>> TASK: BATCH_INDEX_{{ uploadTaskId ? uploadTaskId.slice(0,6) : 'INIT' }}</span>
+                                    <span>{{ uploadTaskProgress }}%</span>
+                                </div>
+                                <div class="space-y-1 h-40 overflow-hidden flex flex-col justify-end relative z-0">
+                                    <div class="opacity-50"> > Initializing sequence... OK</div>
+                                    <div class="opacity-70"> > Target Library: {{ sidebarLibrary.toUpperCase() }}</div>
+                                    <div v-if="uploadTaskInfo.processed > 0"> > Processed {{ uploadTaskInfo.processed }}/{{ uploadTaskInfo.total }} items</div>
+                                    <div class="text-white"> > Current: {{ uploadCurrentFile }}</div>
+                                    <div class="animate-pulse">_</div>
+                                </div>
+                                <div class="mt-4 w-full bg-green-900/30 h-1">
+                                    <div class="h-full bg-green-500 transition-all duration-300" :style="`width: ${uploadTaskProgress}%`"></div>
+                                </div>
+                            </div>
+                            
+                            <div class="mt-8 flex gap-4">
+                                <button @click="uploadShowDetails = !uploadShowDetails" class="text-xs font-bold uppercase tracking-widest text-gray-400 hover:text-black">
+                                    {{ uploadShowDetails ? '隐藏日志' : '查看实时日志' }}
+                                </button>
+                                <button @click="cancelUploadTask" class="text-xs font-bold uppercase tracking-widest text-red-500 hover:bg-red-50 px-4" :disabled="uploadCancelling">
+                                    {{ uploadCancelling ? '正在取消...' : '中止任务' }}
+                                </button>
+                            </div>
+
+                            <!-- Live Log -->
+                            <div v-if="uploadShowDetails" class="mt-8 w-full max-w-2xl border border-gray-200 bg-white p-4 max-h-60 overflow-y-auto font-mono text-[10px]">
+                                <div v-for="dup in uploadTaskInfo.duplicates" :key="dup.path" class="text-yellow-600">
+                                    [DUP] {{ dup.path }} -> {{ dup.action }}
+                                </div>
+                                <div v-for="fail in uploadTaskInfo.failed" :key="fail.path" class="text-red-600">
+                                    [ERR] {{ fail.path }} : {{ fail.error }}
+                                </div>
+                                <div v-if="uploadTaskInfo.duplicates.length === 0 && uploadTaskInfo.failed.length === 0" class="text-gray-400 text-center italic">
+                                    暂无警告或错误
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Step 4: Report -->
+                        <div v-if="uploadStep === 3" class="flex-1 flex flex-col animate-fade-in items-center pt-12">
+                            <div class="text-6xl mb-6 font-light" :class="uploadTaskInfo.failed.length > 0 ? 'text-yellow-500' : 'text-arch-accent'">
+                                {{ uploadTaskInfo.failed.length > 0 ? 'Completed with Issues.' : 'Done.' }}
+                            </div>
+                            <div class="w-24 h-1 bg-black mb-8"></div>
+                            <p class="text-gray-500 mb-12 text-center">
+                                导入操作已结束。<br>
+                                所有成功处理的素材现在都可在{{ sidebarLibrary === 'permanent' ? '永久库' : '项目库' }}中检索。
+                            </p>
+                            
+                            <div class="grid grid-cols-4 gap-px bg-gray-200 border border-gray-200 w-full max-w-3xl mb-12">
+                                <div class="bg-white p-6 text-center">
+                                    <div class="text-3xl font-bold mb-1">{{ uploadTaskInfo.success }}</div>
+                                    <div class="typo-label">成功索引</div>
+                                </div>
+                                <div class="bg-white p-6 text-center">
+                                    <div class="text-3xl font-bold mb-1 text-gray-400">{{ uploadTaskInfo.duplicates.length }}</div>
+                                    <div class="typo-label">重复跳过/覆盖</div>
+                                </div>
+                                <div class="bg-white p-6 text-center">
+                                    <div class="text-3xl font-bold mb-1 text-yellow-500">{{ uploadTaskInfo.truncated.length }}</div>
+                                    <div class="typo-label">PDF 截断</div>
+                                </div>
+                                <div class="bg-white p-6 text-center">
+                                    <div class="text-3xl font-bold mb-1 text-red-500">{{ uploadTaskInfo.failed.length }}</div>
+                                    <div class="typo-label">错误</div>
+                                </div>
+                            </div>
+
+                            <div class="flex gap-6">
+                                <button @click="finishUploadWizard" class="bg-black text-white px-8 py-3 text-xs font-bold uppercase tracking-widest hover:bg-arch-accent transition-colors">查看图库</button>
+                                <button @click="resetUploadWizard" class="bg-white border border-gray-200 text-black px-8 py-3 text-xs font-bold uppercase tracking-widest hover:border-black transition-colors">继续导入</button>
+                            </div>
+                        </div>
+
+                    </div>
+                </transition>
+            </div>
+        </main>
+
+        <!-- ==================== MODALS ==================== -->
+
+        <!-- Detail Modal -->
+        <transition name="fade">
+            <div v-if="detailDialog.visible" class="fixed inset-0 z-50 flex items-center justify-center p-12 bg-black/80 backdrop-blur-sm" @click.self="closeDetail">
+                <div class="bg-white w-full max-w-6xl h-[80vh] flex overflow-hidden shadow-2xl relative">
+                    <button @click="closeDetail" class="absolute top-4 right-4 z-10 text-2xl hover:text-arch-accent">&times;</button>
+                    
+                    <!-- Left: Viewer -->
+                    <div class="w-2/3 bg-gray-100 relative flex items-center justify-center overflow-hidden">
+                        <div v-if="detailDialog.item?.type === 'pdf'" class="w-full h-full overflow-y-auto p-8 space-y-4 bg-gray-200" ref="pdfPagesContainer">
+                            <div v-if="detailDialog.pagesLoading" class="text-center py-10 text-gray-500">加载 PDF 页面...</div>
+                             <div v-for="page in detailDialog.pages" :key="page.id" class="bg-white shadow-lg max-w-full mx-auto relative group">
+                                <span class="absolute top-2 left-2 bg-black/50 text-white text-[10px] px-2 py-1">P{{ page.page_no }}</span>
+                                <img :src="page.image || page.thumbnail" class="block w-full h-auto">
+                            </div>
+                        </div>
+                        <img v-else :src="detailImageSrc" ref="detailImage" class="max-w-full max-h-full object-contain cursor-zoom-in">
+                    </div>
+
+                    <!-- Right: Info -->
+                    <div class="w-1/3 p-8 flex flex-col bg-white border-l border-gray-200 overflow-y-auto">
+                        <h2 class="text-xl font-bold mb-2 break-words">{{ detailItemName }}</h2>
+                        <div class="text-xs text-gray-400 font-mono mb-8 break-all">{{ detailDialog.item?.path }}</div>
+
+                        <div class="space-y-6 flex-1">
+                            <div v-for="meta in detailMetadata" :key="meta.label" class="flex justify-between border-b border-gray-100 pb-2">
+                                <span class="typo-label text-gray-500">{{ meta.label }}</span>
+                                <span class="text-sm font-medium text-right">{{ meta.value }}</span>
+                            </div>
+                        </div>
+
+                        <div class="mt-8 space-y-3">
+                            <button @click="copyPath(detailDialog.item?.path)" class="w-full border border-gray-200 py-3 text-xs font-bold uppercase hover:border-black hover:bg-black hover:text-white transition-colors">复制路径</button>
+                            <button @click="openOriginalFile(detailDialog.item?.path)" class="w-full border border-gray-200 py-3 text-xs font-bold uppercase hover:border-black hover:bg-black hover:text-white transition-colors">打开原文件</button>
+                            <button @click="searchSimilar(detailDialog.item)" class="w-full bg-arch-accent text-white border border-arch-accent py-3 text-xs font-bold uppercase hover:bg-black hover:border-black transition-colors">查找相似素材</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </transition>
+
+        <!-- Project Create Modal -->
+        <transition name="fade">
+            <div v-if="projectDialog.visible" class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm" @click.self="closeProjectDialog">
+                <div class="bg-white p-8 w-[480px] shadow-2xl border-t-4 border-arch-accent">
+                    <h3 class="text-xl font-bold mb-1">新建项目</h3>
+                    <p class="text-xs text-gray-500 mb-6">创建一个独立的项目库用于管理特定素材。</p>
+                    
+                    <div class="space-y-4 mb-8">
+                        <div>
+                            <label class="typo-label block mb-2">项目名称 *</label>
+                            <input type="text" v-model="projectDialog.form.name" class="w-full bg-gray-50 border border-gray-300 p-3 text-sm focus:border-black outline-none">
+                        </div>
+                        <div>
+                            <label class="typo-label block mb-2">客户/业主</label>
+                            <input type="text" v-model="projectDialog.form.client_name" class="w-full bg-gray-50 border border-gray-300 p-3 text-sm focus:border-black outline-none">
+                        </div>
+                        <div>
+                            <label class="typo-label block mb-2">描述</label>
+                            <textarea v-model="projectDialog.form.description" class="w-full bg-gray-50 border border-gray-300 p-3 text-sm focus:border-black outline-none h-24"></textarea>
+                        </div>
+                        <div v-if="projectDialog.error" class="text-red-500 text-xs">{{ projectDialog.error }}</div>
+                    </div>
+
+                    <div class="flex justify-end gap-4">
+                        <button @click="closeProjectDialog" class="text-xs font-bold uppercase text-gray-500 hover:text-black">取消</button>
+                        <button @click="submitProject" :disabled="projectDialog.loading" class="bg-black text-white px-6 py-3 text-xs font-bold uppercase hover:bg-arch-accent transition-colors">
+                            {{ projectDialog.loading ? '创建中...' : '确认创建' }}
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </transition>
+
+         <!-- Duplicate Decision Modal -->
+         <transition name="fade">
+            <div v-if="uploadDuplicateDialog.visible" class="fixed inset-0 z-[60] flex items-center justify-center bg-black/80 backdrop-blur-sm" @click.self="closeUploadDuplicateDialog">
+                <div class="bg-white w-[700px] shadow-2xl border border-gray-200">
+                    <div class="p-6 border-b border-gray-200">
+                        <h3 class="text-lg font-bold">检测到重复文件</h3>
+                        <p class="text-xs text-gray-500 mt-1">目标位置已存在相似或同名文件。</p>
+                    </div>
+                    
+                    <div class="p-6 grid grid-cols-2 gap-8">
+                        <!-- New -->
+                        <div class="flex flex-col gap-2">
+                            <span class="typo-label text-arch-accent">待导入文件</span>
+                            <div class="aspect-square bg-gray-100 border border-gray-200 flex items-center justify-center overflow-hidden">
+                                <img v-if="duplicateNewFile" :src="duplicateNewFile.thumbnail" class="w-full h-full object-cover">
+                            </div>
+                            <div class="text-xs font-bold truncate">{{ duplicateNewFile?.filename }}</div>
+                            <div class="typo-mono text-[10px] text-gray-500">{{ formatBytes(duplicateNewFile?.size) }} · {{ formatTimestamp(duplicateNewFile?.mtime * 1000) }}</div>
+                        </div>
+
+                        <!-- Existing -->
+                        <div class="flex flex-col gap-2 opacity-70">
+                            <span class="typo-label text-gray-500">已有文件</span>
+                            <div class="aspect-square bg-gray-100 border border-gray-200 flex items-center justify-center overflow-hidden">
+                                <img v-if="duplicateExistingFile" :src="duplicateExistingFile.thumbnail" class="w-full h-full object-cover">
+                            </div>
+                            <div class="text-xs font-bold truncate">{{ duplicateExistingFile?.filename }}</div>
+                            <div class="typo-mono text-[10px] text-gray-500">{{ formatBytes(duplicateExistingFile?.size) }} · {{ formatTimestamp(duplicateExistingFile?.mtime * 1000) }}</div>
+                        </div>
+                    </div>
+
+                    <div class="p-6 border-t border-gray-200 flex items-center justify-between bg-gray-50">
+                        <label class="flex items-center gap-2 cursor-pointer">
+                            <input type="checkbox" v-model="uploadDuplicateDialog.remember" class="arch-checkbox">
+                            <span class="text-xs font-bold">为剩余重复项应用此操作</span>
+                        </label>
+                        <div class="flex gap-3">
+                            <button @click="submitUploadDuplicateDecision('skip')" class="border border-gray-300 bg-white px-6 py-3 text-xs font-bold uppercase hover:border-black transition-colors">
+                                跳过
+                            </button>
+                            <button @click="submitUploadDuplicateDecision('overwrite')" class="bg-black text-white px-6 py-3 text-xs font-bold uppercase hover:bg-arch-accent transition-colors">
+                                覆盖
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </transition>
+
+        <!-- Toast Notification -->
+        <transition name="fade">
+            <div v-if="toast.visible" class="fixed bottom-8 right-8 z-50 bg-black text-white px-6 py-4 shadow-xl flex items-center gap-4 min-w-[300px]"
+                 :class="{'border-l-4 border-arch-accent': toast.type === 'error', 'border-l-4 border-green-500': toast.type === 'success'}">
+                <i class="fa-solid" :class="toast.type === 'success' ? 'fa-check' : (toast.type === 'error' ? 'fa-triangle-exclamation' : 'fa-info-circle')"></i>
+                <span class="text-xs font-bold tracking-wide">{{ toast.message }}</span>
+            </div>
+        </transition>
+
+    </div>
+
+    <script>
+        const { createApp } = Vue;
+
+        createApp({
+            data() {
+                return {
+                    // --- State ---
+                    sidebarLibrary: 'permanent', // 'permanent' | 'project'
+                    activeTab: 'search', // 'search' | 'upload'
+                    projects: [],
+                    currentLibrary: 'permanent', // 'permanent' or Project ID
+                    
+                    // Search
+                    searchMode: 0, // 0: Text, 1: Image, 2: Video
+                    searchModes: [
+                        { value: 0, label: '文本搜索', icon: 'font' },
+                        { value: 1, label: '以图搜图', icon: 'image' },
+                        { value: 2, label: '视频搜索', icon: 'video' }
+                    ],
+                    form: {
+                        positive: '',
+                        negative: '',
+                        path: '',
+                        top_n: 30,
+                        include_duplicates: false,
+                        time_range: 'all',
+                        start_time: 0,
+                        end_time: 0
+                    },
+                    searchImage: { name: '', preview: '', uploading: false, error: '' },
+                    files: [],
+                    isLoading: false,
+                    viewMode: 'masonry', // 'masonry' | 'grid'
+                    thumbnailScale: 4,
+                    
+                    // Upload
+                    uploadStep: 0,
+                    uploadPathInput: '',
+                    uploadHistory: [],
+                    uploadPreviewFiles: [],
+                    uploadFilter: 'all',
+                    uploadSelectedPaths: [],
+                    uploadTaskId: null,
+                    uploadTaskInfo: { success: 0, failed: [], duplicates: [], truncated: [] },
+                    uploadTaskProgress: 0,
+                    uploadLoadingPreview: false,
+                    uploadShowDetails: false,
+                    uploadCancelling: false,
+                    uploadDuplicateDialog: { visible: false, payload: null, remember: false },
+
+                    // Selection & Actions
+                    selectedIds: [],
+                    selectionProjectId: null,
+                    
+                    // Permanent Groups
+                    activePermanentGroup: 'images', // Default to images
+                    permanentGroups: [
+                        { id: 'images', name: '所有图片', field: 'total_images' },
+                        { id: 'videos', name: '视频库', field: 'total_videos' },
+                        { id: 'frames', name: '视频帧', field: 'total_video_frames' },
+                        { id: 'queue', name: '扫描队列', field: 'scanning_files' }
+                    ],
+                    statusSummary: {},
+
+                    // Dialogs
+                    detailDialog: { visible: false, item: null, pages: [], pagesLoading: false, viewer: null },
+                    projectDialog: { visible: false, loading: false, error: '', form: { name: '', client_name: '', description: '' } },
+                    dedupReportDialog: { visible: false, meta: null },
+                    
+                    // System
+                    dedup: { running: false, latestReport: null },
+                    toast: { visible: false, message: '', type: 'info', timer: null }
+                };
+            },
+            computed: {
+                searchModeLabel() { return this.searchModes.find(m => m.value === this.searchMode)?.label || 'Search'; },
+                searchModeIcon() { return 'fa-' + (this.searchModes.find(m => m.value === this.searchMode)?.icon || 'search'); },
+                searchPlaceholder() {
+                    if(this.searchMode === 0) return '搜索材质、纹理、氛围...';
+                    if(this.searchMode === 1) return '请上传图片进行匹配...';
+                    return '搜索视频素材...';
+                },
+                scopeHeadline() {
+                    if (this.sidebarLibrary === 'permanent') {
+                        const group = this.permanentGroups.find(g => g.id === this.activePermanentGroup);
+                        return group ? `永久库 / ${group.name}` : 'GLOBAL LIBRARY';
+                    }
+                    const proj = this.projects.find(p => p.id === this.currentLibrary);
+                    return proj ? `${proj.name} / ASSETS` : 'PROJECT SPACE';
+                },
+                resultsWrapperStyle() {
+                    if (this.viewMode === 'grid') {
+                        return { gridTemplateColumns: `repeat(${this.thumbnailScale}, minmax(0, 1fr))` };
+                    }
+                    return { columnCount: this.thumbnailScale, columnGap: '1.5rem' };
+                },
+                filteredUploadFiles() {
+                    if (!this.uploadPreviewFiles.length) return [];
+                    if (this.uploadFilter === 'all') return this.uploadPreviewFiles;
+                    return this.uploadPreviewFiles.filter(f => f.type === this.uploadFilter);
+                },
+                uploadSelectedCount() { return this.uploadSelectedPaths.length; },
+                uploadSelectedSize() { 
+                    const set = new Set(this.uploadSelectedPaths);
+                    return this.uploadPreviewFiles.filter(f => set.has(f.path)).reduce((acc, f) => acc + (f.size || 0), 0);
+                },
+                selectionVisible() { return this.selectedIds.length > 0; },
+                selectedCount() { return this.selectedIds.length; },
+                detailImageSrc() { 
+                    if(!this.detailDialog.item) return '';
+                    return this.detailDialog.item.thumbnail || this.detailDialog.item.url || ''; 
+                },
+                detailItemName() {
+                    if (!this.detailDialog.item) return '';
+                    return this.detailDialog.item.filename || this.detailDialog.item.path.split(/[\\/]/).pop();
+                },
+                detailMetadata() {
+                    if (!this.detailDialog.item) return [];
+                    const i = this.detailDialog.item;
+                    return [
+                        { label: '类型', value: i.type.toUpperCase() },
+                        { label: '大小', value: this.formatBytes(i.size) },
+                        { label: '分辨率', value: i.width ? `${i.width} × ${i.height}` : '--' },
+                        { label: '匹配度', value: this.formatScore(i.score) },
+                        { label: '来源库', value: i.library_type === 'permanent' ? '永久库' : '项目库' },
+                        { label: '修改时间', value: this.formatTimestamp(i.mtime * 1000 || Date.now()) }
+                    ];
+                },
+                // Duplicate Helpers
+                duplicateNewFile() { return this.uploadDuplicateDialog.payload?.new_file; },
+                duplicateExistingFile() { return this.uploadDuplicateDialog.payload?.existing_file; },
+            },
+            watch: {
+                currentLibrary(val) {
+                    this.files = []; // Clear results on switch
+                    this.resetUploadWizard();
+                },
+                'detailDialog.visible'(val) {
+                    if(val) this.$nextTick(this.initDetailViewer);
+                    else this.destroyDetailViewer();
+                }
+            },
+            mounted() {
+                this.loadProjects();
+                this.loadStatus();
+                this.refreshUploadHistory();
+                
+                // Poll status
+                setInterval(this.loadStatus, 10000);
+
+                // Mock data for initial visualization
+                this.generateMockData();
+            },
+            methods: {
+                generateMockData() {
+                    // 使用 placehold.co 生成稳定的占位图，避免网络问题
+                    const colors = ['1a1a1a', '2b2b2b', '3c3c3c', '4d4d4d', '5e5e5e'];
+                    
+                    this.files = Array.from({ length: 12 }).map((_, i) => {
+                        const type = i % 5 === 0 ? 'pdf' : (i % 7 === 0 ? 'video' : 'image');
+                        const color = colors[i % colors.length];
+                        const width = i % 3 === 0 ? 600 : 800;
+                        const height = i % 2 === 0 ? 800 : 600;
+                        
+                        return {
+                            id: `mock-${i}`,
+                            path: `D:\\Library\\Architecture\\2024\\Project_${i+1}\\Render_${i+1}.${type === 'image' ? 'jpg' : type}`,
+                            thumbnail: `https://placehold.co/${width}x${height}/${color}/FFFFFF.jpg?text=Asset+${i+1}\\n${type.toUpperCase()}`,
+                            filename: `Architecture_Demo_${i+1}.${type === 'image' ? 'jpg' : type}`,
+                            source: i % 2 === 0 ? '永久库' : '项目库',
+                            score: 0.85 + (Math.random() * 0.15),
+                            library_type: i % 2 === 0 ? 'permanent' : 'project',
+                            size: 1024 * 1024 * (Math.random() * 20 + 1),
+                            width: width,
+                            height: height,
+                            mtime: Date.now() / 1000 - (Math.random() * 86400 * 30),
+                            type: type,
+                            page_count: type === 'pdf' ? Math.floor(Math.random() * 50) + 1 : null
+                        };
+                    });
+                },
+
+                // --- Navigation ---
+                switchSidebar(lib) {
+                    this.sidebarLibrary = lib;
+                    if (lib === 'permanent') {
+                        this.currentLibrary = 'permanent';
+                        this.activeTab = 'search';
+                    } else if (this.projects.length > 0) {
+                        this.currentLibrary = this.projects[0].id;
+                        this.activeTab = 'search';
+                    }
+                    // 切换库时如果是演示模式，重新生成点不一样的
+                    if (!this.files.length) {
+                         this.generateMockData();
+                    }
+                },
+                switchSidebar(lib) {
+                    this.sidebarLibrary = lib;
+                    if (lib === 'permanent') {
+                        this.currentLibrary = 'permanent';
+                        this.activeTab = 'search';
+                    } else if (this.projects.length > 0) {
+                        this.currentLibrary = this.projects[0].id;
+                        this.activeTab = 'search';
+                    }
+                },
+                selectProject(proj) {
+                    this.currentLibrary = proj.id;
+                    this.sidebarLibrary = 'project'; // Ensure sidebar matches
+                    this.activeTab = 'search';
+                },
+                selectPermanentGroup(group) {
+                    this.activePermanentGroup = group.id;
+                    this.switchSidebar('permanent');
+                },
+                selectSearchMode(mode) { this.searchMode = mode; },
+                toggleDuplicates() { this.form.include_duplicates = !this.form.include_duplicates; },
+                
+                applyTimeFilter() {
+                    const days = parseInt(this.form.time_range, 10);
+                    if (isNaN(days)) {
+                        this.form.start_time = 0;
+                        this.form.end_time = 0;
+                    } else {
+                        const now = Math.floor(Date.now() / 1000);
+                        this.form.end_time = now;
+                        this.form.start_time = now - (days * 24 * 60 * 60);
+                    }
+                    this.search(); // Auto refresh
+                },
+
+                // --- API Calls ---
+                async loadProjects() {
+                    try {
+                        const res = await axios.get('/api/projects');
+                        if (res.data.success) this.projects = res.data.data;
+                    } catch(e) { 
+                        console.error(e);
+                        // Mock data for visualization
+                        this.projects = [
+                            { id: 'p1', name: '上海中心大厦', client_name: '上海城投', image_count: 1240, video_count: 45 },
+                            { id: 'p2', name: '成都天府机场', client_name: '四川机场集团', image_count: 3500, video_count: 120 },
+                            { id: 'p3', name: '深圳湾一号', client_name: '鹏瑞地产', image_count: 890, video_count: 15 }
+                        ];
+                    }
+                },
+                async loadStatus() {
+                    try {
+                        const res = await axios.get('/api/status');
+                        this.statusSummary = res.data;
+                    } catch(e) {
+                        // Mock stats
+                        this.statusSummary = {
+                            total_images: 12580,
+                            total_videos: 450,
+                            total_video_frames: 8900,
+                            scanning_files: 0
+                        };
+                    }
+                    // Update permanent group counts
+                    this.permanentGroups.forEach(g => {
+                        g.countDisplay = this.formatNumber(this.statusSummary[g.field]);
+                    });
+                },
+
+                // --- Search ---
+                async search() {
+                    if (this.isLoading) return;
+                    if (this.searchMode === 1 && !this.searchImage.name) {
+                        this.showToast('请先上传图片', 'error');
+                        return;
+                    }
+
+                    this.isLoading = true;
+                    try {
+                        const payload = {
+                            ...this.form,
+                            search_type: this.searchMode,
+                            library_type: this.sidebarLibrary === 'permanent' ? 'permanent' : 'project',
+                            project_id: this.sidebarLibrary === 'project' ? this.currentLibrary : null
+                        };
+                        
+                        const res = await axios.post('/api/match', payload);
+                        if (Array.isArray(res.data)) {
+                            this.files = res.data.map(this.normalizeItem);
+                            if (this.files.length === 0) this.showToast('未找到结果', 'info');
+                        }
+                    } catch (e) {
+                        console.warn("API不可用，切换到演示模式");
+                        this.generateMockData();
+                        this.showToast('演示模式：已加载模拟数据', 'info');
+                    } finally {
+                        this.isLoading = false;
+                    }
+                },
+                normalizeItem(item) {
+                    return {
+                        ...item,
+                        // Ensure essential fields
+                        thumbnail: item.thumbnail || item.url || `/api/thumbnail?path=${encodeURIComponent(item.path)}&size=300`
+                    };
+                },
+                triggerSearchImagePick() { this.$refs.searchImageInput.click(); },
+                async handleSearchImageChange(e) {
+                    const file = e.target.files[0];
+                    if (!file) return;
+                    
+                    const formData = new FormData();
+                    formData.append('file', file);
+                    this.searchImage.uploading = true;
+                    try {
+                        await axios.post('/api/upload', formData);
+                        this.searchImage.name = file.name;
+                        // Local preview
+                        const reader = new FileReader();
+                        reader.onload = (ev) => this.searchImage.preview = ev.target.result;
+                        reader.readAsDataURL(file);
+                    } catch(e) {
+                        this.searchImage.error = '上传失败';
+                    } finally {
+                        this.searchImage.uploading = false;
+                    }
+                },
+                
+                // --- Selection ---
+                isSelected(item) { return this.selectedIds.includes(item.id); },
+                isProjectResult(item) { return item.library_type === 'project' || item.project_id; },
+                toggleSelection(item) {
+                    if (!this.isProjectResult(item)) return;
+                    const id = item.id;
+                    if (this.selectedIds.includes(id)) this.selectedIds = this.selectedIds.filter(i => i !== id);
+                    else this.selectedIds.push(id);
+                },
+                clearSelection() { this.selectedIds = []; },
+                async deleteSelected() {
+                    if (!confirm(`确定删除选中的 ${this.selectedCount} 项素材吗？`)) return;
+                    try {
+                         await axios.post(`/api/projects/${this.currentLibrary}/images/delete`, { image_ids: this.selectedIds });
+                         this.files = this.files.filter(f => !this.selectedIds.includes(f.id));
+                         this.clearSelection();
+                         this.showToast('删除成功', 'success');
+                    } catch(e) { this.showToast('删除失败', 'error'); }
+                },
+                async archiveSelected() {
+                     try {
+                         await axios.post(`/api/projects/${this.currentLibrary}/archive`, { image_ids: this.selectedIds });
+                         this.clearSelection();
+                         this.showToast('归档成功', 'success');
+                    } catch(e) { this.showToast('归档失败', 'error'); }
+                },
+
+                // --- Upload Wizard ---
+                handleUploadPathPaste() { /* Handled by v-model, maybe debounce cleanup */ },
+                clearUploadInput() { this.uploadPathInput = ''; },
+                refreshUploadHistory() { 
+                    // Mock
+                    const store = localStorage.getItem('uploadHistory');
+                    this.uploadHistory = store ? JSON.parse(store) : [
+                        { path: 'D:\\Assets\\Textures' }, 
+                        { path: '\\NAS\\Projects\\2024' }
+                    ];
+                },
+                applyUploadHistory(path) { 
+                    if(!this.uploadPathInput.includes(path)) 
+                        this.uploadPathInput += (this.uploadPathInput ? '\n' : '') + path; 
+                },
+                async previewUploadFiles() {
+                    this.uploadLoadingPreview = true;
+                    const paths = this.uploadPathInput.split('\n').map(s => s.trim()).filter(Boolean);
+                    try {
+                        const res = await axios.post('/api/preview_files', { 
+                            paths,
+                            target: this.sidebarLibrary === 'permanent' ? 'permanent' : this.currentLibrary 
+                        });
+                        this.uploadPreviewFiles = res.data;
+                        this.selectAllUploadFiles(); // Default select all
+                        this.uploadStep = 1;
+                    } catch(e) {
+                        this.showToast('扫描路径失败', 'error');
+                    } finally {
+                        this.uploadLoadingPreview = false;
+                    }
+                },
+                setUploadFilter(f) { this.uploadFilter = f; },
+                selectAllUploadFiles() { this.uploadSelectedPaths = this.filteredUploadFiles.map(f => f.path); },
+                invertUploadSelection() { 
+                    const current = new Set(this.uploadSelectedPaths);
+                    this.uploadSelectedPaths = this.filteredUploadFiles.filter(f => !current.has(f.path)).map(f => f.path);
+                },
+                isUploadSelected(file) { return this.uploadSelectedPaths.includes(file.path); },
+                toggleUploadSelection(file) {
+                    if(this.isUploadSelected(file)) this.uploadSelectedPaths = this.uploadSelectedPaths.filter(p => p !== file.path);
+                    else this.uploadSelectedPaths.push(file.path);
+                },
+                async startUploadIndex() {
+                    const files = this.uploadPreviewFiles.filter(f => this.uploadSelectedPaths.includes(f.path));
+                    try {
+                        const res = await axios.post('/api/batch_index', {
+                            files,
+                            target: this.sidebarLibrary === 'permanent' ? 'permanent' : this.currentLibrary,
+                            duplicate_strategy: 'ask'
+                        });
+                        this.uploadTaskId = res.data.task_id;
+                        this.uploadStep = 2;
+                        this.pollUploadTask();
+                    } catch(e) {
+                        this.showToast('启动任务失败', 'error');
+                    }
+                },
+                pollUploadTask() {
+                    const interval = setInterval(async () => {
+                        if (!this.uploadTaskId) return clearInterval(interval);
+                        const res = await axios.get(`/api/batch_index/${this.uploadTaskId}/status`);
+                        const status = res.data;
+                        this.uploadTaskProgress = Math.round((status.processed / status.total) * 100) || 0;
+                        this.uploadTaskInfo = status;
+                        this.uploadCurrentFile = status.current_file;
+
+                        if (status.pending_duplicate) {
+                            this.uploadDuplicateDialog.payload = status.pending_duplicate;
+                            this.uploadDuplicateDialog.visible = true;
+                        } else {
+                             this.uploadDuplicateDialog.visible = false;
+                        }
+
+                        if (['completed', 'failed', 'cancelled'].includes(status.status)) {
+                            clearInterval(interval);
+                            this.uploadStep = 3;
+                        }
+                    }, 1000);
+                },
+                async submitUploadDuplicateDecision(action) {
+                    await axios.post(`/api/batch_index/${this.uploadTaskId}/decision`, {
+                        action,
+                        apply_to_all: this.uploadDuplicateDialog.remember
+                    });
+                    this.uploadDuplicateDialog.visible = false; // Optimistic hide
+                },
+                async cancelUploadTask() {
+                    this.uploadCancelling = true;
+                    await axios.delete(`/api/batch_index/${this.uploadTaskId}`);
+                },
+                resetUploadWizard() {
+                    this.uploadStep = 0;
+                    this.uploadPreviewFiles = [];
+                    this.uploadTaskId = null;
+                },
+                finishUploadWizard() {
+                    this.activeTab = 'search';
+                    this.resetUploadWizard();
+                    this.search(); // Refresh results
+                },
+
+                // --- Dialogs ---
+                openDetail(item) {
+                    this.detailDialog.item = item;
+                    this.detailDialog.visible = true;
+                    if (item.type === 'pdf') this.loadPdfPages(item);
+                },
+                closeDetail() { this.detailDialog.visible = false; },
+                async loadPdfPages(item) {
+                    this.detailDialog.pagesLoading = true;
+                    try {
+                        const target = item.library_type === 'project' ? item.project_id : 'permanent';
+                        const res = await axios.get(`/api/pdf/pages?doc_id=${item.id}&target=${target}`);
+                        this.detailDialog.pages = res.data.pages;
+                    } catch(e) {}
+                    finally { this.detailDialog.pagesLoading = false; }
+                },
+                initDetailViewer() {
+                    if(this.$refs.detailImage) {
+                        this.detailDialog.viewer = new Viewer(this.$refs.detailImage, {
+                            inline: false, toolbar: true, navbar: false, title: false
+                        });
+                    }
+                },
+                destroyDetailViewer() {
+                    if(this.detailDialog.viewer) {
+                        this.detailDialog.viewer.destroy();
+                        this.detailDialog.viewer = null;
+                    }
+                },
+                openProjectDialog() { this.projectDialog.visible = true; },
+                closeProjectDialog() { this.projectDialog.visible = false; },
+                async submitProject() {
+                    this.projectDialog.loading = true;
+                    try {
+                        await axios.post('/api/projects', this.projectDialog.form);
+                        await this.loadProjects();
+                        this.closeProjectDialog();
+                        this.showToast('项目创建成功', 'success');
+                    } catch(e) {
+                        this.projectDialog.error = '创建失败';
+                    } finally {
+                        this.projectDialog.loading = false;
+                    }
+                },
+                async startDedupJob() {
+                    if (!confirm('开始去重扫描？')) return;
+                    this.dedup.running = true;
+                    try {
+                        await axios.post('/api/dedup/jobs', { library_type: 'permanent' });
+                        this.showToast('去重任务已启动', 'success');
+                    } catch(e) { this.showToast('启动失败', 'error'); }
+                },
+                openDedupReport(report) {
+                   if(!report) return this.showToast('暂无报告', 'info');
+                   // Mock open logic or navigate
+                   alert('查看报告: ' + JSON.stringify(report));
+                },
+
+                // --- Utils ---
+                copyPath(path) {
+                    navigator.clipboard.writeText(path);
+                    this.showToast('路径已复制', 'success');
+                },
+                openOriginalFile(path) {
+                     window.open('file://' + path); // Browser restrictions apply
+                },
+                searchSimilar(item) {
+                     this.searchMode = 1; // Image search
+                     // Logic to use existing image ID for search would go here
+                     // For V2 design demo, we just switch tab
+                     this.showToast('相似搜索功能演示', 'info');
+                },
+                formatBytes(bytes) {
+                    if (!bytes) return '0 B';
+                    const k = 1024;
+                    const sizes = ['B', 'KB', 'MB', 'GB'];
+                    const i = Math.floor(Math.log(bytes) / Math.log(k));
+                    return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+                },
+                formatNumber(num) { return (num || 0).toLocaleString(); },
+                formatScore(score) { return score ? Math.round(score * 100) + '%' : '--'; },
+                formatName(item) { return item.filename || item.path?.split(/[\\/]/).pop() || 'Unknown'; },
+                formatSource(item) { return item.library_type === 'project' ? 'PROJECT' : 'PERMANENT'; },
+                formatTimestamp(ts) { return new Date(ts).toLocaleDateString(); },
+                showToast(msg, type='info') {
+                    this.toast.message = msg;
+                    this.toast.type = type;
+                    this.toast.visible = true;
+                    if(this.toast.timer) clearTimeout(this.toast.timer);
+                    this.toast.timer = setTimeout(() => this.toast.visible = false, 3000);
+                }
+            }
+        }).mount('#app');
+    </script>
+</body>
+</html>

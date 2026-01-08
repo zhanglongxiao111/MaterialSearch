@@ -88,6 +88,40 @@ B站视频教程：[点击这里，求三连支持](https://www.bilibili.com/vid
 - 不推荐对容器设置内存限制，否则可能会出现奇怪的问题。比如[这个issue](https://github.com/chn-lee-yumi/MaterialSearch/issues/6)。
 - 容器默认设置了环境变量`TRANSFORMERS_OFFLINE=1`，也就是说运行时不会连接huggingface检查模型版本。如果你想更换容器内默认的模型，需要修改`.env`覆盖该环境变量为`TRANSFORMERS_OFFLINE=0`。
 
+### 服务器部署（多用户模式）
+
+MaterialSearch 支持部署为多用户服务器应用，提供两种运行模式：
+
+| 模式 | 数据库 | 认证方式 | 适用场景 |
+|------|--------|----------|----------|
+| **SQLite** | SQLite | 本地 Session | 开发环境、单用户 |
+| **Supabase** | PostgreSQL + pgvector | JWT + 角色权限 | 生产环境、多用户团队 |
+
+**快速启动（开发模式）：**
+
+```bash
+# SQLite 模式 - 默认
+USE_SUPABASE=false python main.py
+```
+
+**生产模式（Supabase）：**
+
+```bash
+# 使用 Docker 启动完整服务栈
+docker-compose up -d
+```
+
+这将启动：
+- PostgreSQL 15 + pgvector 向量搜索扩展
+- Supabase Auth (GoTrue 认证服务)
+- PostgREST API
+- MaterialSearch 应用
+
+详细服务器部署说明请参考：
+- [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) - 完整部署指南
+- [docs/SUPABASE_SETUP.md](docs/SUPABASE_SETUP.md) - Supabase 配置说明
+- [docs/API.md](docs/API.md) - API 接口文档
+
 ## 配置说明
 
 所有配置都在`config.py`文件中，里面已经写了详细的注释。

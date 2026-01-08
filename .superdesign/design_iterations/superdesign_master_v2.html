@@ -1,0 +1,574 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SuperDesign - Architect Edition</title>
+    
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <!-- Inter for UI, JetBrains Mono for Data -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@200;300;400;600;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace'],
+                    },
+                    colors: {
+                        arch: {
+                            black: '#111111',
+                            dark: '#1A1A1A',
+                            gray: '#888888',
+                            light: '#F4F4F4',
+                            white: '#FFFFFF',
+                            accent: '#FF3300' /* International Orange */
+                        }
+                    },
+                    spacing: {
+                        '128': '32rem',
+                    }
+                }
+            }
+        }
+    </script>
+
+    <!-- Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Vue 3 -->
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+
+    <style>
+        /* Global Reset */
+        body {
+            background-color: #F4F4F4;
+            color: #111111;
+            font-family: 'Inter', sans-serif;
+            -webkit-font-smoothing: antialiased;
+        }
+        
+        /* Sharp Edges Everywhere */
+        * {
+            border-radius: 0 !important;
+        }
+
+        /* Architect's Grid Background */
+        .bg-grid {
+            background-size: 40px 40px;
+            background-image:
+                linear-gradient(to right, rgba(0, 0, 0, 0.05) 1px, transparent 1px),
+                linear-gradient(to bottom, rgba(0, 0, 0, 0.05) 1px, transparent 1px);
+        }
+
+        /* Custom Scrollbar - Minimalist */
+        ::-webkit-scrollbar {
+            width: 4px;
+            height: 4px;
+        }
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #111;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #FF3300;
+        }
+
+        /* Typography Utilities */
+        .typo-label {
+            font-family: 'Inter', sans-serif;
+            font-size: 0.65rem;
+            text-transform: uppercase;
+            letter-spacing: 0.15em;
+            font-weight: 600;
+            color: #888;
+        }
+        
+        .typo-mono {
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        /* Brutalist Inputs */
+        .input-line {
+            background: transparent;
+            border: none;
+            border-bottom: 1px solid #ccc;
+            padding: 10px 0;
+            transition: all 0.3s ease;
+        }
+        .input-line:focus {
+            outline: none;
+            border-bottom: 2px solid #111;
+        }
+
+        /* Animations */
+        .fade-enter-active, .fade-leave-active {
+            transition: opacity 0.3s ease;
+        }
+        .fade-enter-from, .fade-leave-to {
+            opacity: 0;
+        }
+    </style>
+</head>
+<body class="h-screen w-full overflow-hidden flex bg-arch-light">
+
+    <div id="app" class="flex w-full h-full">
+
+        <!-- ==================== SIDEBAR: The Structure ==================== -->
+        <aside class="w-[320px] bg-[#111111] text-white flex flex-col flex-shrink-0 h-full relative z-20 border-r border-gray-800">
+            
+            <!-- Brand -->
+            <div class="h-24 flex items-center px-8 border-b border-gray-800">
+                <div class="flex flex-col">
+                    <span class="font-bold text-xl tracking-tighter">SUPERDESIGN</span>
+                    <span class="typo-label text-gray-500 mt-1">ASSET MANAGEMENT SYS.</span>
+                </div>
+            </div>
+
+            <!-- Mode Switcher (Physical Tab Feel) -->
+            <div class="flex border-b border-gray-800">
+                <button 
+                    @click="currentLibrary = 'permanent'"
+                    class="flex-1 py-6 text-xs font-bold uppercase tracking-widest transition-colors relative group"
+                    :class="currentLibrary === 'permanent' ? 'text-white bg-[#1A1A1A]' : 'text-gray-600 hover:text-white hover:bg-[#161616]'">
+                    Permanent
+                    <div v-if="currentLibrary === 'permanent'" class="absolute bottom-0 left-0 w-full h-[2px] bg-arch-accent"></div>
+                </button>
+                <button 
+                    @click="currentLibrary = 'project'"
+                    class="flex-1 py-6 text-xs font-bold uppercase tracking-widest transition-colors relative group"
+                    :class="currentLibrary === 'project' ? 'text-white bg-[#1A1A1A]' : 'text-gray-600 hover:text-white hover:bg-[#161616]'">
+                    Project
+                    <div v-if="currentLibrary === 'project'" class="absolute bottom-0 left-0 w-full h-[2px] bg-arch-accent"></div>
+                </button>
+            </div>
+
+            <!-- Navigation List -->
+            <div class="flex-1 overflow-y-auto py-8 px-0">
+                
+                <!-- Project List -->
+                <transition name="fade" mode="out-in">
+                    <div v-if="currentLibrary === 'project'" class="space-y-8">
+                        <div class="px-8">
+                            <div class="typo-label mb-6 flex justify-between items-center">
+                                <span>Active Projects</span>
+                                <span class="typo-mono text-[10px]">03</span>
+                            </div>
+                            
+                            <div class="space-y-1 border-l border-gray-800 ml-1">
+                                <div 
+                                    v-for="project in projects" 
+                                    :key="project.id"
+                                    @click="activeProjectId = project.id"
+                                    class="pl-6 py-3 cursor-pointer group transition-all relative"
+                                >
+                                    <!-- Active Indicator Line -->
+                                    <div v-if="activeProjectId === project.id" class="absolute left-[-1px] top-0 bottom-0 w-[2px] bg-white"></div>
+                                    
+                                    <div class="flex flex-col">
+                                        <span class="text-sm font-medium tracking-wide transition-colors"
+                                            :class="activeProjectId === project.id ? 'text-white' : 'text-gray-500 group-hover:text-gray-300'">
+                                            {{ project.code }} <span class="opacity-50 mx-1">/</span> {{ project.name }}
+                                        </span>
+                                        <span class="typo-mono text-[10px] text-gray-600 mt-1 group-hover:text-arch-accent transition-colors">
+                                            {{ project.client }}
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="px-8">
+                            <button class="w-full border border-gray-700 hover:border-white text-gray-400 hover:text-white py-3 text-xs uppercase tracking-widest transition-all flex items-center justify-center gap-2">
+                                <i class="fa-solid fa-plus text-[10px]"></i> New Project
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Permanent Categories -->
+                    <div v-else class="px-8 space-y-1">
+                        <div class="typo-label mb-6">Master Classification</div>
+                        <div v-for="(cat, i) in ['Concrete', 'Wood', 'Metal', 'Glass', 'Fabrics', 'Vegetation']" :key="i"
+                             class="py-3 border-b border-gray-800 text-gray-400 hover:text-white hover:pl-2 transition-all cursor-pointer flex justify-between items-center group">
+                            <span class="text-sm">{{ cat }}</span>
+                            <span class="text-[10px] opacity-0 group-hover:opacity-100 typo-mono text-arch-accent">></span>
+                        </div>
+                    </div>
+                </transition>
+            </div>
+
+            <!-- Bottom Status (Technical) -->
+            <div class="p-8 border-t border-gray-800 bg-[#0D0D0D]">
+                <div class="flex items-center justify-between mb-4">
+                    <span class="typo-label">Server Status</span>
+                    <div class="flex items-center gap-2">
+                        <div class="w-1.5 h-1.5 bg-arch-accent animate-pulse"></div>
+                        <span class="typo-mono text-[10px] text-gray-400">ONLINE</span>
+                    </div>
+                </div>
+                <div class="typo-mono text-[10px] text-gray-600 space-y-1">
+                    <div class="flex justify-between">
+                        <span>MEM</span> 
+                        <span>32%</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span>IDX</span> 
+                        <span>IDLE</span>
+                    </div>
+                </div>
+            </div>
+        </aside>
+
+
+        <!-- ==================== MAIN CANVAS ==================== -->
+        <main class="flex-1 flex flex-col h-full relative bg-grid">
+            
+            <!-- Header: Minimalist -->
+            <header class="h-24 flex items-center justify-between px-12 bg-white/90 backdrop-blur border-b border-gray-200 sticky top-0 z-10">
+                <!-- Breadcrumbs -->
+                <div class="flex items-center gap-4">
+                    <span class="typo-label text-black">{{ currentLibrary === 'project' ? 'PROJECT SPACE' : 'GLOBAL LIBRARY' }}</span>
+                    <i class="fa-solid fa-slash text-gray-300 text-xs transform -rotate-12"></i>
+                    <h1 class="text-2xl font-light tracking-tight text-black">{{ activeProjectName }}</h1>
+                </div>
+
+                <!-- Actions (Text Buttons) -->
+                <div class="flex items-center gap-8">
+                    <button 
+                        @click="currentTab = 'search'"
+                        class="text-xs font-bold uppercase tracking-widest hover:text-arch-accent transition-colors relative py-2"
+                        :class="currentTab === 'search' ? 'text-black border-b-2 border-black' : 'text-gray-400'"
+                    >
+                        Search [S]
+                    </button>
+                    <button 
+                        v-if="currentLibrary === 'project'"
+                        @click="currentTab = 'upload'"
+                        class="text-xs font-bold uppercase tracking-widest hover:text-arch-accent transition-colors relative py-2"
+                        :class="currentTab === 'upload' ? 'text-black border-b-2 border-black' : 'text-gray-400'"
+                    >
+                        Batch Import [U]
+                    </button>
+                    
+                    <div class="w-px h-6 bg-gray-300 mx-2"></div>
+                    
+                    <div class="flex items-center gap-2 cursor-pointer group">
+                        <div class="w-8 h-8 bg-black text-white flex items-center justify-center text-xs font-bold">LX</div>
+                    </div>
+                </div>
+            </header>
+
+            <!-- Content -->
+            <div class="flex-1 overflow-y-auto p-12">
+                
+                <!-- TAB: SEARCH -->
+                <transition name="fade" mode="out-in">
+                    <div v-if="currentTab === 'search'" key="search" class="max-w-[1600px] mx-auto">
+                        
+                        <!-- Search Interface: Brutalist Forms -->
+                        <div class="mb-16">
+                            <div class="relative">
+                                <input type="text" 
+                                    class="w-full bg-transparent border-b-2 border-gray-200 text-4xl font-light py-6 placeholder-gray-300 focus:border-black focus:outline-none transition-all"
+                                    placeholder="Search materials...">
+                                <button class="absolute right-0 top-1/2 -translate-y-1/2 text-xl hover:text-arch-accent transition-colors">
+                                    <i class="fa-solid fa-arrow-right"></i>
+                                </button>
+                            </div>
+
+                            <!-- Filters: Horizontal Bar -->
+                            <div class="flex flex-wrap gap-12 mt-8 border-b border-gray-200 pb-8">
+                                <!-- Filter Group -->
+                                <div class="flex flex-col gap-2">
+                                    <span class="typo-label">Classification</span>
+                                    <div class="flex gap-4">
+                                        <label class="flex items-center gap-2 cursor-pointer group">
+                                            <div class="w-4 h-4 border border-gray-300 group-hover:border-black flex items-center justify-center">
+                                                <div class="w-2 h-2 bg-black opacity-0 group-hover:opacity-100"></div>
+                                            </div>
+                                            <span class="text-sm font-medium">All</span>
+                                        </label>
+                                        <label class="flex items-center gap-2 cursor-pointer group">
+                                            <div class="w-4 h-4 border border-gray-300 group-hover:border-black"></div>
+                                            <span class="text-sm text-gray-500 group-hover:text-black">Maps</span>
+                                        </label>
+                                        <label class="flex items-center gap-2 cursor-pointer group">
+                                            <div class="w-4 h-4 border border-gray-300 group-hover:border-black"></div>
+                                            <span class="text-sm text-gray-500 group-hover:text-black">Models</span>
+                                        </label>
+                                    </div>
+                                </div>
+
+                                <!-- Filter Group -->
+                                <div class="flex flex-col gap-2">
+                                    <span class="typo-label">Format</span>
+                                    <select class="bg-transparent border-none text-sm font-medium p-0 pr-4 cursor-pointer focus:outline-none text-gray-500 hover:text-black">
+                                        <option>JPG / PNG / TIFF</option>
+                                        <option>DWG / DXF</option>
+                                        <option>3DM / SKP</option>
+                                    </select>
+                                </div>
+
+                                <!-- Weight Slider: Technical -->
+                                <div class="flex flex-col gap-2 flex-1 max-w-xs ml-auto">
+                                    <div class="flex justify-between">
+                                        <span class="typo-label">Search Bias</span>
+                                        <span class="typo-mono text-[10px]">TEXT <span class="mx-2 text-gray-300">|</span> VISUAL</span>
+                                    </div>
+                                    <input type="range" class="w-full h-[2px] bg-gray-200 appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:bg-black">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Results: Gallery Grid -->
+                        <div>
+                            <div class="flex justify-between items-end mb-6">
+                                <span class="typo-mono text-xs text-gray-500">INDEX_RESULT: 124 ITEMS</span>
+                                <div class="flex gap-1">
+                                    <button class="w-8 h-8 border border-black bg-black text-white flex items-center justify-center"><i class="fa-solid fa-table-cells"></i></button>
+                                    <button class="w-8 h-8 border border-gray-200 hover:border-black text-gray-400 hover:text-black flex items-center justify-center transition-colors"><i class="fa-solid fa-list"></i></button>
+                                </div>
+                            </div>
+
+                            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-x-8 gap-y-12">
+                                <div v-for="n in 8" :key="n" class="group cursor-pointer">
+                                    <!-- Image Container: Sharp, No Shadow -->
+                                    <div class="relative aspect-[4/3] bg-gray-100 overflow-hidden mb-3 border border-transparent group-hover:border-arch-accent transition-colors">
+                                        <img :src="`https://picsum.photos/seed/${n*12}/800/600`" class="w-full h-full object-cover filter grayscale group-hover:grayscale-0 transition-all duration-500">
+                                        
+                                        <!-- Overlay info on hover (Architectural) -->
+                                        <div class="absolute top-0 left-0 p-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                                            <span class="bg-black text-white text-[10px] px-1 py-0.5 typo-mono">ID_{{ 202400 + n }}</span>
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- Meta -->
+                                    <div class="flex flex-col border-t border-gray-200 pt-2 group-hover:border-black transition-colors">
+                                        <div class="flex justify-between items-start">
+                                            <h3 class="text-sm font-bold truncate">Concrete_Raw_Panel_{{n}}</h3>
+                                            <span class="typo-mono text-[10px] text-gray-400">24MB</span>
+                                        </div>
+                                        <div class="flex justify-between items-center mt-1">
+                                            <span class="text-[10px] text-gray-500 uppercase tracking-wider">Texture / Rough</span>
+                                            <i class="fa-regular fa-heart text-xs text-gray-300 hover:text-arch-accent"></i>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- TAB: UPLOAD (Technical Process) -->
+                    <div v-else-if="currentTab === 'upload'" key="upload" class="max-w-4xl mx-auto h-full flex flex-col">
+                        
+                        <!-- Technical Header -->
+                        <div class="border-b border-black pb-6 mb-12 flex justify-between items-end">
+                            <div>
+                                <h2 class="text-3xl font-light mb-1">Batch Indexing Protocol</h2>
+                                <p class="typo-mono text-xs text-gray-500">/// EXECUTE_SEQUENCE_INIT</p>
+                            </div>
+                            
+                            <!-- Step Indicator as Code -->
+                            <div class="flex gap-8">
+                                <div v-for="(step, i) in uploadSteps" :key="i" 
+                                    class="flex flex-col items-center gap-2 cursor-pointer group"
+                                    @click="currentUploadStep > i + 1 ? currentUploadStep = i + 1 : null">
+                                    <div class="w-2 h-2 transition-all" 
+                                        :class="currentUploadStep === i + 1 ? 'bg-arch-accent' : (currentUploadStep > i + 1 ? 'bg-black' : 'bg-gray-300')"></div>
+                                    <span class="typo-mono text-[10px] uppercase" 
+                                        :class="currentUploadStep === i + 1 ? 'text-black font-bold' : 'text-gray-400'">
+                                        0{{i+1}}_{{step}}
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Step 1: Input -->
+                        <div v-if="currentUploadStep === 1" class="flex-1 flex flex-col animate-fade-in">
+                            <div class="bg-white border border-gray-200 p-12 relative">
+                                <span class="absolute top-4 left-4 typo-mono text-[10px] text-gray-400">INPUT_SOURCE</span>
+                                
+                                <label class="block text-sm font-bold mb-4">DIRECTORY PATH</label>
+                                <div class="flex gap-0">
+                                    <input type="text" placeholder="\\SERVER\PROJECTS\..." class="flex-1 bg-gray-50 border border-gray-300 p-4 font-mono text-sm focus:border-black focus:bg-white outline-none transition-colors">
+                                    <button class="bg-black text-white px-8 hover:bg-arch-accent transition-colors text-sm font-bold uppercase tracking-wider">Browse</button>
+                                </div>
+
+                                <div class="mt-12">
+                                    <span class="typo-label block mb-4 text-gray-400">RECENT_HISTORY</span>
+                                    <div class="space-y-2">
+                                        <div v-for="path in ['D:\\Work\\2024_Museum', '\\NAS\\Lib\\Textures']" class="flex items-center justify-between border-b border-gray-100 py-2 group cursor-pointer hover:bg-gray-50 px-2">
+                                            <span class="font-mono text-xs text-gray-600 group-hover:text-black">{{ path }}</span>
+                                            <span class="text-[10px] text-gray-300 group-hover:text-arch-accent">[LOAD]</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="mt-8 flex justify-end">
+                                <button @click="simulateScan" class="border-2 border-black bg-transparent hover:bg-black hover:text-white text-black px-10 py-4 text-sm font-bold uppercase tracking-widest transition-all flex items-center gap-3">
+                                    Initialize Scan <i class="fa-solid fa-arrow-right"></i>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Step 2: Data Table -->
+                        <div v-if="currentUploadStep === 2" class="flex-1 flex flex-col animate-fade-in">
+                            <div class="bg-white border border-gray-200 flex-1 flex flex-col">
+                                <div class="p-4 border-b border-gray-200 bg-gray-50 flex justify-between items-center">
+                                    <span class="typo-mono text-xs font-bold">FOUND: 42 OBJECTS</span>
+                                    <div class="flex gap-4 text-[10px] font-bold uppercase tracking-wider">
+                                        <button class="hover:text-arch-accent hover:underline">Select All</button>
+                                        <button class="hover:text-arch-accent hover:underline">Invert</button>
+                                    </div>
+                                </div>
+                                <div class="flex-1 overflow-y-auto p-0">
+                                    <table class="w-full text-left border-collapse">
+                                        <thead>
+                                            <tr class="border-b border-black text-[10px] uppercase tracking-wider text-gray-500">
+                                                <th class="p-4 w-12 text-center">#</th>
+                                                <th class="p-4">Filename</th>
+                                                <th class="p-4 w-24">Ext</th>
+                                                <th class="p-4 w-32 text-right">Size</th>
+                                                <th class="p-4 w-24 text-center">Status</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody class="font-mono text-xs text-gray-600">
+                                            <tr v-for="i in 8" class="border-b border-gray-100 hover:bg-gray-50 group">
+                                                <td class="p-4 text-center border-r border-gray-100"><input type="checkbox" checked class="accent-black"></td>
+                                                <td class="p-4 text-black font-medium group-hover:text-arch-accent">render_cam_0{{i}}</td>
+                                                <td class="p-4 border-l border-gray-100">JPG</td>
+                                                <td class="p-4 text-right border-l border-gray-100">4,2MB</td>
+                                                <td class="p-4 text-center border-l border-gray-100 text-gray-400">WAIT</td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                            <div class="mt-8 flex justify-between">
+                                <button @click="currentUploadStep = 1" class="text-gray-400 hover:text-black text-xs font-bold uppercase tracking-widest">Back</button>
+                                <button @click="startIndexing" class="bg-black text-white px-10 py-4 text-sm font-bold uppercase tracking-widest hover:bg-arch-accent transition-colors">
+                                    Execute Indexing
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Step 3: Processing (Terminal Style) -->
+                        <div v-if="currentUploadStep === 3" class="flex-1 flex flex-col items-center justify-center animate-fade-in">
+                            <div class="w-full max-w-lg bg-black text-green-500 font-mono text-xs p-6 shadow-2xl relative overflow-hidden">
+                                <!-- Scanline effect -->
+                                <div class="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20 pointer-events-none"></div>
+                                <div class="absolute top-0 left-0 w-full h-1 bg-white/10 animate-[scan_2s_linear_infinite]"></div>
+                                
+                                <div class="mb-4 border-b border-green-900 pb-2">
+                                    > RUNNING TASK: BATCH_INDEX_V2
+                                </div>
+                                <div class="space-y-1 h-32 overflow-hidden flex flex-col justify-end">
+                                    <div class="opacity-50">> Reading metadata... OK</div>
+                                    <div class="opacity-70">> Generating thumbnail [128x128]... OK</div>
+                                    <div>> Processing file {{ progress }}%...</div>
+                                    <div class="animate-pulse">_</div>
+                                </div>
+                                <div class="mt-4 w-full bg-green-900/30 h-1">
+                                    <div class="h-full bg-green-500" :style="`width: ${progress}%`"></div>
+                                </div>
+                            </div>
+                            <button class="mt-8 text-xs font-bold uppercase tracking-widest text-red-500 hover:bg-red-50 px-4 py-2">Abort Process</button>
+                        </div>
+
+                        <!-- Step 4: Report -->
+                        <div v-if="currentUploadStep === 4" class="flex-1 flex flex-col animate-fade-in items-center pt-12">
+                            <div class="text-6xl mb-6 text-arch-accent font-light">Done.</div>
+                            <div class="w-24 h-1 bg-black mb-8"></div>
+                            <p class="text-gray-500 mb-12 text-center">The operation completed successfully.<br>All assets are now available in the project library.</p>
+                            
+                            <div class="grid grid-cols-3 gap-px bg-gray-200 border border-gray-200 w-full max-w-2xl mb-12">
+                                <div class="bg-white p-6 text-center">
+                                    <div class="text-3xl font-bold mb-1">38</div>
+                                    <div class="typo-label">Indexed</div>
+                                </div>
+                                <div class="bg-white p-6 text-center">
+                                    <div class="text-3xl font-bold mb-1 text-gray-400">04</div>
+                                    <div class="typo-label">Skipped</div>
+                                </div>
+                                <div class="bg-white p-6 text-center">
+                                    <div class="text-3xl font-bold mb-1 text-red-500">00</div>
+                                    <div class="typo-label">Errors</div>
+                                </div>
+                            </div>
+
+                            <div class="flex gap-6">
+                                <button @click="currentTab = 'search'" class="bg-black text-white px-8 py-3 text-xs font-bold uppercase tracking-widest hover:bg-arch-accent transition-colors">View Gallery</button>
+                                <button @click="currentUploadStep = 1" class="bg-white border border-gray-200 text-black px-8 py-3 text-xs font-bold uppercase tracking-widest hover:border-black transition-colors">Import More</button>
+                            </div>
+                        </div>
+
+                    </div>
+                </transition>
+            </div>
+        </main>
+
+    </div>
+
+    <script>
+        const { createApp, ref, computed, watch } = Vue;
+
+        createApp({
+            setup() {
+                const currentLibrary = ref('project');
+                const currentTab = ref('search');
+                const activeProjectId = ref(1);
+                const currentUploadStep = ref(1);
+                const progress = ref(0);
+
+                const projects = ref([
+                    { id: 1, name: 'Museum of Light', code: 'PRJ_2401', client: 'Gov. Arts' },
+                    { id: 2, name: 'Cliffside Villa', code: 'PRJ_2405', client: 'Private' },
+                    { id: 3, name: 'Tech Hub HQ', code: 'PRJ_2312', client: 'Tencent' },
+                ]);
+
+                const activeProjectName = computed(() => {
+                    const p = projects.value.find(p => p.id === activeProjectId.value);
+                    return p ? `${p.code} ${p.name}` : 'Unknown';
+                });
+
+                const uploadSteps = ['Source', 'Audit', 'Process', 'Report'];
+
+                const simulateScan = () => {
+                    setTimeout(() => currentUploadStep.value = 2, 600);
+                };
+
+                const startIndexing = () => {
+                    currentUploadStep.value = 3;
+                    progress.value = 0;
+                    const interval = setInterval(() => {
+                        progress.value += 2;
+                        if(progress.value >= 100) {
+                            clearInterval(interval);
+                            setTimeout(() => currentUploadStep.value = 4, 500);
+                        }
+                    }, 50);
+                };
+
+                // Reset tab when switching library to strictly enforce separation
+                watch(currentLibrary, (val) => {
+                    if(val === 'permanent') currentTab.value = 'search';
+                });
+
+                return {
+                    currentLibrary, currentTab, activeProjectId, projects, activeProjectName,
+                    uploadSteps, currentUploadStep, progress, simulateScan, startIndexing
+                };
+            }
+        }).mount('#app');
+    </script>
+</body>
+</html>

@@ -1,0 +1,88 @@
+# MaterialSearch Server - Development Docker Compose
+# 轻量级开发环境，使用 SQLite
+
+version: '3.8'
+
+services:
+  # ==========================================================================
+  # MaterialSearch 开发服务
+  # ==========================================================================
+  
+  materialsearch-dev:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: ms-app-dev
+    restart: unless-stopped
+    environment:
+      # 使用 SQLite 模式
+      USE_SUPABASE: "false"
+      
+      # 服务配置
+      HOST: "0.0.0.0"
+      PORT: "5000"
+      FLASK_DEBUG: "true"
+      ENABLE_LOGIN: "false"
+      LOG_LEVEL: "DEBUG"
+      
+      # AI 模型配置
+      MODEL_NAME: ${MODEL_NAME:-OFA-Sys/chinese-clip-vit-base-patch16}
+      DEVICE: ${DEVICE:-auto}
+      
+      # 路径配置
+      ASSETS_PATH: /data/assets
+      TEMP_PATH: /data/tmp
+      PERMANENT_DATABASE_PATH: /app/instance/permanent.db
+      METADATA_DATABASE_PATH: /app/instance/projects_metadata.db
+      PROJECT_DATABASE_DIR: /app/instance/projects
+    volumes:
+      # 源代码热重载
+      - ./app:/app/app:ro
+      - ./routes.py:/app/routes.py:ro
+      - ./config.py:/app/config.py:ro
+      
+      # 数据持久化
+      - ./instance:/app/instance
+      - dev_assets:/data/assets
+      - dev_tmp:/data/tmp
+      
+      # 模型缓存
+      - model_cache:/root/.cache/huggingface
+    ports:
+      - "5000:5000"
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+
+  # ==========================================================================
+  # 可选: 前端开发服务
+  # ==========================================================================
+  
+  frontend-dev:
+    image: node:20-alpine
+    container_name: ms-frontend-dev
+    working_dir: /app
+    command: sh -c "npm install && npm run dev"
+    environment:
+      VITE_API_URL: http://localhost:5000
+    volumes:
+      - ./frontend:/app
+      - frontend_node_modules:/app/node_modules
+    ports:
+      - "3000:3000"
+    profiles:
+      - frontend
+
+volumes:
+  dev_assets:
+  dev_tmp:
+  model_cache:
+  frontend_node_modules:
+
+networks:
+  default:
+    name: materialsearch-dev-network

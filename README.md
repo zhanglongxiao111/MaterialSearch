@@ -90,6 +90,40 @@ Note:
 - It is not recommended to set memory limits for the container, as it may cause strange issues. For example, refer to [this issue](https://github.com/chn-lee-yumi/MaterialSearch/issues/6).
 - Docker image has the default environment variables `TRANSFORMERS_OFFLINE=1`, which means it won't connect to huggingface to check the model version. If you want to change the default model in the container, you have to modify `.env` and set `TRANSFORMERS_OFFLINE=0`.
 
+### Server Deployment (Multi-User Mode)
+
+MaterialSearch supports server deployment with multi-user authentication. Two modes are available:
+
+| Mode | Database | Authentication | Use Case |
+|------|----------|----------------|----------|
+| **SQLite** | SQLite | Local Session | Development, single-user |
+| **Supabase** | PostgreSQL + pgvector | JWT + RBAC | Production, multi-user |
+
+**Quick Start (Development Mode):**
+
+```bash
+# SQLite mode - default
+USE_SUPABASE=false python main.py
+```
+
+**Production Mode (Supabase):**
+
+```bash
+# Start the full stack with Docker
+docker-compose up -d
+```
+
+This will launch:
+- PostgreSQL 15 with pgvector extension
+- Supabase Auth (GoTrue)
+- PostgREST API
+- MaterialSearch application
+
+For detailed server deployment instructions, see:
+- [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) - Full deployment guide
+- [docs/SUPABASE_SETUP.md](docs/SUPABASE_SETUP.md) - Supabase configuration
+- [docs/API.md](docs/API.md) - API documentation
+
 ## Configuration Instructions
 
 All configurations are in the `config.py` file, which contains detailed comments.

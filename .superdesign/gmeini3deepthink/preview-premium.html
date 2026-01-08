@@ -1,0 +1,810 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SuperDesign — Material Library</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap"
+        rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        surface: {
+                            0: '#0A0A0B',
+                            1: '#121214',
+                            2: '#1A1A1D',
+                            3: '#232326',
+                            4: '#2D2D31'
+                        },
+                        accent: {
+                            gold: '#D4A853',
+                            amber: '#F5C769',
+                            warm: '#E8B94B'
+                        },
+                        text: {
+                            primary: '#FAFAFA',
+                            secondary: '#A1A1AA',
+                            muted: '#71717A',
+                            dim: '#52525B'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        * {
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+        }
+
+        .font-mono {
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        /* Glassmorphism */
+        .glass {
+            background: rgba(26, 26, 29, 0.7);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .glass-light {
+            background: rgba(255, 255, 255, 0.03);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        /* Subtle glow effects */
+        .glow-gold {
+            box-shadow: 0 0 30px rgba(212, 168, 83, 0.15);
+        }
+
+        .glow-subtle {
+            box-shadow: 0 4px 24px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(255, 255, 255, 0.03);
+        }
+
+        /* Premium scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 3px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(255, 255, 255, 0.15);
+        }
+
+        /* Animations */
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(8px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes shimmer {
+            0% {
+                background-position: -200% 0;
+            }
+
+            100% {
+                background-position: 200% 0;
+            }
+        }
+
+        @keyframes pulse-glow {
+
+            0%,
+            100% {
+                box-shadow: 0 0 20px rgba(212, 168, 83, 0.2);
+            }
+
+            50% {
+                box-shadow: 0 0 30px rgba(212, 168, 83, 0.4);
+            }
+        }
+
+        .animate-fade-in {
+            animation: fadeIn 0.4s ease-out;
+        }
+
+        .animate-shimmer {
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.05), transparent);
+            background-size: 200% 100%;
+            animation: shimmer 2s infinite;
+        }
+
+        .animate-pulse-glow {
+            animation: pulse-glow 3s ease-in-out infinite;
+        }
+
+        /* Image hover */
+        .img-zoom {
+            transition: transform 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        .group:hover .img-zoom {
+            transform: scale(1.08);
+        }
+
+        /* Button states */
+        .btn-primary {
+            background: linear-gradient(135deg, #D4A853 0%, #B8923E 100%);
+            transition: all 0.3s ease;
+        }
+
+        .btn-primary:hover {
+            background: linear-gradient(135deg, #E8B94B 0%, #D4A853 100%);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 20px rgba(212, 168, 83, 0.3);
+        }
+
+        /* Tab indicator */
+        .tab-active {
+            position: relative;
+        }
+
+        .tab-active::after {
+            content: '';
+            position: absolute;
+            bottom: -1px;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, #D4A853, transparent);
+        }
+
+        /* Card border gradient */
+        .card-border {
+            position: relative;
+        }
+
+        .card-border::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            padding: 1px;
+            border-radius: 8px;
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.1), transparent, rgba(255, 255, 255, 0.05));
+            -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+            mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+            -webkit-mask-composite: xor;
+            mask-composite: exclude;
+            pointer-events: none;
+        }
+
+        /* Range slider */
+        input[type="range"] {
+            -webkit-appearance: none;
+            background: transparent;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            height: 14px;
+            width: 14px;
+            border-radius: 50%;
+            background: #D4A853;
+            cursor: pointer;
+            margin-top: -5px;
+            box-shadow: 0 0 10px rgba(212, 168, 83, 0.5);
+        }
+
+        input[type="range"]::-webkit-slider-runnable-track {
+            height: 4px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 2px;
+        }
+
+        /* Progress ring */
+        @keyframes progress {
+            0% {
+                stroke-dashoffset: 283;
+            }
+
+            100% {
+                stroke-dashoffset: 0;
+            }
+        }
+
+        .progress-ring {
+            animation: progress 3s ease-out forwards;
+        }
+    </style>
+</head>
+
+<body class="bg-surface-0 text-text-primary antialiased">
+    <div class="flex h-screen w-full" id="app">
+
+        <!-- === SIDEBAR === -->
+        <aside class="w-[260px] bg-surface-1 border-r border-white/5 flex flex-col">
+
+            <!-- Brand -->
+            <div class="h-16 flex items-center px-5 border-b border-white/5">
+                <div
+                    class="w-8 h-8 rounded-md bg-gradient-to-br from-accent-gold to-accent-amber flex items-center justify-center mr-3 glow-gold">
+                    <span class="text-surface-0 font-bold text-sm">S</span>
+                </div>
+                <div>
+                    <span class="font-semibold text-text-primary tracking-tight">SuperDesign</span>
+                    <span class="block text-[10px] text-text-muted font-mono tracking-wider">MATERIAL LIBRARY</span>
+                </div>
+            </div>
+
+            <!-- Mode Switcher -->
+            <div class="p-4">
+                <div class="bg-surface-2 p-1 rounded-lg flex text-xs font-medium">
+                    <button id="mode-permanent" onclick="switchMode('permanent')"
+                        class="flex-1 py-2 rounded-md transition-all text-text-muted hover:text-text-secondary">
+                        Permanent
+                    </button>
+                    <button id="mode-project" onclick="switchMode('project')"
+                        class="flex-1 py-2 rounded-md transition-all bg-surface-3 text-accent-gold shadow-sm">
+                        Project
+                    </button>
+                </div>
+
+                <!-- Scope Indicator -->
+                <div id="scope-hint" class="mt-4 glass-light rounded-lg p-3">
+                    <div class="flex items-center gap-2 mb-1">
+                        <div class="w-1.5 h-1.5 rounded-full bg-accent-gold animate-pulse"></div>
+                        <span class="text-[10px] font-mono text-accent-gold uppercase tracking-widest"
+                            id="scope-title">Project Scope</span>
+                    </div>
+                    <p class="text-xs text-text-secondary leading-relaxed" id="scope-desc">Searching within selected
+                        project assets</p>
+                </div>
+            </div>
+
+            <!-- Project List -->
+            <div class="flex-1 overflow-y-auto px-3" id="project-list-container">
+                <div
+                    class="px-2 py-3 text-[10px] font-mono text-text-dim uppercase tracking-widest flex items-center gap-2">
+                    <span class="flex-1">Recent Projects</span>
+                    <span class="text-text-muted">3</span>
+                </div>
+                <div id="project-list" class="space-y-1"></div>
+            </div>
+
+            <!-- Scanner Status -->
+            <div class="p-4 border-t border-white/5">
+                <div class="glass-light rounded-lg p-3">
+                    <div class="flex justify-between items-center mb-3">
+                        <div class="flex items-center gap-2">
+                            <div class="w-2 h-2 rounded-full bg-accent-gold animate-pulse-glow"></div>
+                            <span class="text-xs font-medium text-text-secondary">Indexing</span>
+                        </div>
+                        <span class="text-[10px] font-mono text-text-muted">2:34</span>
+                    </div>
+                    <div class="w-full h-1 bg-surface-3 rounded-full overflow-hidden">
+                        <div class="h-full w-[65%] bg-gradient-to-r from-accent-gold to-accent-amber rounded-full">
+                        </div>
+                    </div>
+                    <div class="mt-2 text-[10px] text-text-dim font-mono truncate">.../Renderings/facade_detail_04.jpg
+                    </div>
+                </div>
+            </div>
+        </aside>
+
+        <!-- === MAIN CONTENT === -->
+        <main class="flex-1 flex flex-col min-w-0 bg-surface-0">
+
+            <!-- Header -->
+            <header
+                class="h-14 bg-surface-1/50 backdrop-blur-xl border-b border-white/5 flex items-center justify-between px-6 sticky top-0 z-20">
+                <div class="flex items-center gap-4">
+                    <div id="header-title" class="flex items-center gap-2 text-sm">
+                        <span class="text-text-muted">Project</span>
+                        <svg class="w-3 h-3 text-text-dim" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                        </svg>
+                        <span class="text-text-primary font-medium" id="header-project-name">Museum of Modern Art</span>
+                    </div>
+                    <span
+                        class="px-2 py-0.5 rounded text-[9px] font-mono font-medium uppercase tracking-wider bg-accent-gold/10 text-accent-gold border border-accent-gold/20">Active</span>
+                </div>
+
+                <!-- Tabs -->
+                <nav class="absolute left-1/2 -translate-x-1/2 flex">
+                    <button id="tab-search" onclick="switchTab('search')"
+                        class="px-5 py-4 text-xs font-medium tracking-wide transition-colors text-accent-gold tab-active">
+                        Search
+                    </button>
+                    <button id="tab-upload" onclick="switchTab('upload')"
+                        class="px-5 py-4 text-xs font-medium tracking-wide transition-colors text-text-muted hover:text-text-secondary flex items-center gap-2">
+                        Upload
+                        <span class="w-1.5 h-1.5 rounded-full bg-accent-gold"></span>
+                    </button>
+                    <button id="tab-stats" onclick="switchTab('stats')"
+                        class="px-5 py-4 text-xs font-medium tracking-wide transition-colors text-text-muted hover:text-text-secondary">
+                        Analytics
+                    </button>
+                </nav>
+
+                <!-- User -->
+                <div class="flex items-center gap-3">
+                    <div class="text-right hidden sm:block">
+                        <div class="text-xs font-medium text-text-primary">龙潇</div>
+                        <div class="text-[10px] text-text-muted">Architect</div>
+                    </div>
+                    <div
+                        class="w-9 h-9 rounded-full bg-gradient-to-br from-surface-3 to-surface-4 flex items-center justify-center text-xs font-medium text-text-secondary ring-2 ring-accent-gold/20">
+                        龙
+                    </div>
+                </div>
+            </header>
+
+            <!-- Content -->
+            <div class="flex-1 overflow-y-auto">
+
+                <!-- Search Content -->
+                <div id="content-search" class="p-6 animate-fade-in">
+                    <!-- Search Bar -->
+                    <div class="max-w-5xl mx-auto mb-8">
+                        <div class="flex gap-4">
+                            <div class="flex-1 relative group">
+                                <div
+                                    class="absolute inset-0 bg-gradient-to-r from-accent-gold/20 to-transparent rounded-xl blur-xl opacity-0 group-focus-within:opacity-100 transition-opacity">
+                                </div>
+                                <div class="relative glass rounded-xl overflow-hidden">
+                                    <svg class="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-text-muted group-focus-within:text-accent-gold transition-colors"
+                                        fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <circle cx="11" cy="11" r="8" />
+                                        <path stroke-linecap="round" d="m21 21-4.3-4.3" />
+                                    </svg>
+                                    <input type="text"
+                                        class="w-full h-12 pl-12 pr-4 bg-transparent text-text-primary placeholder:text-text-dim text-sm outline-none"
+                                        placeholder="Search materials, textures, renders, CAD files..." />
+                                    <div class="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-2">
+                                        <kbd
+                                            class="px-2 py-1 rounded bg-surface-3 text-[10px] font-mono text-text-muted">⌘K</kbd>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Filters -->
+                            <div class="glass rounded-xl px-4 flex items-center gap-4">
+                                <div class="flex items-center gap-2">
+                                    <span class="text-[10px] font-mono text-text-muted uppercase">Focus</span>
+                                    <input type="range" class="w-20" />
+                                </div>
+                                <div class="w-px h-6 bg-white/10"></div>
+                                <button class="text-text-muted hover:text-text-primary transition-colors">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
+                                    </svg>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Quick Tags -->
+                        <div class="flex gap-2 mt-4">
+                            <span
+                                class="px-3 py-1 rounded-full text-xs bg-surface-2 text-text-muted hover:text-text-secondary hover:bg-surface-3 cursor-pointer transition-colors">#facade</span>
+                            <span
+                                class="px-3 py-1 rounded-full text-xs bg-surface-2 text-text-muted hover:text-text-secondary hover:bg-surface-3 cursor-pointer transition-colors">#render</span>
+                            <span
+                                class="px-3 py-1 rounded-full text-xs bg-surface-2 text-text-muted hover:text-text-secondary hover:bg-surface-3 cursor-pointer transition-colors">#concrete</span>
+                            <span
+                                class="px-3 py-1 rounded-full text-xs bg-surface-2 text-text-muted hover:text-text-secondary hover:bg-surface-3 cursor-pointer transition-colors">#glass</span>
+                            <span
+                                class="px-3 py-1 rounded-full text-xs bg-accent-gold/10 text-accent-gold border border-accent-gold/20 cursor-pointer">+
+                                Add Tag</span>
+                        </div>
+                    </div>
+
+                    <!-- Results Grid -->
+                    <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 max-w-[1600px] mx-auto"
+                        id="image-grid"></div>
+
+                    <!-- Load More -->
+                    <div class="flex justify-center mt-8">
+                        <button
+                            class="px-6 py-2 rounded-lg text-xs font-medium text-text-muted bg-surface-2 hover:bg-surface-3 transition-colors">
+                            Load More Results
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Upload Content -->
+                <div id="content-upload" class="hidden p-6 h-full animate-fade-in">
+                    <div class="max-w-4xl mx-auto h-full flex flex-col">
+                        <!-- Steps -->
+                        <div class="flex items-center justify-center mb-8 relative">
+                            <div class="absolute top-4 left-[20%] right-[20%] h-px bg-surface-3"></div>
+                            <div id="step-indicators" class="flex gap-20 relative"></div>
+                        </div>
+
+                        <!-- Step Content -->
+                        <div class="flex-1 glass rounded-2xl overflow-hidden glow-subtle" id="step-content"></div>
+                    </div>
+                </div>
+
+                <!-- Stats Content -->
+                <div id="content-stats"
+                    class="hidden p-6 h-full flex flex-col items-center justify-center animate-fade-in">
+                    <div class="glass-light rounded-2xl p-12 text-center max-w-md">
+                        <div class="w-16 h-16 rounded-2xl bg-surface-3 flex items-center justify-center mx-auto mb-6">
+                            <svg class="w-8 h-8 text-text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                                    d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                            </svg>
+                        </div>
+                        <h3 class="text-lg font-medium text-text-primary mb-2">Analytics Dashboard</h3>
+                        <p class="text-sm text-text-muted leading-relaxed">Visual insights for your material library
+                            usage patterns and storage metrics.</p>
+                        <div class="mt-6 text-[10px] font-mono text-text-dim uppercase tracking-widest">Coming Q1 2025
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        // === DATA ===
+        const PROJECTS = [
+            { id: '2401-MOMA', name: 'Museum of Modern Art', type: 'Cultural', count: 1240 },
+            { id: '2311-RVR', name: 'Riverside Villa 04', type: 'Residential', count: 850 },
+            { id: '2205-TWR', name: 'Skyline Tower HZ', type: 'Commercial', count: 3200 },
+        ];
+
+        const ARCHITECTURE_IMAGES = [
+            { url: 'https://images.unsplash.com/photo-1486325212027-8081e485255e?w=600&h=450&fit=crop&q=80', name: 'Museum_Facade_Final.jpg', size: '4.2 MB', type: 'Render' },
+            { url: 'https://images.unsplash.com/photo-1545324418-cc6e8fc76d14?w=600&h=450&fit=crop&q=80', name: 'Glass_Curtainwall_01.jpg', size: '3.8 MB', type: 'Detail' },
+            { url: 'https://images.unsplash.com/photo-1518005020951-eccb494ad742?w=600&h=450&fit=crop&q=80', name: 'Concrete_Texture_HD.jpg', size: '5.1 MB', type: 'Material' },
+            { url: 'https://images.unsplash.com/photo-1511818966892-d7d671e672a2?w=600&h=450&fit=crop&q=80', name: 'Skyline_Dusk_View.jpg', size: '6.2 MB', type: 'Render' },
+            { url: 'https://images.unsplash.com/photo-1487958449943-2429e8be8625?w=600&h=450&fit=crop&q=80', name: 'Urban_Geometry_Study.jpg', size: '3.4 MB', type: 'Photo' },
+            { url: 'https://images.unsplash.com/photo-1448630360428-65456885c650?w=600&h=450&fit=crop&q=80', name: 'Heritage_Facade_Ref.jpg', size: '4.8 MB', type: 'Reference' },
+            { url: 'https://images.unsplash.com/photo-1479839672679-a46483c0e7c8?w=600&h=450&fit=crop&q=80', name: 'Atrium_Interior_V2.jpg', size: '7.1 MB', type: 'Render' },
+            { url: 'https://images.unsplash.com/photo-1431576901776-e539bd916ba2?w=600&h=450&fit=crop&q=80', name: 'Pattern_Study_03.jpg', size: '2.9 MB', type: 'Detail' },
+            { url: 'https://images.unsplash.com/photo-1524813686514-a57563d77965?w=600&h=450&fit=crop&q=80', name: 'Minimal_Form_Concept.jpg', size: '3.2 MB', type: 'Concept' },
+            { url: 'https://images.unsplash.com/photo-1555883006-0f5a0915a80f?w=600&h=450&fit=crop&q=80', name: 'Twilight_Exterior.jpg', size: '5.8 MB', type: 'Render' },
+        ];
+
+        // === STATE ===
+        let state = {
+            mode: 'project',
+            activeProject: PROJECTS[0],
+            activeTab: 'search',
+            uploadStep: 1
+        };
+
+        // === RENDER ===
+        function renderProjectList() {
+            const container = document.getElementById('project-list');
+            container.innerHTML = PROJECTS.map(p => `
+                <div onclick="selectProject('${p.id}')" 
+                     class="group flex items-center gap-3 px-3 py-3 rounded-lg cursor-pointer transition-all
+                     ${state.activeProject?.id === p.id
+                    ? 'bg-surface-3 ring-1 ring-accent-gold/20'
+                    : 'hover:bg-surface-2'}">
+                    <div class="w-10 h-10 rounded-lg bg-surface-${state.activeProject?.id === p.id ? '4' : '3'} flex items-center justify-center text-xs font-mono ${state.activeProject?.id === p.id ? 'text-accent-gold' : 'text-text-muted'}">
+                        ${p.id.split('-')[1].substring(0, 2)}
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <div class="text-sm font-medium truncate ${state.activeProject?.id === p.id ? 'text-text-primary' : 'text-text-secondary'}">${p.name}</div>
+                        <div class="text-[10px] text-text-muted font-mono flex items-center gap-2">
+                            <span>${p.type}</span>
+                            <span>·</span>
+                            <span>${p.count.toLocaleString()} files</span>
+                        </div>
+                    </div>
+                    ${state.activeProject?.id === p.id ? '<div class="w-1.5 h-1.5 rounded-full bg-accent-gold"></div>' : ''}
+                </div>
+            `).join('');
+        }
+
+        function renderImageGrid() {
+            const container = document.getElementById('image-grid');
+            container.innerHTML = ARCHITECTURE_IMAGES.map((img, i) => `
+                <div class="group card-border rounded-xl overflow-hidden bg-surface-1 hover:bg-surface-2 transition-all cursor-pointer" style="animation-delay: ${i * 50}ms">
+                    <div class="aspect-[4/3] relative overflow-hidden">
+                        <img src="${img.url}" alt="${img.name}" class="img-zoom w-full h-full object-cover"/>
+                        <div class="absolute inset-0 bg-gradient-to-t from-surface-0/90 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                        
+                        <!-- Overlay Actions -->
+                        <div class="absolute bottom-0 left-0 right-0 p-3 translate-y-full group-hover:translate-y-0 transition-transform">
+                            <div class="flex items-center justify-between">
+                                <span class="text-xs font-medium text-text-primary">${img.type}</span>
+                                <div class="flex gap-1">
+                                    <button class="w-7 h-7 rounded-md bg-white/10 backdrop-blur flex items-center justify-center hover:bg-white/20 transition-colors">
+                                        <svg class="w-3.5 h-3.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+                                        </svg>
+                                    </button>
+                                    <button class="w-7 h-7 rounded-md bg-white/10 backdrop-blur flex items-center justify-center hover:bg-white/20 transition-colors">
+                                        <svg class="w-3.5 h-3.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/>
+                                        </svg>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Type Badge -->
+                        <div class="absolute top-2 left-2 px-2 py-0.5 rounded-md text-[10px] font-medium bg-surface-0/80 backdrop-blur text-text-secondary">
+                            ${img.type}
+                        </div>
+                    </div>
+                    <div class="p-3">
+                        <div class="text-xs font-medium text-text-primary truncate mb-1">${img.name}</div>
+                        <div class="flex justify-between items-center text-[10px] text-text-muted font-mono">
+                            <span>JPG</span>
+                            <span>${img.size}</span>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function renderStepIndicators() {
+            const steps = ['Import', 'Review', 'Process', 'Complete'];
+            const container = document.getElementById('step-indicators');
+            container.innerHTML = steps.map((name, i) => {
+                const s = i + 1;
+                const isActive = state.uploadStep === s;
+                const isComplete = state.uploadStep > s;
+                return `
+                    <div class="flex flex-col items-center gap-2 bg-surface-0 px-4">
+                        <div class="w-8 h-8 rounded-full flex items-center justify-center text-xs font-mono transition-all
+                            ${isActive ? 'bg-accent-gold text-surface-0 ring-4 ring-accent-gold/20' :
+                        isComplete ? 'bg-green-500/20 text-green-400 ring-2 ring-green-500/20' :
+                            'bg-surface-3 text-text-muted'}">
+                            ${isComplete ? '✓' : s}
+                        </div>
+                        <span class="text-[10px] font-medium uppercase tracking-wider ${isActive ? 'text-accent-gold' : 'text-text-dim'}">${name}</span>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function renderStepContent() {
+            const container = document.getElementById('step-content');
+
+            if (state.uploadStep === 1) {
+                container.innerHTML = `
+                    <div class="p-8 flex flex-col h-full">
+                        <div class="mb-6">
+                            <h2 class="text-xl font-semibold text-text-primary mb-1">Import Assets</h2>
+                            <p class="text-sm text-text-muted">Paste folder paths below to scan and index new materials</p>
+                        </div>
+                        
+                        <div class="flex-1 flex gap-6">
+                            <div class="flex-1 flex flex-col">
+                                <textarea class="flex-1 w-full p-4 rounded-xl bg-surface-2 border border-white/5 font-mono text-xs text-text-secondary leading-relaxed focus:ring-1 focus:ring-accent-gold/50 focus:border-accent-gold/30 outline-none resize-none placeholder:text-text-dim"
+                                    placeholder="\\\\NAS\\Projects\\2024\\...&#10;D:\\Local\\Site_Photos\\...">\\\\NAS-01\\Projects\\2024\\MOMA\\Renderings\\Final</textarea>
+                                <div class="mt-2 flex justify-between text-[10px] text-text-dim font-mono">
+                                    <span>UNC paths and local drives supported</span>
+                                    <span>⌘V to paste</span>
+                                </div>
+                            </div>
+                            
+                            <div class="w-56 border-l border-white/5 pl-6">
+                                <h3 class="text-[10px] font-mono text-text-dim uppercase tracking-widest mb-4">Quick Access</h3>
+                                <div class="space-y-2">
+                                    <div class="p-2 rounded-lg hover:bg-surface-3 cursor-pointer transition-colors group">
+                                        <div class="flex items-center gap-2 mb-1">
+                                            <svg class="w-3.5 h-3.5 text-text-muted group-hover:text-accent-gold transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"/></svg>
+                                            <span class="text-xs text-text-secondary">Final Renders</span>
+                                        </div>
+                                        <div class="text-[10px] text-text-dim font-mono truncate">...\\MOMA\\Renderings</div>
+                                    </div>
+                                    <div class="p-2 rounded-lg hover:bg-surface-3 cursor-pointer transition-colors group">
+                                        <div class="flex items-center gap-2 mb-1">
+                                            <svg class="w-3.5 h-3.5 text-text-muted group-hover:text-accent-gold transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"/></svg>
+                                            <span class="text-xs text-text-secondary">Site Photos</span>
+                                        </div>
+                                        <div class="text-[10px] text-text-dim font-mono truncate">D:\\Work\\Site_Photos</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="mt-6 pt-6 border-t border-white/5 flex justify-end">
+                            <button onclick="setUploadStep(2)" class="btn-primary px-5 py-2.5 rounded-lg text-sm font-medium text-surface-0 flex items-center gap-2">
+                                Scan Folders
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
+                            </button>
+                        </div>
+                    </div>
+                `;
+            } else if (state.uploadStep === 2) {
+                container.innerHTML = `
+                    <div class="flex flex-col h-full">
+                        <div class="p-4 border-b border-white/5 flex justify-between items-center bg-surface-2/50">
+                            <div class="flex items-center gap-4">
+                                <span class="px-2 py-1 rounded-md text-xs font-mono bg-accent-gold/10 text-accent-gold">45 Found</span>
+                                <span class="text-xs text-text-muted">1.2 GB total</span>
+                            </div>
+                            <div class="flex gap-2">
+                                <button onclick="setUploadStep(1)" class="px-4 py-2 rounded-lg text-xs font-medium text-text-muted hover:text-text-secondary bg-surface-3 hover:bg-surface-4 transition-colors">Back</button>
+                                <button onclick="setUploadStep(3)" class="btn-primary px-4 py-2 rounded-lg text-xs font-medium text-surface-0">Start Processing</button>
+                            </div>
+                        </div>
+                        
+                        <div class="flex-1 overflow-auto">
+                            <table class="w-full">
+                                <thead class="text-[10px] text-text-dim uppercase tracking-wider sticky top-0 bg-surface-1">
+                                    <tr>
+                                        <th class="px-4 py-3 text-left font-medium">File</th>
+                                        <th class="px-4 py-3 text-left font-medium">Path</th>
+                                        <th class="px-4 py-3 text-right font-medium">Size</th>
+                                        <th class="px-4 py-3 text-center font-medium w-24">Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="text-sm">
+                                    ${ARCHITECTURE_IMAGES.slice(0, 7).map((img, i) => `
+                                        <tr class="border-t border-white/5 hover:bg-surface-2/50 transition-colors">
+                                            <td class="px-4 py-3">
+                                                <div class="flex items-center gap-3">
+                                                    <div class="w-8 h-8 rounded bg-surface-3 overflow-hidden">
+                                                        <img src="${img.url}" class="w-full h-full object-cover"/>
+                                                    </div>
+                                                    <span class="font-mono text-xs text-text-secondary">${img.name}</span>
+                                                </div>
+                                            </td>
+                                            <td class="px-4 py-3 text-xs text-text-dim font-mono">.../Renderings/Final</td>
+                                            <td class="px-4 py-3 text-xs text-text-muted font-mono text-right">${img.size}</td>
+                                            <td class="px-4 py-3 text-center">
+                                                <span class="px-2 py-0.5 rounded text-[10px] font-medium ${i === 2 ? 'bg-surface-3 text-text-muted' : 'bg-green-500/10 text-green-400'}">
+                                                    ${i === 2 ? 'Exists' : 'New'}
+                                                </span>
+                                            </td>
+                                        </tr>
+                                    `).join('')}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                `;
+            } else if (state.uploadStep === 3) {
+                container.innerHTML = `
+                    <div class="flex-1 flex flex-col items-center justify-center bg-surface-2/30">
+                        <div class="relative w-28 h-28 mb-6">
+                            <svg class="w-full h-full -rotate-90" viewBox="0 0 100 100">
+                                <circle cx="50" cy="50" r="42" fill="none" stroke="rgba(255,255,255,0.05)" stroke-width="3"/>
+                                <circle cx="50" cy="50" r="42" fill="none" stroke="url(#gold-gradient)" stroke-width="3" stroke-dasharray="264" stroke-dashoffset="100" stroke-linecap="round" class="progress-ring"/>
+                                <defs>
+                                    <linearGradient id="gold-gradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                                        <stop offset="0%" stop-color="#D4A853"/>
+                                        <stop offset="100%" stop-color="#F5C769"/>
+                                    </linearGradient>
+                                </defs>
+                            </svg>
+                            <div class="absolute inset-0 flex items-center justify-center">
+                                <span class="text-2xl font-light text-text-primary font-mono" id="progress-percent">0%</span>
+                            </div>
+                        </div>
+                        
+                        <div class="w-[360px] bg-surface-2 rounded-xl p-4 font-mono text-[11px] leading-relaxed">
+                            <div class="text-green-400 mb-1">→ Connected to NAS-01</div>
+                            <div class="text-text-muted mb-1">→ Extracting metadata...</div>
+                            <div class="text-text-muted mb-1">→ Generating thumbnails...</div>
+                            <div class="text-accent-gold animate-pulse">→ Indexing vectors...</div>
+                        </div>
+                        
+                        <button onclick="setUploadStep(4)" class="mt-6 text-xs text-text-dim hover:text-accent-gold transition-colors">Skip Demo →</button>
+                    </div>
+                `;
+                let progress = 0;
+                const interval = setInterval(() => {
+                    progress += 2;
+                    const el = document.getElementById('progress-percent');
+                    if (el) el.textContent = Math.min(progress, 100) + '%';
+                    if (progress >= 100) {
+                        clearInterval(interval);
+                        setTimeout(() => setUploadStep(4), 500);
+                    }
+                }, 50);
+            } else if (state.uploadStep === 4) {
+                container.innerHTML = `
+                    <div class="flex-1 flex flex-col items-center justify-center">
+                        <div class="w-16 h-16 rounded-2xl bg-green-500/10 flex items-center justify-center mb-6 ring-4 ring-green-500/10">
+                            <svg class="w-8 h-8 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                            </svg>
+                        </div>
+                        <h2 class="text-xl font-semibold text-text-primary mb-2">Import Complete</h2>
+                        <p class="text-sm text-text-muted mb-8">44 new assets indexed successfully</p>
+                        <div class="flex gap-3">
+                            <button onclick="setUploadStep(1)" class="px-5 py-2.5 rounded-lg text-sm font-medium text-text-muted bg-surface-3 hover:bg-surface-4 transition-colors">Import More</button>
+                            <button onclick="switchTab('search')" class="btn-primary px-5 py-2.5 rounded-lg text-sm font-medium text-surface-0">View Library</button>
+                        </div>
+                    </div>
+                `;
+            }
+        }
+
+        // === INTERACTIONS ===
+        function switchMode(mode) {
+            state.mode = mode;
+            state.activeProject = mode === 'permanent' ? null : PROJECTS[0];
+
+            document.getElementById('mode-permanent').className = `flex-1 py-2 rounded-md transition-all ${mode === 'permanent' ? 'bg-surface-3 text-text-primary shadow-sm' : 'text-text-muted hover:text-text-secondary'}`;
+            document.getElementById('mode-project').className = `flex-1 py-2 rounded-md transition-all ${mode === 'project' ? 'bg-surface-3 text-accent-gold shadow-sm' : 'text-text-muted hover:text-text-secondary'}`;
+
+            document.getElementById('scope-title').textContent = mode === 'permanent' ? 'Global Scope' : 'Project Scope';
+            document.getElementById('scope-desc').textContent = mode === 'permanent' ? 'Searching across all indexed assets' : 'Searching within selected project assets';
+
+            document.getElementById('project-list-container').style.opacity = mode === 'permanent' ? '0.3' : '1';
+            document.getElementById('project-list-container').style.pointerEvents = mode === 'permanent' ? 'none' : 'auto';
+
+            document.getElementById('tab-upload').style.opacity = mode === 'permanent' ? '0.3' : '1';
+            document.getElementById('tab-upload').style.pointerEvents = mode === 'permanent' ? 'none' : 'auto';
+
+            updateHeader();
+            renderProjectList();
+            switchTab('search');
+        }
+
+        function selectProject(projectId) {
+            state.activeProject = PROJECTS.find(p => p.id === projectId);
+            updateHeader();
+            renderProjectList();
+        }
+
+        function updateHeader() {
+            const name = document.getElementById('header-project-name');
+            if (state.mode === 'permanent') {
+                name.textContent = 'All Projects';
+            } else {
+                name.textContent = state.activeProject?.name || '';
+            }
+        }
+
+        function switchTab(tab) {
+            if (tab === 'upload' && state.mode === 'permanent') return;
+
+            state.activeTab = tab;
+            state.uploadStep = 1;
+
+            ['search', 'upload', 'stats'].forEach(t => {
+                const btn = document.getElementById(`tab-${t}`);
+                btn.className = `px-5 py-4 text-xs font-medium tracking-wide transition-colors ${t === tab ? 'text-accent-gold tab-active' : 'text-text-muted hover:text-text-secondary'}`;
+                if (t === 'upload') btn.className += ' flex items-center gap-2';
+            });
+
+            document.getElementById('content-search').className = tab === 'search' ? 'p-6 animate-fade-in' : 'hidden';
+            document.getElementById('content-upload').className = tab === 'upload' ? 'p-6 h-full animate-fade-in' : 'hidden';
+            document.getElementById('content-stats').className = tab === 'stats' ? 'p-6 h-full flex flex-col items-center justify-center animate-fade-in' : 'hidden';
+
+            if (tab === 'upload') {
+                renderStepIndicators();
+                renderStepContent();
+            }
+        }
+
+        function setUploadStep(step) {
+            state.uploadStep = step;
+            renderStepIndicators();
+            renderStepContent();
+        }
+
+        // === INIT ===
+        renderProjectList();
+        renderImageGrid();
+    </script>
+</body>
+
+</html>

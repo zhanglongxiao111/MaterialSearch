@@ -13,3 +13,7 @@ python-dotenv>=0.19.2
 tqdm>=4.66.1
 requests>=2.31.0
 faiss-cpu>=1.11.0
+
+# === 新增：Supabase 集成 ===
+supabase>=2.0.0
+python-jose[cryptography]>=3.3.0

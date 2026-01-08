@@ -1,0 +1,111 @@
+_format_version: "2.1"
+_transform: true
+
+# =============================================================================
+# Supabase Gateway 配置
+# Kong 作为 API 网关，路由请求到后端服务
+# =============================================================================
+
+consumers:
+  - username: anon
+    keyauth_credentials:
+      - key: ${SUPABASE_ANON_KEY}
+  - username: service_role
+    keyauth_credentials:
+      - key: ${SUPABASE_SERVICE_KEY}
+
+acls:
+  - consumer: anon
+    group: anon
+  - consumer: service_role
+    group: admin
+
+# =============================================================================
+# 服务定义
+# =============================================================================
+
+services:
+  # ---------------------------------------------------------------------------
+  # Auth 服务 (GoTrue)
+  # ---------------------------------------------------------------------------
+  - name: auth-v1
+    url: http://auth:9999/
+    routes:
+      - name: auth-v1-route
+        strip_path: true
+        paths:
+          - /auth/v1
+    plugins:
+      - name: cors
+        config:
+          origins:
+            - "*"
+          methods:
+            - GET
+            - POST
+            - PUT
+            - DELETE
+            - OPTIONS
+          headers:
+            - Content-Type
+            - Authorization
+            - X-Requested-With
+            - apikey
+          credentials: true
+          max_age: 3600
+
+  # ---------------------------------------------------------------------------
+  # REST 服务 (PostgREST)
+  # ---------------------------------------------------------------------------
+  - name: rest-v1
+    url: http://rest:3000/
+    routes:
+      - name: rest-v1-route
+        strip_path: true
+        paths:
+          - /rest/v1
+    plugins:
+      - name: cors
+        config:
+          origins:
+            - "*"
+          methods:
+            - GET
+            - POST
+            - PUT
+            - PATCH
+            - DELETE
+            - OPTIONS
+          headers:
+            - Content-Type
+            - Authorization
+            - Prefer
+            - apikey
+            - Range
+          credentials: true
+          exposed_headers:
+            - Content-Range
+          max_age: 3600
+      - name: key-auth
+        config:
+          hide_credentials: false
+          key_names:
+            - apikey
+            - Authorization
+      - name: acl
+        config:
+          hide_groups_header: true
+          allow:
+            - anon
+            - admin
+
+  # ---------------------------------------------------------------------------
+  # Storage 服务 (可选)
+  # ---------------------------------------------------------------------------
+  # - name: storage-v1
+  #   url: http://storage:5000/
+  #   routes:
+  #     - name: storage-v1-route
+  #       strip_path: true
+  #       paths:
+  #         - /storage/v1

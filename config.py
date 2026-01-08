@@ -9,8 +9,8 @@ from env import *  # noqa
 env()  # noqa
 
 # *****服务器配置*****
-HOST = os.getenv('HOST', '127.0.0.1')  # 监听IP，如果想允许远程访问，把这个改成0.0.0.0
-PORT = int(os.getenv('PORT', 8085))  # 监听端口
+HOST = os.getenv('HOST', '0.0.0.0')  # 监听IP，如果想允许远程访问，把这个改成0.0.0.0
+PORT = int(os.getenv('PORT',58888))  # 监听端口
 
 # *****扫描配置*****
 # Windows系统的路径写法例子：'D:/照片'
