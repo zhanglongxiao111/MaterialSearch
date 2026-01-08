@@ -166,3 +166,76 @@ Phase 0 → Phase 1.1 → Phase 1.2 → Phase 1.3
 - Phase 1.3.2 ~ 1.3.4 可并行拆分
 - Phase 2 和 Phase 3 的模型/API 部分可并行
 - Phase 5.2 文档可与 Phase 4/5.1 并行
+
+---
+
+## Phase 6: 旧代码完全迁移 (NEW)
+
+**目标**: 将根目录的旧 .py 文件逻辑完全迁移到 `app/` 模块化架构，然后删除旧文件。
+
+### 6.0 准备工作
+- [x] 6.0.1 Git 备份当前状态 ✅ (commit: db9611e)
+- [ ] 6.0.2 创建核心功能测试用例
+  - 验证：搜索、扫描、项目管理、归档功能有测试覆盖
+
+### 6.1 搜索模块迁移 (search.py → app/services/)
+- [ ] 6.1.1 将 `search.py` 核心逻辑移入 `app/services/search_service.py`
+  - 包含: FAISS 索引、向量搜索、相似度计算
+- [ ] 6.1.2 更新 `app/api/search.py` 使用新 Service
+- [ ] 6.1.3 删除根目录 `search.py` (确认无依赖后)
+
+### 6.2 扫描模块迁移 (scan.py → app/services/)
+- [ ] 6.2.1 将 `scan.py` 核心逻辑移入 `app/services/scan_service.py`
+  - 包含: 文件扫描、特征提取、进度跟踪
+- [ ] 6.2.2 更新 `app/api/scan.py` 使用新 Service
+- [ ] 6.2.3 删除根目录 `scan.py`
+
+### 6.3 数据库模块迁移 (database.py → app/repositories/)
+- [ ] 6.3.1 将 `database.py` 的 Session 管理移入 `app/integrations/`
+- [ ] 6.3.2 将 CRUD 操作移入对应 Repository
+- [ ] 6.3.3 更新所有依赖 database.py 的模块
+- [ ] 6.3.4 删除根目录 `database.py`
+
+### 6.4 模型迁移 (models.py → app/models/)
+- [ ] 6.4.1 将 `models.py` 完全拆分到 `app/models/`
+- [ ] 6.4.2 更新所有 `from models import` 语句
+- [ ] 6.4.3 删除根目录 `models.py`
+
+### 6.5 路由迁移 (routes.py → app/api/)
+- [ ] 6.5.1 将 `routes.py` 剩余逻辑移入对应 Blueprint
+- [ ] 6.5.2 更新 `main.py` 使用新 App Factory
+- [ ] 6.5.3 删除根目录 `routes.py`
+
+### 6.6 其他模块迁移
+- [ ] 6.6.1 迁移 `archive.py` → `app/services/archive_service.py`
+- [ ] 6.6.2 迁移 `dedup_service.py` → `app/services/dedup_service.py`
+- [ ] 6.6.3 迁移 `project_manager.py` → `app/services/project_service.py`
+- [ ] 6.6.4 迁移 `process_assets.py` → `app/services/asset_service.py`
+- [ ] 6.6.5 迁移 `utils.py` 和 `utils_image.py` → `app/utils/`
+
+### 6.7 验证与清理
+- [ ] 6.7.1 运行所有测试用例
+  - 验证：搜索、扫描、项目管理全部通过
+- [ ] 6.7.2 验证 API 端点正常
+  - 验证：`python api_test.py` 全部通过
+- [ ] 6.7.3 清理根目录，删除已迁移的 .py 文件
+- [ ] 6.7.4 更新文档和导入路径
+
+### 6.8 迁移后的目录结构
+
+```
+MaterialSearch/
+├── app/                      # 所有业务代码
+│   ├── api/                  # Flask Blueprints
+│   ├── services/             # 业务逻辑
+│   ├── repositories/         # 数据访问
+│   ├── models/               # 数据模型
+│   ├── integrations/         # 外部服务
+│   └── utils/                # 工具函数
+├── config.py                 # 配置文件 (保留)
+├── main.py                   # 入口文件 (精简)
+├── static/                   # 静态资源
+├── instance/                 # 数据库文件
+├── docs/                     # 文档
+└── ...                       # Docker/脚本等
+```

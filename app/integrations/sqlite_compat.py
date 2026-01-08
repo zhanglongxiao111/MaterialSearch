@@ -85,7 +85,7 @@ class SQLiteManager:
         Returns:
             数据库文件路径
         """
-        from app.models.asset import BaseModelProject
+        from app.models import BaseModelProject
         
         db_path = os.path.join(self.project_db_dir, f'{project_id}.db')
         engine = self._get_engine(db_path)
@@ -123,8 +123,8 @@ class SQLiteManager:
     
     def init_databases(self):
         """初始化所有数据库表"""
-        from app.models.asset import BaseModel, BaseModelProject
-        from app.models.project import Project, DedupJob
+        from app.models import BaseModel, BaseModelProject
+        from app.models import Project, DedupJob
         
         # 初始化永久库
         engine = self._get_engine(self.permanent_db_path)

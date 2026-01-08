@@ -27,6 +27,9 @@ from search import clean_cache
 from utils import get_file_hash
 from utils_image import calculate_image_properties
 
+scanning = False
+status = {}
+
 
 class Scanner:
     """
@@ -82,7 +85,7 @@ class Scanner:
             progress = self.scanned_files / self.scanning_files
         else:
             progress = 0
-        return {
+        result = {
             "status": self.is_scanning,
             "total_images": self.total_images,
             "total_videos": self.total_videos,
@@ -93,6 +96,9 @@ class Scanner:
             "remain_time": int(remain_time),
             "enable_login": ENABLE_LOGIN,
         }
+        global status
+        status = result
+        return result
 
     def save_assets(self):
         with open(self.temp_file, "wb") as f:
@@ -264,8 +270,10 @@ class Scanner:
         :param target: 扫描目标库，'permanent' 或 'proj_xxx'
         :param scan_paths: 自定义扫描路径列表，如果为None则使用环境变量 ASSETS_PATH
         """
+        global scanning
         self.logger.info(f"开始扫描 (目标库: {target})")
         self.is_scanning = True
+        scanning = True
         self.scan_start_time = time.time()
 
         # 为不同库使用不同的缓存文件
@@ -376,6 +384,7 @@ class Scanner:
             self.logger.info("扫描完成，用时%d秒" % int(time.time() - self.scan_start_time))
             clean_cache()  # 清空搜索缓存
             self.is_scanning = False
+            scanning = False
 
 
 scanner = Scanner()
