@@ -101,3 +101,129 @@ def stop_scan():
     except Exception as e:
         logger.error(f"停止扫描失败: {e}")
         return jsonify({"success": False, "error": str(e)}), 500
+
+
+# =============================================================================
+# 批量索引 API
+# =============================================================================
+import uuid
+import os
+
+# 存储批量索引任务状态
+_batch_index_tasks = {}
+
+
+@scan_bp.route('/batch_index', methods=['POST'])
+def start_batch_index():
+    """
+    启动批量索引任务
+    
+    Request Body:
+    {
+        "files": [{"path": "/path/to/file", "filename": "xxx.jpg"}, ...],
+        "target": "permanent" or "proj_xxx",
+        "duplicate_strategy": "ask" | "skip" | "overwrite"
+    }
+    """
+    data = request.get_json() or {}
+    files = data.get('files', [])
+    target = data.get('target', 'permanent')
+    duplicate_strategy = data.get('duplicate_strategy', 'ask')
+    
+    if not files:
+        return jsonify({"error": "未提供文件列表"}), 400
+    
+    # 提取文件路径
+    file_paths = []
+    for f in files:
+        path = f.get('path') if isinstance(f, dict) else f
+        if path and os.path.exists(path):
+            file_paths.append(path)
+    
+    if not file_paths:
+        return jsonify({"error": "没有有效的文件路径"}), 400
+    
+    # 验证项目是否存在
+    if target.startswith('proj_'):
+        try:
+            pm = get_project_manager()
+            project = pm.get_project(target)
+            if not project:
+                return jsonify({"error": f"项目不存在: {target}"}), 404
+        except Exception as e:
+            logger.error(f"验证项目失败: {e}")
+            return jsonify({"error": str(e)}), 500
+    
+    # 创建任务
+    task_id = str(uuid.uuid4())
+    task_info = {
+        "task_id": task_id,
+        "status": "running",
+        "total": len(file_paths),
+        "processed": 0,
+        "success": 0,
+        "failed": [],
+        "duplicates": [],
+        "truncated": [],
+        "current_file": "",
+        "progress": 0,
+        "target": target,
+        "pending_duplicate": None,
+    }
+    _batch_index_tasks[task_id] = task_info
+    
+    # 启动异步处理
+    def process_batch():
+        try:
+            for i, path in enumerate(file_paths):
+                if task_info["status"] == "cancelled":
+                    break
+                
+                task_info["current_file"] = os.path.basename(path)
+                task_info["processed"] = i
+                task_info["progress"] = i / len(file_paths)
+                
+                try:
+                    # 使用扫描服务处理单个文件
+                    scanner.scan_single_file(path, target)
+                    task_info["success"] += 1
+                except Exception as e:
+                    logger.error(f"索引文件失败: {path}, {e}")
+                    task_info["failed"].append({
+                        "path": path,
+                        "error": str(e)
+                    })
+            
+            task_info["processed"] = len(file_paths)
+            task_info["progress"] = 1.0
+            task_info["status"] = "completed"
+            task_info["current_file"] = ""
+        except Exception as e:
+            logger.error(f"批量索引任务异常: {e}")
+            task_info["status"] = "failed"
+            task_info["error"] = str(e)
+    
+    index_thread = threading.Thread(target=process_batch)
+    index_thread.start()
+    
+    return jsonify({"task_id": task_id, "success": True})
+
+
+@scan_bp.route('/batch_index/<task_id>/status', methods=['GET'])
+def get_batch_index_status(task_id):
+    """获取批量索引任务状态"""
+    task_info = _batch_index_tasks.get(task_id)
+    if not task_info:
+        return jsonify({"error": "任务不存在"}), 404
+    return jsonify(task_info)
+
+
+@scan_bp.route('/batch_index/<task_id>/cancel', methods=['POST'])
+def cancel_batch_index(task_id):
+    """取消批量索引任务"""
+    task_info = _batch_index_tasks.get(task_id)
+    if not task_info:
+        return jsonify({"error": "任务不存在"}), 404
+    
+    task_info["status"] = "cancelled"
+    return jsonify({"success": True, "message": "任务已取消"})

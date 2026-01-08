@@ -4,6 +4,8 @@ from .video import Video, ProjectVideo, VideoMixin, PexelsVideo
 from .pdf import PDFPage, ProjectPDFPage
 from .project import Project
 from .dedup import DedupJob, DedupResult
+from .user import User, UserProfile
+from .audit import AuditLog, AuditAction
 
 __all__ = [
     "BaseModel",
@@ -21,4 +23,8 @@ __all__ = [
     "PexelsVideo",
     "ImageMixin",
     "VideoMixin",
+    "User",
+    "UserProfile",
+    "AuditLog",
+    "AuditAction",
 ]

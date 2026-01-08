@@ -222,7 +222,8 @@ class Scanner:
                 # 如果属性计算失败，仍然添加图片（只是没有扩展属性）
                 add_image(session, path, modify_time, checksum, features)
 
-            del self.assets[path]
+            # 安全地从 assets 中移除（单文件索引时可能不存在）
+            self.assets.pop(path, None)
         self.total_images = get_image_count(session)
 
     def handle_pdf(self, session, file_path, modify_time, checksum):
@@ -391,6 +392,42 @@ class Scanner:
             clean_cache()  # 清空搜索缓存
             self.is_scanning = False
             scanning = False
+
+    def scan_single_file(self, file_path, target='permanent'):
+        """
+        扫描单个文件并索引到数据库
+        :param file_path: 文件路径
+        :param target: 目标库，'permanent' 或 'proj_xxx'
+        """
+        if not os.path.exists(file_path):
+            raise FileNotFoundError(f"文件不存在: {file_path}")
+        
+        # 获取文件修改时间和校验和
+        modify_time = datetime.datetime.fromtimestamp(os.path.getmtime(file_path))
+        checksum = get_file_hash(file_path) if ENABLE_CHECKSUM else ""
+        
+        # 获取数据库会话
+        session = get_session_by_target(target)
+        
+        ext = Path(file_path).suffix.lower()
+        
+        with session:
+            if ext in IMAGE_EXTENSIONS:
+                # 处理图片
+                image_batch_dict = {file_path: (modify_time, checksum)}
+                self.handle_image_batch(session, image_batch_dict)
+                self.logger.info(f"已索引图片: {file_path}")
+            elif ext in PDF_EXTENSIONS:
+                # 处理 PDF
+                self.handle_pdf(session, file_path, modify_time, checksum)
+                self.logger.info(f"已索引 PDF: {file_path}")
+            elif ext in VIDEO_EXTENSIONS:
+                # 处理视频 - 目前批量索引不支持视频
+                raise NotImplementedError("批量索引暂不支持视频文件")
+            else:
+                raise ValueError(f"不支持的文件类型: {ext}")
+        
+        clean_cache()  # 清空搜索缓存
 
 
 scanner = Scanner()
