@@ -412,6 +412,12 @@
                                         <button @click.stop="copyPath(item.path)"
                                             class="bg-white p-1 hover:bg-arch-accent hover:text-white"><i
                                                 data-lucide="copy" class="w-3 h-3"></i></button>
+                                        <button v-if="isProjectResult(item)" @click.stop="archiveItems([item])"
+                                            class="bg-white p-1 hover:bg-arch-accent hover:text-white"><i
+                                                data-lucide="archive" class="w-3 h-3"></i></button>
+                                        <button v-if="isProjectResult(item)" @click.stop="deleteItems([item])"
+                                            class="bg-white p-1 hover:bg-red-500 hover:text-white"><i
+                                                data-lucide="trash-2" class="w-3 h-3"></i></button>
                                     </div>
                                     <!-- Selection Checkbox -->
                                     <div v-if="isProjectResult(item)" class="absolute top-2 right-2" @click.stop>
@@ -603,6 +609,20 @@
                             class="mt-6 text-xs font-bold uppercase tracking-widest text-red-500 hover:bg-red-50 px-4 py-2">
                             {{ uploadCancelling ? '取消中...' : '中止任务' }}
                         </button>
+                        <button @click="uploadShowDetails = !uploadShowDetails"
+                            class="mt-2 text-xs font-bold uppercase tracking-widest text-gray-400 hover:text-black px-4 py-2">
+                            {{ uploadShowDetails ? '收起明细' : '查看明细' }}
+                        </button>
+                        <div v-if="uploadShowDetails" class="mt-4 w-full max-w-lg text-xs text-left bg-black/50 p-4">
+                            <div v-if="(uploadTaskInfo.failed || []).length" class="text-red-400">失败：{{
+                                (uploadTaskInfo.failed || []).length }} 个文件</div>
+                            <div v-if="(uploadTaskInfo.duplicates || []).length" class="text-yellow-400">重复：{{
+                                (uploadTaskInfo.duplicates || []).length }} 个文件</div>
+                            <div v-if="(uploadTaskInfo.truncated || []).length" class="text-orange-400">截断：{{
+                                (uploadTaskInfo.truncated || []).length }} 个文件</div>
+                            <div v-if="!(uploadTaskInfo.failed || []).length && !(uploadTaskInfo.duplicates || []).length && !(uploadTaskInfo.truncated || []).length"
+                                class="text-gray-400">暂无异常</div>
+                        </div>
                     </div>
 
                     <!-- Step 3: Complete -->
@@ -623,6 +643,43 @@
                             <div class="bg-white p-6 text-center">
                                 <div class="text-3xl font-bold mb-1 text-red-500">{{ uploadResult.failed || 0 }}</div>
                                 <div class="typo-label">失败</div>
+                            </div>
+                        </div>
+
+                        <!-- 异常明细列表 -->
+                        <div v-if="(uploadTaskInfo.failed || []).length || (uploadTaskInfo.duplicates || []).length || (uploadTaskInfo.truncated || []).length"
+                            class="w-full max-w-2xl mb-8 text-left">
+                            <button @click="uploadShowDetails = !uploadShowDetails"
+                                class="text-xs font-bold uppercase tracking-widest text-gray-400 hover:text-black mb-4">
+                                {{ uploadShowDetails ? '收起明细' : '查看异常明细' }}
+                            </button>
+                            <div v-if="uploadShowDetails" class="space-y-4 text-xs">
+                                <div v-if="(uploadTaskInfo.failed || []).length" class="bg-red-50 p-4">
+                                    <div class="font-bold text-red-600 mb-2">失败文件 ({{ (uploadTaskInfo.failed ||
+                                        []).length }})</div>
+                                    <div v-for="f in (uploadTaskInfo.failed || []).slice(0, 10)" :key="f"
+                                        class="text-red-700 truncate">{{ f }}</div>
+                                    <div v-if="(uploadTaskInfo.failed || []).length > 10" class="text-red-400 mt-1">
+                                        ...还有 {{ (uploadTaskInfo.failed || []).length - 10 }} 个</div>
+                                </div>
+                                <div v-if="(uploadTaskInfo.duplicates || []).length" class="bg-yellow-50 p-4">
+                                    <div class="font-bold text-yellow-600 mb-2">重复文件 ({{ (uploadTaskInfo.duplicates ||
+                                        []).length }})</div>
+                                    <div v-for="f in (uploadTaskInfo.duplicates || []).slice(0, 10)" :key="f.path || f"
+                                        class="text-yellow-700 truncate">{{ f.path || f }}</div>
+                                    <div v-if="(uploadTaskInfo.duplicates || []).length > 10"
+                                        class="text-yellow-400 mt-1">...还有 {{ (uploadTaskInfo.duplicates || []).length -
+                                        10 }} 个</div>
+                                </div>
+                                <div v-if="(uploadTaskInfo.truncated || []).length" class="bg-orange-50 p-4">
+                                    <div class="font-bold text-orange-600 mb-2">截断文件 ({{ (uploadTaskInfo.truncated ||
+                                        []).length }})</div>
+                                    <div v-for="f in (uploadTaskInfo.truncated || []).slice(0, 10)" :key="f"
+                                        class="text-orange-700 truncate">{{ f }}</div>
+                                    <div v-if="(uploadTaskInfo.truncated || []).length > 10"
+                                        class="text-orange-400 mt-1">...还有 {{ (uploadTaskInfo.truncated || []).length -
+                                        10 }} 个</div>
+                                </div>
                             </div>
                         </div>
 
@@ -692,6 +749,9 @@
                 <div class="space-y-3">
                     <button @click="openDetailInNewTab"
                         class="w-full border border-gray-300 py-3 text-xs font-bold uppercase hover:border-black hover:bg-black hover:text-white transition-all">打开原图</button>
+                    <button v-if="detailDialog.item && detailDialog.item.type === 'pdf'"
+                        @click="openOriginalFile(detailDialog.item.path)"
+                        class="w-full border border-gray-300 py-3 text-xs font-bold uppercase hover:border-black hover:bg-black hover:text-white transition-all">打开原文件</button>
                     <button @click="searchSimilar(detailDialog.item)"
                         class="w-full border border-gray-300 py-3 text-xs font-bold uppercase hover:border-black hover:bg-black hover:text-white transition-all">找相似</button>
                     <button @click="copyPath(detailDialog.item ? detailDialog.item.path : '')"
@@ -705,13 +765,19 @@
             class="fixed inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur"
             @click.self="closeProjectDialog">
             <div class="bg-white p-10 w-full max-w-lg">
-                <h2 class="text-2xl font-light mb-6">{{ projectDialog.mode === 'create' ? '新建项目' : '编辑项目' }}</h2>
+                <h2 class="text-2xl font-light mb-6">新建项目</h2>
                 <div class="space-y-6">
                     <div>
                         <label class="typo-label block mb-2">项目名称</label>
                         <input v-model="projectDialog.form.name"
                             class="w-full bg-gray-50 border border-gray-300 p-3 text-sm focus:border-black focus:bg-white outline-none"
                             placeholder="例如：科技园总部办公楼">
+                    </div>
+                    <div>
+                        <label class="typo-label block mb-2">客户名称（可选）</label>
+                        <input v-model="projectDialog.form.client_name"
+                            class="w-full bg-gray-50 border border-gray-300 p-3 text-sm focus:border-black focus:bg-white outline-none"
+                            placeholder="例如：XX开发公司">
                     </div>
                     <div>
                         <label class="typo-label block mb-2">项目描述（可选）</label>
@@ -723,9 +789,8 @@
                 <div class="flex gap-4 mt-8">
                     <button @click="closeProjectDialog"
                         class="flex-1 border border-gray-300 py-3 text-xs font-bold uppercase hover:border-black">取消</button>
-                    <button @click="submitProjectDialog"
-                        class="flex-1 bg-black text-white py-3 text-xs font-bold uppercase hover:bg-arch-accent">{{
-                        projectDialog.mode === 'create' ? '创建' : '保存' }}</button>
+                    <button @click="submitProject"
+                        class="flex-1 bg-black text-white py-3 text-xs font-bold uppercase hover:bg-arch-accent">创建</button>
                 </div>
             </div>
         </div>

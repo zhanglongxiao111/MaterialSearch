@@ -336,6 +336,29 @@ const WorkspaceApp = Vue.createApp({
                 return `上次：${this.formatDateTime(this.dedup.latestReport.completed_at)}`;
             }
             return '尚未执行去重任务';
+        },
+        // === 新版前端兼容字段 (v2) ===
+        uploadProgress() {
+            return this.uploadTaskProgress || 0;
+        },
+        uploadProgressMessage() {
+            const info = this.uploadTaskInfo || {};
+            const processed = info.processed || 0;
+            const total = info.total || 0;
+            const remain = info.remain_time;
+            const remainText = remain ? ` · 剩余 ${remain}s` : '';
+            const current = this.uploadCurrentFile || '';
+            return current ? `${current} (${processed}/${total})${remainText}` : `处理中 (${processed}/${total})${remainText}`;
+        },
+        uploadResult() {
+            const info = this.uploadTaskInfo || {};
+            const failed = (info.failed || []).length;
+            const skipped = (info.duplicates || []).length + (info.truncated || []).length;
+            return {
+                success: info.success || 0,
+                failed,
+                skipped
+            };
         }
     },
 
