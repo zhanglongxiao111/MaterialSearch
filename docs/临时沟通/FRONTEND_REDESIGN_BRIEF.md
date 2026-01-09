@@ -5,6 +5,34 @@
 
 ---
 
+## 🚨 关键工作方法要求
+
+### ❌ 禁止的做法
+- **一次性大范围重构整个文件** - 这会导致严重的结构问题
+- 创建独立静态页面 - 失去所有动态功能
+- 删除或覆盖原文件 - 破坏现有功能
+- 使用 Vue 模板不支持的语法（如 `?.` 可选链操作符）
+
+### ✅ 正确的做法
+1. **小范围、逐步修改** - 每次只修改一个组件或区域
+2. **每次修改后测试** - 确保没有破坏 Vue 渲染
+3. **优先使用 CSS 覆盖** - 尽量不动 HTML 结构
+4. **保留所有 Vue 绑定** - `v-model`, `v-for`, `@click` 等
+
+### 📋 推荐的修改顺序
+```
+1. 先修改 CSS 文件 (materialsearch_theme_swiss.css)
+2. 修改 <head> 部分（字体、CSS 引用）
+3. 修改 Header 区域
+4. 修改 Sidebar 区域
+5. 修改 Main 内容区
+6. 修改各个对话框
+```
+
+每完成一步，**刷新浏览器测试**，确认没有问题再继续下一步！
+
+---
+
 ## 现有前端文件（必须基于这些修改）
 
 | 文件 | 说明 |
@@ -14,21 +42,6 @@
 | `static/assets/materialsearch_theme_2.css` | 原主题 CSS 变量 |
 
 **设计参考**：`.superdesign/design_iterations/superdesign_master_v2.html`
-
----
-
-## ❌ 错误做法（上次的问题）
-
-- 创建独立静态页面 `index_workspace_swiss.html` - 没有连接后端
-- 删除原文件 - 破坏了功能
-- 使用硬编码数据 - 失去动态功能
-
-## ✅ 正确做法
-
-1. **直接修改** `static/index_workspace.html`
-2. **保留所有 Vue 绑定**（`v-model`, `v-for`, `@click` 等）
-3. **保留 `workspace.js` 引用**，不修改 JS 逻辑
-4. 只修改 **HTML 结构** 和 **CSS 样式**
 
 ---
 
@@ -78,9 +91,26 @@ border-radius: 0 !important;
 
 ---
 
+## ⚠️ Vue 模板语法注意事项
+
+以下语法在 Vue 模板中**不被支持**，会导致渲染失败：
+
+```html
+<!-- ❌ 错误：可选链操作符 -->
+{{ item?.name }}
+:src="item?.thumbnail"
+
+<!-- ✅ 正确：三元表达式 -->
+{{ item ? item.name : '' }}
+:src="item ? item.thumbnail : ''"
+```
+
+---
+
 ## 验收标准
 
 1. ✅ 所有原有功能正常工作（点击按钮有响应）
 2. ✅ 侧边栏深色、从顶到底
 3. ✅ 无紫色/蓝色残留
 4. ✅ 修改的是 `index_workspace.html`，不是新文件
+5. ✅ 每次小范围修改后测试通过

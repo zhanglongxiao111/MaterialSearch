@@ -1,0 +1,836 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SA Architects - Asset Management</title>
+
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@200;300;400;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap"
+        rel="stylesheet">
+
+    <!-- Dependencies -->
+    <link rel="stylesheet" href="https://unpkg.com/viewerjs@1.11.6/dist/viewer.min.css" />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'PingFang SC', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace'],
+                    },
+                    colors: {
+                        arch: {
+                            black: '#111111',
+                            dark: '#1A1A1A',
+                            gray: '#888888',
+                            light: '#F4F4F4',
+                            white: '#FFFFFF',
+                            accent: '#FF3300'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <script src="static/assets/vue.global.prod.js"></script>
+    <script src="static/assets/axios.min.js"></script>
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+    <script src="https://unpkg.com/viewerjs@1.11.6/dist/viewer.min.js"></script>
+
+    <style>
+        /* Global Reset */
+        body {
+            background: #F4F4F4;
+            color: #111;
+            font-family: 'Inter', sans-serif;
+            margin: 0;
+        }
+
+        * {
+            border-radius: 0 !important;
+        }
+
+        /* Grid Background */
+        .bg-grid {
+            background-size: 40px 40px;
+            background-image: linear-gradient(to right, rgba(0, 0, 0, 0.04) 1px, transparent 1px),
+                linear-gradient(to bottom, rgba(0, 0, 0, 0.04) 1px, transparent 1px);
+        }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar {
+            width: 4px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #111;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #FF3300;
+        }
+
+        /* Typography */
+        .typo-label {
+            font-size: 10px;
+            text-transform: uppercase;
+            letter-spacing: 0.15em;
+            font-weight: 600;
+            color: #888;
+        }
+
+        .typo-mono {
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        /* Animations */
+        .fade-enter-active,
+        .fade-leave-active {
+            transition: opacity 0.3s ease;
+        }
+
+        .fade-enter-from,
+        .fade-leave-to {
+            opacity: 0;
+        }
+
+        /* Custom Range Slider */
+        input[type="range"] {
+            -webkit-appearance: none;
+            appearance: none;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 12px;
+            height: 12px;
+            background: #111;
+            cursor: pointer;
+        }
+    </style>
+</head>
+
+<body class="h-screen w-full overflow-hidden">
+    <div id="app" class="flex w-full h-full">
+
+        <!-- SIDEBAR -->
+        <aside class="w-[320px] bg-arch-black text-white flex flex-col flex-shrink-0 h-full border-r border-gray-800">
+            <!-- Brand -->
+            <div class="h-24 flex items-center px-8 border-b border-gray-800">
+                <div class="flex flex-col">
+                    <span class="font-bold text-xl tracking-tighter">SA ARCHITECTS</span>
+                    <span class="typo-label text-gray-500 mt-1">ASSET MANAGEMENT SYS.</span>
+                </div>
+            </div>
+
+            <!-- Mode Tabs -->
+            <div class="flex border-b border-gray-800">
+                <button @click="switchSidebar('permanent')"
+                    class="flex-1 py-5 text-[11px] font-bold uppercase tracking-widest transition-colors relative"
+                    :class="sidebarLibrary === 'permanent' ? 'text-white bg-arch-dark' : 'text-gray-600 hover:text-white hover:bg-[#161616]'">
+                    永久库
+                    <div v-if="sidebarLibrary === 'permanent'"
+                        class="absolute bottom-0 left-0 w-full h-[2px] bg-arch-accent"></div>
+                </button>
+                <button @click="switchSidebar('project')"
+                    class="flex-1 py-5 text-[11px] font-bold uppercase tracking-widest transition-colors relative"
+                    :class="sidebarLibrary === 'project' ? 'text-white bg-arch-dark' : 'text-gray-600 hover:text-white hover:bg-[#161616]'">
+                    项目库
+                    <div v-if="sidebarLibrary === 'project'"
+                        class="absolute bottom-0 left-0 w-full h-[2px] bg-arch-accent"></div>
+                </button>
+            </div>
+
+            <!-- Navigation -->
+            <div class="flex-1 overflow-y-auto py-6">
+                <!-- Permanent Groups -->
+                <div v-if="sidebarLibrary === 'permanent'" class="px-8">
+                    <div class="typo-label mb-4">分类统计</div>
+                    <div v-for="group in permanentGroups" :key="group.id" @click="selectPermanentGroup(group)"
+                        class="py-3 border-b border-gray-800 cursor-pointer flex justify-between items-center transition-all"
+                        :class="activePermanentGroup === group.id ? 'text-white pl-2 border-arch-accent' : 'text-gray-500 hover:text-white hover:pl-2'">
+                        <span class="text-sm">{{ group.name }}</span>
+                        <span class="typo-mono text-[10px] text-gray-600">{{ group.countDisplay }}</span>
+                    </div>
+                </div>
+
+                <!-- Project List -->
+                <div v-else class="px-8">
+                    <div class="typo-label mb-4 flex justify-between">
+                        <span>项目列表</span>
+                        <span class="typo-mono text-[10px]">{{ projects.length }}</span>
+                    </div>
+                    <div class="space-y-1 border-l border-gray-800 ml-1">
+                        <div v-for="project in projects" :key="project.id" @click="selectProject(project)"
+                            class="pl-6 py-3 cursor-pointer group transition-all relative">
+                            <div v-if="currentLibrary === project.id"
+                                class="absolute left-[-1px] top-0 bottom-0 w-[2px] bg-white"></div>
+                            <div class="flex flex-col">
+                                <span class="text-sm font-medium transition-colors"
+                                    :class="currentLibrary === project.id ? 'text-white' : 'text-gray-500 group-hover:text-gray-300'">
+                                    {{ project.name }}
+                                </span>
+                                <span class="typo-mono text-[10px] text-gray-600 mt-1">
+                                    图片 {{ formatNumber(project.image_count) }} · 视频 {{ formatNumber(project.video_count)
+                                    }}
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                    <button @click="openProjectDialog"
+                        class="w-full mt-6 border border-gray-700 hover:border-white text-gray-400 hover:text-white py-3 text-[11px] uppercase tracking-widest transition-all flex items-center justify-center gap-2">
+                        <i data-lucide="plus" class="w-3 h-3"></i> 新建项目
+                    </button>
+                </div>
+            </div>
+
+            <!-- Status -->
+            <div class="p-6 border-t border-gray-800 bg-[#0D0D0D]">
+                <div class="flex items-center justify-between mb-3">
+                    <span class="typo-label">系统状态</span>
+                    <div class="flex items-center gap-2">
+                        <div class="w-1.5 h-1.5 bg-arch-accent animate-pulse"></div>
+                        <span class="typo-mono text-[10px] text-gray-400">在线</span>
+                    </div>
+                </div>
+                <div class="typo-mono text-[10px] text-gray-600 space-y-1">
+                    <div class="flex justify-between"><span>索引数量</span><span>{{ formatNumber(statusSummary.total_images)
+                            }}</span></div>
+                    <div class="flex justify-between"><span>扫描队列</span><span>{{ statusSummary.scanning_files }}</span>
+                    </div>
+                </div>
+            </div>
+        </aside>
+
+        <!-- MAIN CONTENT -->
+        <main class="flex-1 flex flex-col h-full bg-grid overflow-hidden">
+            <!-- Header -->
+            <header
+                class="h-24 flex items-center justify-between px-12 bg-white/95 backdrop-blur border-b border-gray-200 flex-shrink-0">
+                <div class="flex items-center gap-4">
+                    <span class="typo-label text-black">{{ currentLibrary === 'permanent' ? '永久库' : '项目空间' }}</span>
+                    <i data-lucide="slash" class="w-3 h-3 text-gray-300 transform -rotate-12"></i>
+                    <h1 class="text-xl font-light tracking-tight text-black">{{ currentLibrary === 'permanent' ?
+                        activeGroupName : (currentProject ? currentProject.name : '加载中...') }}</h1>
+                </div>
+                <div class="flex items-center gap-8">
+                    <button @click="setActiveTab('search')"
+                        class="text-[11px] font-bold uppercase tracking-widest py-2 transition-colors"
+                        :class="activeTab === 'search' ? 'text-black border-b-2 border-black' : 'text-gray-400 hover:text-arch-accent'">搜索</button>
+                    <button @click="setActiveTab('upload')" v-if="currentLibrary !== 'permanent'"
+                        class="text-[11px] font-bold uppercase tracking-widest py-2 transition-colors"
+                        :class="activeTab === 'upload' ? 'text-black border-b-2 border-black' : 'text-gray-400 hover:text-arch-accent'">导入</button>
+                    <div class="w-px h-6 bg-gray-300"></div>
+                    <button @click="cycleTheme" class="p-2 text-gray-400 hover:text-black"><i data-lucide="sun-moon"
+                            class="w-4 h-4"></i></button>
+                    <div class="w-8 h-8 bg-black text-white flex items-center justify-center text-xs font-bold">{{
+                        (statusSummary.username || 'U').charAt(0).toUpperCase() }}</div>
+                </div>
+            </header>
+
+            <!-- Content Area -->
+            <div class="flex-1 overflow-y-auto p-12">
+                <!-- SEARCH TAB -->
+                <div v-show="activeTab === 'search'" class="max-w-[1600px] mx-auto">
+                    <!-- Search Input -->
+                    <div class="mb-10">
+                        <div class="relative">
+                            <input type="text" v-model="form.positive" @keyup.enter="search"
+                                class="w-full bg-transparent border-b-2 border-gray-200 text-3xl font-light py-4 placeholder-gray-300 focus:border-black focus:outline-none transition-all"
+                                placeholder="搜索素材...">
+                            <button @click="search"
+                                class="absolute right-0 top-1/2 -translate-y-1/2 p-2 hover:text-arch-accent transition-colors">
+                                <i data-lucide="arrow-right" class="w-6 h-6"></i>
+                            </button>
+                        </div>
+
+                        <!-- Filters -->
+                        <div class="flex flex-wrap items-center gap-8 mt-6 border-b border-gray-100 pb-6">
+                            <div class="flex items-center gap-3">
+                                <span class="typo-label">返回数量</span>
+                                <select v-model="form.top_n"
+                                    class="bg-transparent border-none typo-mono text-xs font-bold focus:outline-none cursor-pointer">
+                                    <option value="30">30</option>
+                                    <option value="60">60</option>
+                                    <option value="150">150</option>
+                                    <option value="1000">全部</option>
+                                </select>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <div v-for="mode in searchModes" :key="mode.value"
+                                    @click="!mode.disabled && selectSearchMode(mode.value)"
+                                    class="px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest border cursor-pointer transition-all flex items-center gap-2"
+                                    :class="[searchMode === mode.value ? 'bg-black text-white border-black' : 'text-gray-500 border-transparent hover:border-gray-300', mode.disabled ? 'opacity-40 cursor-not-allowed' : '']">
+                                    <i :data-lucide="mode.icon" class="w-3 h-3"></i> {{ mode.label }}
+                                </div>
+                            </div>
+                            <button @click="advancedOpen = !advancedOpen"
+                                class="typo-label hover:text-black flex items-center gap-1 ml-auto">
+                                <i data-lucide="sliders-horizontal" class="w-3 h-3"></i> {{ advancedOpen ? '收起' : '高级筛选'
+                                }}
+                            </button>
+                            <div class="flex gap-1">
+                                <button @click="setViewMode('masonry')"
+                                    class="w-8 h-8 flex items-center justify-center transition-colors"
+                                    :class="viewMode === 'masonry' ? 'bg-black text-white' : 'bg-gray-100 text-gray-400 hover:bg-black hover:text-white'">
+                                    <i data-lucide="layout-grid" class="w-4 h-4"></i>
+                                </button>
+                                <button @click="setViewMode('grid')"
+                                    class="w-8 h-8 flex items-center justify-center transition-colors"
+                                    :class="viewMode === 'grid' ? 'bg-black text-white' : 'bg-gray-100 text-gray-400 hover:bg-black hover:text-white'">
+                                    <i data-lucide="grid-3x3" class="w-4 h-4"></i>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Advanced Filters -->
+                        <div v-show="advancedOpen"
+                            class="mt-4 grid grid-cols-3 gap-6 bg-gray-50 p-6 border border-gray-100">
+                            <div>
+                                <label class="typo-label block mb-2">路径限制</label>
+                                <input v-model="form.path"
+                                    class="w-full bg-white border border-gray-200 p-2 text-xs typo-mono focus:border-black outline-none"
+                                    placeholder="/Projects/...">
+                            </div>
+                            <div>
+                                <label class="typo-label block mb-2">排除关键词</label>
+                                <input v-model="form.negative"
+                                    class="w-full bg-white border border-gray-200 p-2 text-xs typo-mono focus:border-black outline-none"
+                                    placeholder="草图, 线框">
+                            </div>
+                            <div class="flex flex-col justify-end">
+                                <div class="flex gap-2">
+                                    <button @click="applyTimeFilter(30)"
+                                        class="px-3 py-2 border border-gray-200 bg-white text-[10px] font-bold uppercase hover:border-black">最近30天</button>
+                                    <button @click="applyTimeFilter(365)"
+                                        class="px-3 py-2 border border-gray-200 bg-white text-[10px] font-bold uppercase hover:border-black">一年内</button>
+                                    <button v-if="timeFilterLabel" @click="clearTimeFilter"
+                                        class="px-3 py-2 text-red-500 text-[10px] hover:underline">清除</button>
+                                </div>
+                            </div>
+                            <!-- Extra Options Row -->
+                            <div class="col-span-3 flex items-center gap-6 border-t border-gray-200 pt-4 mt-2">
+                                <label v-if="currentLibrary === 'permanent'"
+                                    class="flex items-center gap-2 cursor-pointer group">
+                                    <input type="checkbox" v-model="form.include_duplicates"
+                                        class="w-4 h-4 accent-black">
+                                    <span class="text-xs font-bold text-gray-500 group-hover:text-black">包含重复素材</span>
+                                </label>
+                                <div v-if="currentLibrary === 'permanent'" class="flex items-center gap-2 ml-auto">
+                                    <span class="typo-label">维护工具</span>
+                                    <button @click="startDedupJob" :disabled="dedup.loading || dedup.running"
+                                        class="text-xs hover:text-arch-accent hover:underline">
+                                        {{ dedup.running ? '扫描中...' : '去重扫描' }}
+                                    </button>
+                                    <span class="text-gray-300">/</span>
+                                    <button @click="openDedupReport(dedup.latestReport)" :disabled="!dedup.latestReport"
+                                        class="text-xs hover:text-arch-accent hover:underline">查看报告</button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Image Search Panel -->
+                        <div v-if="searchMode === 1" class="mt-4 p-4 border border-dashed border-gray-300 bg-gray-50">
+                            <input type="file" ref="searchImageInput" class="hidden" accept="image/*"
+                                @change="handleSearchImageChange">
+                            <div class="flex items-start gap-4">
+                                <div class="w-24 h-24 bg-gray-200 flex items-center justify-center border border-gray-300 overflow-hidden cursor-pointer"
+                                    @click="triggerSearchImagePick">
+                                    <img v-if="searchImage.preview" :src="searchImage.preview"
+                                        class="w-full h-full object-cover">
+                                    <i v-else data-lucide="image-plus" class="text-gray-400 w-8 h-8"></i>
+                                </div>
+                                <div class="flex-1">
+                                    <button @click="triggerSearchImagePick"
+                                        class="bg-black text-white text-[10px] font-bold uppercase tracking-widest px-4 py-2 hover:bg-arch-accent">
+                                        {{ searchImage.name ? '重新选择' : '选择参考图' }}
+                                    </button>
+                                    <button v-if="searchImage.name" @click="clearSearchImage"
+                                        class="ml-2 text-red-500 text-[10px] font-bold uppercase hover:underline">清除</button>
+                                    <div class="typo-mono text-xs text-gray-500 mt-2">{{ searchImage.name || '未选择图片' }}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Results -->
+                    <div>
+                        <div class="flex justify-between items-end mb-6">
+                            <div class="flex items-center gap-4">
+                                <span class="typo-mono text-xs text-gray-500">结果: {{ files.length }} 条</span>
+                                <button @click="copyAllPaths"
+                                    class="text-[10px] font-bold uppercase text-gray-400 hover:text-black flex items-center gap-1"
+                                    v-if="files.length">
+                                    <i data-lucide="copy" class="w-3 h-3"></i> 复制路径
+                                </button>
+                            </div>
+                            <div class="flex items-center gap-4">
+                                <span class="typo-label">缩略图</span>
+                                <input type="range" min="2" max="6" step="1" v-model.number="thumbnailScale"
+                                    class="w-20 h-1 bg-gray-200 appearance-none cursor-pointer">
+                            </div>
+                        </div>
+
+                        <!-- Loading Skeleton -->
+                        <div v-if="isLoading" class="grid gap-6" :style="resultsWrapperStyle">
+                            <div v-for="n in 8" :key="n" class="bg-gray-100 animate-pulse h-48"></div>
+                        </div>
+
+                        <!-- Results Grid -->
+                        <div v-else
+                            :class="viewMode === 'masonry' ? 'columns-2 md:columns-3 lg:columns-4 xl:columns-5 gap-6' : 'grid gap-6'"
+                            :style="viewMode === 'grid' ? resultsWrapperStyle : ''">
+                            <article v-for="item in files" :key="item.id"
+                                class="group cursor-pointer mb-6 break-inside-avoid"
+                                :class="{'ring-2 ring-arch-accent': isSelected(item)}">
+                                <div class="relative bg-gray-100 overflow-hidden border border-transparent group-hover:border-arch-accent transition-colors"
+                                    @click="openDetail(item)">
+                                    <img :src="resultImage(item)"
+                                        class="w-full h-auto object-cover block filter grayscale group-hover:grayscale-0 transition-all duration-500"
+                                        loading="lazy">
+                                    <div
+                                        class="absolute top-2 left-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                        <span class="bg-black text-white text-[10px] px-1.5 py-0.5 typo-mono">ID_{{
+                                            item.id }}</span>
+                                    </div>
+                                    <div
+                                        class="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                        <button @click.stop="searchSimilar(item)"
+                                            class="bg-white p-1 hover:bg-arch-accent hover:text-white"><i
+                                                data-lucide="sparkles" class="w-3 h-3"></i></button>
+                                        <button @click.stop="copyPath(item.path)"
+                                            class="bg-white p-1 hover:bg-arch-accent hover:text-white"><i
+                                                data-lucide="copy" class="w-3 h-3"></i></button>
+                                    </div>
+                                    <!-- Selection Checkbox -->
+                                    <div v-if="isProjectResult(item)" class="absolute top-2 right-2" @click.stop>
+                                        <div class="w-5 h-5 border-2 border-white bg-black/50 flex items-center justify-center cursor-pointer"
+                                            :class="{'bg-arch-accent border-arch-accent': isSelected(item)}"
+                                            @click="toggleSelection(item)">
+                                            <i v-if="isSelected(item)" data-lucide="check"
+                                                class="w-3 h-3 text-white"></i>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div
+                                    class="flex flex-col border-t border-gray-200 pt-2 mt-2 group-hover:border-black transition-colors">
+                                    <div class="flex justify-between items-start gap-2">
+                                        <h3 class="text-xs font-bold truncate flex-1">{{ formatName(item) }}</h3>
+                                        <span class="typo-mono text-[10px] text-gray-400">{{ formatBytes(item.size)
+                                            }}</span>
+                                    </div>
+                                    <div class="flex justify-between items-center mt-1">
+                                        <span
+                                            class="text-[10px] text-gray-500 uppercase tracking-wider truncate max-w-[70%]">{{
+                                            formatSource(item) }}</span>
+                                        <span v-if="item.score" class="typo-mono text-[10px] text-arch-accent">{{
+                                            formatScore(item.score) }}</span>
+                                    </div>
+                                </div>
+                            </article>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- UPLOAD TAB -->
+                <div v-show="activeTab === 'upload'" class="max-w-4xl mx-auto h-full flex flex-col">
+                    <!-- Header -->
+                    <div class="border-b border-black pb-6 mb-8 flex justify-between items-end">
+                        <div>
+                            <h2 class="text-2xl font-light mb-1">批量导入</h2>
+                            <p class="typo-mono text-xs text-gray-500">/// BATCH_INDEX_PROTOCOL</p>
+                        </div>
+                        <!-- Steps -->
+                        <div class="flex gap-8">
+                            <div v-for="(step, i) in ['输入', '预览', '处理', '完成']" :key="i"
+                                class="flex flex-col items-center gap-2">
+                                <div class="w-2 h-2 transition-all"
+                                    :class="uploadStep === i ? 'bg-arch-accent' : (uploadStep > i ? 'bg-black' : 'bg-gray-300')">
+                                </div>
+                                <span class="typo-mono text-[10px] uppercase"
+                                    :class="uploadStep === i ? 'text-black font-bold' : 'text-gray-400'">0{{ i+1 }}_{{
+                                    step }}</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Step 0: Input -->
+                    <div v-if="uploadStep === 0" class="flex-1 flex flex-col">
+                        <div class="bg-white border border-gray-200 p-8 relative flex-1">
+                            <span class="absolute top-4 left-4 typo-mono text-[10px] text-gray-400">INPUT_SOURCE</span>
+                            <label class="block text-sm font-bold mb-4 mt-4">目录路径</label>
+                            <textarea v-model="uploadPathInput" @paste="handleUploadPathPaste"
+                                class="w-full bg-gray-50 border border-gray-300 p-4 typo-mono text-sm focus:border-black focus:bg-white outline-none transition-colors h-40 resize-none"
+                                placeholder="在此粘贴路径（每行一个）&#10;D:\Projects\A101\exports&#10;\\NAS\Share"></textarea>
+
+                            <div class="mt-8" v-if="uploadHistory.length">
+                                <div class="flex justify-between items-center mb-4">
+                                    <span class="typo-label text-gray-400">最近历史记录</span>
+                                    <button @click="clearUploadInput"
+                                        class="text-[10px] font-bold uppercase hover:text-arch-accent">清空输入</button>
+                                </div>
+                                <div class="space-y-2">
+                                    <div v-for="item in uploadHistory" :key="item.path"
+                                        @click="applyUploadHistory(item.path)"
+                                        class="flex items-center justify-between border-b border-gray-100 py-2 group cursor-pointer hover:bg-gray-50 px-2">
+                                        <span
+                                            class="typo-mono text-xs text-gray-600 group-hover:text-black truncate max-w-lg">{{
+                                            item.path }}</span>
+                                        <span class="text-[10px] text-gray-300 group-hover:text-arch-accent">[加载]</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="mt-8 flex justify-end">
+                            <button @click="previewUploadFiles" :disabled="uploadLoadingPreview"
+                                class="border-2 border-black bg-transparent hover:bg-black hover:text-white text-black px-10 py-4 text-sm font-bold uppercase tracking-widest transition-all flex items-center gap-3 disabled:opacity-50">
+                                {{ uploadLoadingPreview ? '扫描中...' : '开始扫描' }} <i data-lucide="arrow-right"
+                                    class="w-4 h-4"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Step 1: Preview -->
+                    <div v-if="uploadStep === 1" class="flex-1 flex flex-col">
+                        <div class="bg-white border border-gray-200 flex-1 flex flex-col overflow-hidden">
+                            <div class="p-4 border-b border-gray-200 bg-gray-50 flex justify-between items-center">
+                                <div class="flex items-center gap-4">
+                                    <span class="typo-mono text-xs font-bold">扫描到: {{ filteredUploadFiles.length }}
+                                        文件</span>
+                                    <div class="flex gap-1 ml-4">
+                                        <button @click="setUploadFilter('all')"
+                                            class="px-2 py-1 text-[10px] font-bold uppercase"
+                                            :class="uploadFilter === 'all' ? 'bg-black text-white' : 'text-gray-500 hover:text-black'">全部</button>
+                                        <button @click="setUploadFilter('image')"
+                                            class="px-2 py-1 text-[10px] font-bold uppercase"
+                                            :class="uploadFilter === 'image' ? 'bg-black text-white' : 'text-gray-500 hover:text-black'">图片</button>
+                                        <button @click="setUploadFilter('video')"
+                                            class="px-2 py-1 text-[10px] font-bold uppercase"
+                                            :class="uploadFilter === 'video' ? 'bg-black text-white' : 'text-gray-500 hover:text-black'">视频</button>
+                                        <button @click="setUploadFilter('pdf')"
+                                            class="px-2 py-1 text-[10px] font-bold uppercase"
+                                            :class="uploadFilter === 'pdf' ? 'bg-black text-white' : 'text-gray-500 hover:text-black'">PDF</button>
+                                    </div>
+                                </div>
+                                <div class="flex gap-4 text-[10px] font-bold uppercase tracking-wider">
+                                    <button @click="selectAllUploadFiles"
+                                        class="hover:text-arch-accent hover:underline">全选</button>
+                                    <button @click="invertUploadSelection"
+                                        class="hover:text-arch-accent hover:underline">反选</button>
+                                </div>
+                            </div>
+                            <div class="flex-1 overflow-y-auto">
+                                <table class="w-full text-left border-collapse">
+                                    <thead>
+                                        <tr
+                                            class="border-b border-black text-[10px] uppercase tracking-wider text-gray-500 sticky top-0 bg-white">
+                                            <th class="p-4 w-12 text-center">#</th>
+                                            <th class="p-4">文件名</th>
+                                            <th class="p-4 w-24">类型</th>
+                                            <th class="p-4 w-32 text-right">大小</th>
+                                            <th class="p-4 w-24 text-center">状态</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody class="typo-mono text-xs text-gray-600">
+                                        <tr v-for="file in filteredUploadFiles" :key="file.path"
+                                            class="border-b border-gray-100 hover:bg-gray-50 group">
+                                            <td class="p-4 text-center border-r border-gray-100">
+                                                <input type="checkbox" v-model="file.selected"
+                                                    class="accent-black w-4 h-4">
+                                            </td>
+                                            <td
+                                                class="p-4 text-black font-medium group-hover:text-arch-accent truncate max-w-xs">
+                                                {{ file.filename }}</td>
+                                            <td class="p-4 border-l border-gray-100 uppercase">{{ file.ext }}</td>
+                                            <td class="p-4 text-right border-l border-gray-100">{{
+                                                formatBytes(file.size) }}</td>
+                                            <td class="p-4 text-center border-l border-gray-100"
+                                                :class="file.is_indexed ? 'text-emerald-600' : 'text-gray-400'">
+                                                {{ file.is_indexed ? '已索引' : '待处理' }}
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                        <div class="mt-8 flex justify-between">
+                            <div class="flex gap-4">
+                                <button @click="uploadStep = 0"
+                                    class="text-gray-400 hover:text-black text-xs font-bold uppercase tracking-widest">返回</button>
+                                <button @click="refreshUploadHistory"
+                                    class="text-gray-400 hover:text-black text-xs font-bold uppercase tracking-widest flex items-center gap-1">
+                                    <i data-lucide="refresh-ccw" class="w-3 h-3"></i> 刷新
+                                </button>
+                            </div>
+                            <button @click="startUploadIndex" :disabled="uploadSelectedCount === 0"
+                                class="bg-black text-white px-10 py-4 text-sm font-bold uppercase tracking-widest hover:bg-arch-accent transition-colors disabled:opacity-50">
+                                开始索引 ({{ uploadSelectedCount }} 文件)
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Step 2: Processing -->
+                    <div v-if="uploadStep === 2" class="flex-1 flex flex-col items-center justify-center">
+                        <div
+                            class="w-full max-w-lg bg-black text-green-500 typo-mono text-xs p-6 shadow-2xl relative overflow-hidden">
+                            <div class="mb-4 border-b border-green-900 pb-2">> RUNNING TASK: BATCH_INDEX_V2</div>
+                            <div class="space-y-1 h-32 overflow-hidden flex flex-col justify-end">
+                                <div class="opacity-50">> 读取元数据... OK</div>
+                                <div class="opacity-70">> 生成缩略图 [128x128]... OK</div>
+                                <div>> 处理进度 {{ uploadProgress }}%...</div>
+                                <div class="animate-pulse">_</div>
+                            </div>
+                            <div class="mt-4 w-full bg-green-900/30 h-1">
+                                <div class="h-full bg-green-500 transition-all" :style="`width: ${uploadProgress}%`">
+                                </div>
+                            </div>
+                        </div>
+                        <div class="mt-4 text-center">
+                            <span class="typo-mono text-sm">{{ uploadProgressMessage }}</span>
+                        </div>
+                        <button @click="cancelUploadTask" :disabled="uploadCancelling"
+                            class="mt-6 text-xs font-bold uppercase tracking-widest text-red-500 hover:bg-red-50 px-4 py-2">
+                            {{ uploadCancelling ? '取消中...' : '中止任务' }}
+                        </button>
+                    </div>
+
+                    <!-- Step 3: Complete -->
+                    <div v-if="uploadStep === 3" class="flex-1 flex flex-col items-center pt-12">
+                        <div class="text-5xl mb-6 text-arch-accent font-light">完成</div>
+                        <div class="w-24 h-1 bg-black mb-8"></div>
+                        <p class="text-gray-500 mb-12 text-center">所有素材已成功索引。<br>现在可以在项目库中搜索这些资源。</p>
+
+                        <div class="grid grid-cols-3 gap-px bg-gray-200 border border-gray-200 w-full max-w-2xl mb-12">
+                            <div class="bg-white p-6 text-center">
+                                <div class="text-3xl font-bold mb-1">{{ uploadResult.success || 0 }}</div>
+                                <div class="typo-label">已索引</div>
+                            </div>
+                            <div class="bg-white p-6 text-center">
+                                <div class="text-3xl font-bold mb-1 text-gray-400">{{ uploadResult.skipped || 0 }}</div>
+                                <div class="typo-label">已跳过</div>
+                            </div>
+                            <div class="bg-white p-6 text-center">
+                                <div class="text-3xl font-bold mb-1 text-red-500">{{ uploadResult.failed || 0 }}</div>
+                                <div class="typo-label">失败</div>
+                            </div>
+                        </div>
+
+                        <div class="flex gap-6">
+                            <button @click="finishUploadWizard"
+                                class="bg-black text-white px-8 py-3 text-xs font-bold uppercase tracking-widest hover:bg-arch-accent transition-colors">查看素材</button>
+                            <button @click="resetUploadWizard({ keepInput: true })"
+                                class="bg-white border border-gray-200 text-black px-8 py-3 text-xs font-bold uppercase tracking-widest hover:border-black transition-colors">继续导入</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Selection Bar -->
+            <div v-if="selectionVisible"
+                class="absolute bottom-0 left-0 right-0 bg-black text-white p-4 flex justify-between items-center z-50">
+                <div class="flex items-center gap-4 px-8">
+                    <span class="typo-mono text-sm">已选择 {{ selectedCount }} 项</span>
+                </div>
+                <div class="flex gap-4 px-8">
+                    <button @click="clearSelection" class="text-xs font-bold uppercase hover:text-gray-300">取消</button>
+                    <button v-if="canArchiveSelected" @click="archiveSelected"
+                        class="bg-white text-black px-4 py-2 text-xs font-bold uppercase hover:bg-gray-200">归档</button>
+                    <button v-if="canDeleteSelected" @click="deleteSelected"
+                        class="bg-red-600 text-white px-4 py-2 text-xs font-bold uppercase hover:bg-red-700">删除</button>
+                </div>
+            </div>
+        </main>
+
+        <!-- DETAIL DIALOG -->
+        <div v-if="detailDialog.visible" class="fixed inset-0 z-50 flex bg-black/95" @click.self="closeDetail">
+            <button @click="closeDetail"
+                class="absolute top-4 right-4 z-10 text-white hover:text-arch-accent bg-black/50 p-2">
+                <i data-lucide="x" class="w-6 h-6"></i>
+            </button>
+            <!-- Image -->
+            <div class="flex-1 flex items-center justify-center overflow-hidden relative p-4">
+                <div v-if="detailDialog.item && detailDialog.item.type !== 'pdf'"
+                    class="w-full h-full flex items-center justify-center">
+                    <img :src="detailImageSrc" ref="detailImage" class="max-w-full max-h-full object-contain">
+                </div>
+                <div v-else class="w-full h-full overflow-auto p-8 grid grid-cols-3 gap-4 content-start">
+                    <div v-if="detailDialog.pagesLoading" class="col-span-3 text-center py-12 text-gray-500">正在加载 PDF
+                        页面...</div>
+                    <div v-for="page in detailDialog.pages" :key="page.id" class="relative group">
+                        <img :src="page.image || page.thumbnail"
+                            class="w-full shadow-sm hover:shadow-md transition-shadow cursor-pointer">
+                        <span class="absolute bottom-2 right-2 bg-black text-white text-[10px] px-2 py-1">{{
+                            page.page_no }}</span>
+                    </div>
+                </div>
+            </div>
+            <!-- Info Panel -->
+            <div class="w-[360px] bg-white border-l border-gray-200 p-8 flex flex-col overflow-y-auto">
+                <div class="mb-8">
+                    <h2 class="text-xl font-bold mb-2 break-words">{{ detailItemName }}</h2>
+                    <p class="typo-mono text-xs text-gray-500 break-all">{{ detailDialog.item ? detailDialog.item.path :
+                        '' }}</p>
+                </div>
+                <div class="space-y-4 mb-8 flex-1">
+                    <div v-for="meta in detailMetadata" :key="meta.label"
+                        class="flex justify-between border-b border-gray-100 pb-2">
+                        <span class="typo-label">{{ meta.label }}</span>
+                        <span class="text-sm font-medium text-right">{{ meta.value }}</span>
+                    </div>
+                </div>
+                <div class="space-y-3">
+                    <button @click="openDetailInNewTab"
+                        class="w-full border border-gray-300 py-3 text-xs font-bold uppercase hover:border-black hover:bg-black hover:text-white transition-all">打开原图</button>
+                    <button @click="searchSimilar(detailDialog.item)"
+                        class="w-full border border-gray-300 py-3 text-xs font-bold uppercase hover:border-black hover:bg-black hover:text-white transition-all">找相似</button>
+                    <button @click="copyPath(detailDialog.item ? detailDialog.item.path : '')"
+                        class="w-full border border-gray-300 py-3 text-xs font-bold uppercase hover:border-black hover:bg-black hover:text-white transition-all">复制路径</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- PROJECT DIALOG -->
+        <div v-if="projectDialog.visible"
+            class="fixed inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur"
+            @click.self="closeProjectDialog">
+            <div class="bg-white p-10 w-full max-w-lg">
+                <h2 class="text-2xl font-light mb-6">{{ projectDialog.mode === 'create' ? '新建项目' : '编辑项目' }}</h2>
+                <div class="space-y-6">
+                    <div>
+                        <label class="typo-label block mb-2">项目名称</label>
+                        <input v-model="projectDialog.form.name"
+                            class="w-full bg-gray-50 border border-gray-300 p-3 text-sm focus:border-black focus:bg-white outline-none"
+                            placeholder="例如：科技园总部办公楼">
+                    </div>
+                    <div>
+                        <label class="typo-label block mb-2">项目描述（可选）</label>
+                        <textarea v-model="projectDialog.form.description"
+                            class="w-full bg-gray-50 border border-gray-300 p-3 text-sm focus:border-black focus:bg-white outline-none h-24 resize-none"
+                            placeholder="项目简介或备注"></textarea>
+                    </div>
+                </div>
+                <div class="flex gap-4 mt-8">
+                    <button @click="closeProjectDialog"
+                        class="flex-1 border border-gray-300 py-3 text-xs font-bold uppercase hover:border-black">取消</button>
+                    <button @click="submitProjectDialog"
+                        class="flex-1 bg-black text-white py-3 text-xs font-bold uppercase hover:bg-arch-accent">{{
+                        projectDialog.mode === 'create' ? '创建' : '保存' }}</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- DUPLICATE DIALOG -->
+        <div v-if="uploadDuplicateDialog.visible"
+            class="fixed inset-0 z-[60] flex items-center justify-center bg-black/90 backdrop-blur"
+            @click.self="closeUploadDuplicateDialog">
+            <div class="bg-white p-8 w-full max-w-xl">
+                <h3 class="text-xl font-bold mb-4">检测到重复素材</h3>
+                <p class="text-sm text-gray-500 mb-6">库中已存在相同指纹的文件，请选择处理方式。</p>
+                <div class="grid grid-cols-2 gap-4 mb-6">
+                    <div class="bg-gray-50 p-4 border border-gray-200">
+                        <span class="typo-label block mb-2 text-arch-accent">待导入文件</span>
+                        <div class="aspect-video bg-gray-200 mb-2 overflow-hidden">
+                            <img v-if="duplicateNewFile" :src="duplicateNewFile.thumbnail"
+                                class="w-full h-full object-cover">
+                        </div>
+                        <div class="text-xs font-bold truncate">{{ duplicateNewFile ? duplicateNewFile.filename : '' }}
+                        </div>
+                        <div class="text-[10px] text-gray-500">{{ duplicateNewFile ? formatBytes(duplicateNewFile.size)
+                            : '' }}</div>
+                    </div>
+                    <div class="bg-gray-50 p-4 border border-gray-200">
+                        <span class="typo-label block mb-2">已有素材</span>
+                        <div class="aspect-video bg-gray-200 mb-2 overflow-hidden">
+                            <img v-if="duplicateExistingFile" :src="duplicateExistingFile.thumbnail"
+                                class="w-full h-full object-cover">
+                        </div>
+                        <div class="text-xs font-bold truncate">{{ duplicateExistingFile ?
+                            duplicateExistingFile.filename : '' }}</div>
+                        <div class="text-[10px] text-gray-500">{{ duplicateExistingFile ?
+                            formatBytes(duplicateExistingFile.size) : '' }}</div>
+                    </div>
+                </div>
+                <div class="flex items-center gap-2 mb-6">
+                    <input type="checkbox" v-model="uploadDuplicateDialog.remember" id="dup-remember"
+                        class="accent-black w-4 h-4">
+                    <label for="dup-remember" class="text-xs font-medium">对此后的所有重复项执行相同操作</label>
+                </div>
+                <div class="flex gap-4">
+                    <button @click="submitUploadDuplicateDecision('skip')"
+                        class="flex-1 py-3 border border-gray-300 hover:bg-gray-50 text-xs font-bold uppercase">跳过新文件</button>
+                    <button @click="submitUploadDuplicateDecision('overwrite')"
+                        class="flex-1 py-3 bg-red-600 text-white hover:bg-red-700 text-xs font-bold uppercase">覆盖已有</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- DEDUP REPORT DIALOG -->
+        <div v-if="dedupReportDialog.visible"
+            class="fixed inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur"
+            @click.self="closeDedupReport">
+            <div class="bg-white p-12 w-full max-w-2xl max-h-[80vh] overflow-y-auto shadow-2xl relative">
+                <button @click="closeDedupReport" class="absolute top-4 right-4 text-black hover:text-arch-accent">
+                    <i data-lucide="x" class="w-6 h-6"></i>
+                </button>
+                <h2 class="text-2xl font-light mb-2">去重扫描报告</h2>
+                <p class="typo-mono text-xs text-gray-400 mb-8">{{ formatDateTime(dedupReportDialog.meta ?
+                    dedupReportDialog.meta.completed_at : null) }}</p>
+
+                <div class="grid grid-cols-3 gap-8 mb-8 border-b border-gray-100 pb-8">
+                    <div>
+                        <div class="typo-label mb-1">重复组</div>
+                        <div class="text-2xl font-bold">{{ dedupReportDialog.meta ?
+                            dedupReportDialog.meta.duplicate_groups : 0 }}</div>
+                    </div>
+                    <div>
+                        <div class="typo-label mb-1">重复素材</div>
+                        <div class="text-2xl font-bold">{{ dedupReportDialog.meta ?
+                            dedupReportDialog.meta.duplicates_marked : 0 }}</div>
+                    </div>
+                    <div>
+                        <div class="typo-label mb-1">预计释放空间</div>
+                        <div class="text-2xl font-bold">{{ formatBytes(dedupReportDialog.meta ?
+                            dedupReportDialog.meta.space_saving_bytes : 0) }}</div>
+                    </div>
+                </div>
+
+                <div class="space-y-4">
+                    <div v-for="stage in (dedupReportDialog.report ? dedupReportDialog.report.stages : [])"
+                        :key="stage.stage" class="bg-gray-50 p-4 border border-gray-100">
+                        <div class="flex justify-between items-center mb-2">
+                            <span class="font-bold uppercase text-sm">{{ dedupStageTitle(stage.stage) }}</span>
+                            <span class="typo-mono text-[10px]">{{ stage.duplicates || 0 }} 重复</span>
+                        </div>
+                        <p class="text-xs text-gray-500">{{ dedupStageDescription(stage.stage) }}</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- TOAST -->
+        <transition name="fade">
+            <div v-if="toast.visible"
+                class="fixed bottom-8 left-1/2 -translate-x-1/2 z-[100] px-6 py-3 shadow-lg text-sm font-medium"
+                :class="toast.type === 'success' ? 'bg-black text-white' : toast.type === 'error' ? 'bg-red-600 text-white' : 'bg-gray-800 text-white'">
+                {{ toast.message }}
+            </div>
+        </transition>
+
+    </div>
+
+    <script src="static/assets/workspace.js"></script>
+    <script src="static/assets/tauri-integration.js"></script>
+</body>
+
+</html>

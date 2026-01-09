@@ -407,6 +407,11 @@ def register_blueprints(app: Flask) -> None:
         """工作区界面"""
         return send_from_directory(static_dir, 'index_workspace.html')
     
+    @app.route('/workspace-v2')
+    def workspace_v2():
+        """瑞士风格工作区界面"""
+        return send_from_directory(static_dir, 'index_workspace_v2.html')
+    
     @app.route('/classic')
     def classic():
         """经典界面"""
